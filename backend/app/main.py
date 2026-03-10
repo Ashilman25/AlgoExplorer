@@ -2,9 +2,11 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
 from app.config import settings
 from app.exceptions import DomainError, NotFoundException, PermissionError
 from app.schemas.errors import ErrorDetail, ErrorResponse
+from app.routes import metadata
 
 
 # to start:
@@ -19,6 +21,8 @@ app.add_middleware(
     allow_methods = ["*"],
     allow_headers = ["*"],
 )
+
+app.include_router(metadata.router)
 
 
 # EXCEPTION HANDLING
