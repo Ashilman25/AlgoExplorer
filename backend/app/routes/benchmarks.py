@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from app.exceptions import NotFoundException, DomainError
-from app.schemas.benchmarks import CreateBenchmarkRequest, CreateBenchmarkResponse, BenchmarkResultsResponse, BenchmarkStatusResponse
+from app.schemas.benchmarks import CreateBenchmarkRequest, CreateBenchmarkResponse, BenchmarkResultsResponse, BenchmarkStatusResponse, UpdateBenchmarkStatusRequest
 from app.db import get_db
 from app.data.models import BenchmarkJob
 
@@ -38,7 +38,26 @@ def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db)):
     
     
     
+#update benchmark status with given info input    
+@router.patch("/{benchmark_id}/status", response_model = BenchmarkStatusResponse)
+def update_benchmark_status(benchmark_id: int, body: UpdateBenchmarkStatusRequest, db = Depends(get_db)):
+    job = db.query(BenchmarkJob).filter(BenchmarkJob.id == benchmark_id).first()
+    if not job:
+        raise NotFoundException(f"Benchmark Job '{benchmark_id}' not found.")
+
+    job.status = body.status
+    job.progress = body.progress
+    db.commit()
+    db.refresh(job)
+
+    return BenchmarkStatusResponse.model_validate(job)
     
     
     
+@router.get("/{benchmark_id}/results", response_model = BenchmarkResultsResponse)
+def get_benchmark_results(benchmark_id: int, db = Depends(get_db)):
+    job = db.query(BenchmarkJob).filter(BenchmarkJob.id == benchmark_id).first()
+    if not job:
+        raise NotFoundException(f"Benchmark Job '{benchmark_id}' not found.")
     
+    return BenchmarkResultsResponse.model_validate(job)

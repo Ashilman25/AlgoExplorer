@@ -9,6 +9,13 @@ class CreateBenchmarkRequest(BaseModel):
     config: dict[str, Any]
     
 
+class UpdateBenchmarkStatusRequest(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    status: str
+    progress: float
+
+
 class CreateBenchmarkResponse(BaseModel):
     model_config = ConfigDict(from_attributes = True)
     
