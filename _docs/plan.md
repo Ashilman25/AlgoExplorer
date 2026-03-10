@@ -10,7 +10,7 @@ This plan is intentionally structured to match the product vision from the PRD:
 - a browser-based technical tool, not a simple website
 - a timeline-driven simulation architecture
 - support for graph, sorting, and dynamic programming modules
-- persistence for scenarios and runs
+- guest-mode persistence for scenarios and runs in the MVP
 - a polished interface that feels like an interactive lab environment
 
 ---
@@ -31,7 +31,7 @@ Recommended usage:
 1. Treat each phase as a milestone.
 2. Do not skip foundational phases just to “get to the UI.”
 3. Complete the shared simulation contract before building domain-specific algorithm modules.
-4. Build MVP scope first, then layer on comparison, async benchmarking, and richer export/polish features.
+4. Build guest-mode MVP scope first, then layer on auth, comparison, async benchmarking, and richer export/polish features.
 
 ---
 
@@ -60,10 +60,11 @@ Build the product in this order:
 4. Graph Lab MVP
 5. Sorting Lab MVP
 6. DP Lab MVP
-7. scenario persistence and run history
+7. guest scenario persistence and guest run history
 8. basic benchmark page
 9. testing, polish, deployment
-10. Phase 2 additions
+10. authenticated accounts and cloud sync
+11. Phase 2 additions
 
 ## 3.3 Recommended MVP Scope
 
@@ -92,10 +93,17 @@ Each MVP algorithm should support:
 - replay controls
 - explanation panel
 - metrics panel
-- saved scenario compatibility
-- run history compatibility
+- guest-saved scenario compatibility
+- guest run history compatibility
 
 This is the minimum bar for a module to count as “done.”
+
+### MVP Product Constraint
+The MVP is explicitly **guest mode first**:
+- no login, signup, or protected routes in MVP scope
+- scenarios, run history, and preferences persist locally in the browser
+- backend services focus on simulation, validation, and benchmark execution
+- account-based sync and ownership rules are a post-MVP feature
 
 ---
 
@@ -111,9 +119,9 @@ This is the minimum bar for a module to count as “done.”
 ## Phase 7 — Dynamic Programming Lab MVP
 ## Phase 8 — Scenario Library and Run History
 ## Phase 9 — Basic Benchmarking Foundation
-## Phase 10 — Auth, Settings, and Persistence Hardening
-## Phase 11 — Testing, Observability, and Error Handling
-## Phase 12 — Deployment, Demo Readiness, and Portfolio Positioning
+## Phase 10 — Testing, Observability, and Error Handling
+## Phase 11 — Deployment, Demo Readiness, and Portfolio Positioning
+## Phase 12 — Auth, Account Sync, Settings, and Persistence Hardening
 ## Phase 13 — Phase 2 Expansion Plan
 
 ---
@@ -145,6 +153,7 @@ Without this phase, the project can drift into:
 - Separate MVP from Phase 2 features.
 - Create a checklist of what must ship in MVP versus what can wait.
 - Explicitly mark comparison mode and async workers as non-blocking unless time permits.
+- Explicitly mark authentication as post-MVP so guest mode is the default development path.
 
 ### 0.2 Finalize Stack Choices
 Choose exact technologies so the implementation does not stall later.
@@ -158,26 +167,23 @@ Recommended stack:
 
 ### 0.3 Decide MVP Persistence Strategy
 For MVP, keep it simple:
-- store timelines as JSONB in PostgreSQL
-- store scenarios in PostgreSQL
-- store run metadata in PostgreSQL
+- store guest scenarios in browser storage first
+- store guest run history in browser storage first
+- keep backend run/timeline responses easy to cache or persist locally
+- use PostgreSQL only for infrastructure that clearly needs server persistence in MVP
 - use Redis only where it clearly helps
 - do not introduce object storage until large-scale timelines become a real issue
 
 ### 0.4 Choose MVP Auth Strategy
-Pick one of these paths early:
+Lock this decision now:
 
-**Path A: Auth in MVP**
-- stronger portfolio value
-- user-scoped saved scenarios and runs
-- more realistic product depth
+**Chosen path: Guest-first MVP**
+- no authentication work should block the first shipped version
+- use browser persistence for scenarios, run history, and preferences
+- design data shapes so they can later map cleanly to account-backed persistence
+- add authentication only after the guest workflow is stable end to end
 
-**Path B: Guest-first MVP**
-- faster initial delivery
-- use local storage for temporary persistence
-- add auth after shared architecture is stable
-
-Recommended: include auth only after the first full simulation flow works, unless authentication is easy for you to scaffold quickly.
+Auth is a later feature, not an MVP dependency.
 
 ### 0.5 Define Milestone Order
 Create milestone sequence:
@@ -191,6 +197,7 @@ Create milestone sequence:
 8. scenarios and history complete
 9. benchmark basics complete
 10. deployment complete
+11. auth and account sync complete
 
 ## Dependencies
 None.
@@ -199,7 +206,7 @@ None.
 - MVP scope is frozen
 - stack decisions are locked
 - storage approach is chosen
-- auth strategy is chosen
+- guest-first auth strategy is chosen
 - milestone order is documented
 
 ---
@@ -273,33 +280,17 @@ Create the backend app with:
 Define environment variables for:
 - frontend API base URL
 - database URL
-- JWT secret if auth enabled
 - Redis URL
 - environment mode
 - CORS origins
 
+Defer auth-specific secrets such as JWT/session configuration until the auth phase is scheduled.
+
 Create:
 - `.env.example`
 - local `.env`
-- production environment variable checklist
 
-### 1.5 Add Development Standards
-Set up:
-- linting
-- code formatting
-- import organization
-- basic commit conventions
-- issue/milestone labels if using GitHub
-- README sections for setup and run commands
-
-### 1.6 Create Base Documentation
-Inside `docs/`, create:
-- `architecture.md`
-- `api-contract.md`
-- `timeline-schema.md`
-- `mvp-checklist.md`
-
-### 1.7 Add a Minimal Health Check Flow
+### 1.5 Add a Minimal Health Check Flow
 Backend:
 - `/health`
 - API version endpoint
@@ -317,7 +308,7 @@ Phase 0.
 - backend runs successfully
 - frontend can reach backend
 - base folders match planned architecture
-- environment setup is documented
+- environment setup
 
 ---
 
@@ -341,39 +332,23 @@ If the backend is not standardized, each module becomes a special case.
 - domain-agnostic simulation interfaces
 - shared schemas
 - metadata endpoints
-- persistent models for scenarios and runs
+- backend contracts that support guest persistence cleanly
 - error response system
 
 ## Detailed Tasks
 
 ### 2.1 Define Core Data Models
 Create SQLAlchemy models for:
-- User (if auth enabled)
-- Scenario
-- SimulationRun
+- SimulationRun cache or persisted run record if needed
 - BenchmarkJob
-- optional Settings
+- optional server-side artifacts only if they materially simplify MVP execution
 
-For MVP, timeline steps can live inside a JSON field in `SimulationRun` or in a separate table if you want more flexibility.
+For MVP, timeline steps can live inside a JSON field in `SimulationRun` or be returned directly without long-term server retention if the frontend is persisting guest runs locally.
 
 Minimum fields to implement now:
 
-#### Scenario
-- id
-- owner_id nullable
-- module_type
-- scenario_type
-- title
-- description
-- input_payload JSON
-- tags JSON/array
-- is_preset
-- created_at
-- updated_at
-
 #### SimulationRun
 - id
-- owner_id nullable
 - scenario_id nullable
 - module_type
 - algorithm_key
@@ -384,7 +359,6 @@ Minimum fields to implement now:
 
 #### BenchmarkJob
 - id
-- owner_id nullable
 - module_type
 - config JSON
 - status
@@ -397,14 +371,14 @@ Minimum fields to implement now:
 ### 2.2 Define Pydantic Schemas
 Create request/response models for:
 - metadata responses
-- scenario CRUD
 - create run request
 - create run response
 - timeline response
 - run summary
 - benchmark create/status/results
-- auth requests/responses if needed
-- settings requests/responses
+- guest scenario import/export payloads
+- guest run history payloads
+- settings requests/responses only if server-backed settings are added later
 
 ### 2.3 Create Unified Error Format
 Implement one consistent error structure for the whole API.
@@ -430,25 +404,20 @@ Implement endpoints for:
 This should be driven from static definitions or configuration, not hardcoded separately in many places.
 
 ### 2.5 Build Scenario CRUD Foundations
-Implement service functions and API endpoints for:
-- create scenario
-- list scenarios
-- retrieve scenario
-- update scenario
-- delete scenario
+Do not build account-scoped scenario CRUD in the backend for MVP.
 
-Support filtering by:
-- module_type
-- search
-- tag
+Instead:
+- define a stable scenario JSON shape shared by frontend and backend
+- validate scenario payloads before runs are created
+- support preset metadata from the backend
+- leave server-side scenario CRUD for the auth phase
 
 ### 2.6 Build Run Persistence Foundations
 Implement:
-- create run record
+- create run response contract
 - fetch run summary
-- fetch timeline
-- delete run
-- list run history
+- fetch timeline when server retention is enabled
+- keep payloads compatible with frontend guest history storage
 
 ### 2.7 Build Basic Benchmark Persistence Layer
 Implement benchmark data model and API placeholders even if async workers are deferred.
@@ -473,8 +442,7 @@ Phase 1.
 
 ## Definition of Done
 - database models exist and migrate correctly
-- scenario CRUD works end to end
-- run records can be saved and retrieved
+- guest-compatible run contracts work end to end
 - metadata endpoints work
 - API error responses are standardized
 
@@ -519,7 +487,8 @@ Create routes for:
 - run history
 - benchmark lab
 - settings
-- auth pages if enabled
+
+Do not add auth routes in MVP.
 
 ### 3.3 Set Up Frontend State Management
 Create stores for:
@@ -530,23 +499,21 @@ Create stores for:
 - timeline data
 - playback state
 - benchmark job status
-- user/auth state if enabled
+- guest persistence state
 
 Keep shared concerns global, but keep module-specific state isolated when possible.
 
 ### 3.4 Build API Client Layer
 Create services for:
 - metadata
-- scenarios
 - runs
 - benchmarks
-- auth
-- settings
+- preset metadata
+- guest persistence adapters
 
 Centralize:
 - base URL
 - error handling
-- auth headers
 - response typing
 
 ### 3.5 Create Shared UI Components
@@ -1072,15 +1039,15 @@ Persistence is one of the major differentiators in the PRD. Without it, the prod
 ## Major Outputs
 - scenario library page
 - run history page
-- save/load flows for scenarios
+- guest save/load flows for scenarios
 - resume/review flows for runs
 
 ## Detailed Tasks
 
 ### 8.1 Finish Scenario CRUD Integration in Frontend
 Build UI flows for:
-- save scenario from setup page
-- browse saved scenarios
+- save scenario locally from setup page
+- browse guest-saved scenarios
 - filter by module
 - search by title
 - edit metadata
@@ -1088,10 +1055,12 @@ Build UI flows for:
 
 ### 8.2 Build Scenario Library Page
 Include:
-- list/grid of saved scenarios
+- list/grid of guest-saved scenarios
 - preset grouping
 - tags/filter/search
 - quick actions like load, duplicate, delete
+
+Use IndexedDB or another browser-local persistence layer rather than account-backed storage.
 
 ### 8.3 Connect Scenario Load Into Setup Pages
 Allow users to select a scenario and automatically populate the correct setup screen with stored input.
@@ -1105,6 +1074,8 @@ Show:
 - reopen run
 - rerun from same configuration
 - optional save scenario from run
+
+Back this with guest-local history in MVP.
 
 ### 8.5 Support Reopening Old Runs
 Implement flow:
@@ -1123,8 +1094,8 @@ Display:
 Phases 2–7.
 
 ## Definition of Done
-- user can save and load scenarios across all MVP modules
-- user can review old runs from history
+- guest user can save and load scenarios across all MVP modules
+- guest user can review old runs from history
 - dashboard shows recent activity
 
 ---
@@ -1213,67 +1184,7 @@ Phases 2–8.
 
 ---
 
-# Phase 10 — Auth, Settings, and Persistence Hardening
-
-## Objective
-Add user-level persistence, preferences, and platform realism if not already included.
-
-## Why This Phase Exists
-This phase helps the project feel like a true software product and improves portfolio quality.
-
-## Major Outputs
-- login/register flow if enabled
-- protected resources
-- settings page
-- stronger ownership rules
-
-## Detailed Tasks
-
-### 10.1 Implement Authentication (if not already done)
-Support:
-- register
-- login
-- logout
-- get current user
-- route protection where necessary
-
-### 10.2 Apply Resource Ownership Rules
-Ensure only owners can:
-- edit/delete scenarios
-- access personal run history
-- access personal benchmark records
-
-### 10.3 Build Settings Page
-Include user preferences for:
-- theme
-- default playback speed
-- explanation verbosity
-- animation detail
-- chart preferences
-
-### 10.4 Add Guest Fallback Where Needed
-If users are not logged in, define clear product behavior:
-- local temporary state
-- prompt to save with account if necessary
-- clear guest limitations
-
-### 10.5 Improve Persistence Reliability
-Add safeguards for:
-- large timeline records
-- safe JSON serialization/deserialization
-- data migrations if schema changes
-
-## Dependencies
-Phases 2–9.
-
-## Definition of Done
-- auth flows work if included
-- settings persist correctly
-- personal resources are scoped correctly
-
----
-
-# Phase 11 — Testing, Observability, and Error Handling
+# Phase 10 — Testing, Observability, and Error Handling
 
 ## Objective
 Make the product stable, demonstrable, and maintainable.
@@ -1290,7 +1201,7 @@ A portfolio-grade project should not only have features; it should also show qua
 
 ## Detailed Tasks
 
-### 11.1 Backend Unit Tests
+### 10.1 Backend Unit Tests
 Write tests for:
 - BFS correctness
 - Dijkstra correctness
@@ -1300,9 +1211,9 @@ Write tests for:
 - Edit Distance correctness
 - timeline generation shape
 - validation helpers
-- scenario CRUD services
+- guest scenario schema validation
 
-### 11.2 Frontend Component Tests
+### 10.2 Frontend Component Tests
 Test:
 - playback controls
 - step inspector rendering
@@ -1310,37 +1221,39 @@ Test:
 - metrics panels
 - benchmark chart rendering
 
-### 11.3 End-to-End Flow Tests
+### 10.3 End-to-End Flow Tests
 Cover these flows:
 - create scenario → run simulation → fetch timeline → replay
 - save scenario → load scenario → rerun
 - run benchmark → view results
-- login → save scenario → reopen from history
+- guest save scenario → reopen from history
 
-### 11.4 Improve Error UX
+### 10.4 Improve Error UX
 Ensure the UI clearly handles:
 - invalid inputs
 - failed run creation
 - failed benchmark requests
 - missing resources
-- auth expiration
+- guest storage failures/quota issues
+- auth expiration after auth is added
 
-### 11.5 Add Logging
+### 10.5 Add Logging
 Log at minimum:
 - run creation
 - algorithm execution summaries
 - benchmark lifecycle
-- auth events
 - server errors
 
-### 11.6 Add Performance Notes and Metrics
+Add auth event logging in Phase 12 when authentication is introduced.
+
+### 10.6 Add Performance Notes and Metrics
 Track:
 - timeline generation duration
 - endpoint latency
 - benchmark completion duration
 - large timeline load behavior
 
-### 11.7 Manual QA Pass
+### 10.7 Manual QA Pass
 Do a manual product walkthrough across all modules.
 
 Specifically verify:
@@ -1350,7 +1263,7 @@ Specifically verify:
 - stored scenarios reload correctly
 
 ## Dependencies
-Phases 2–10.
+Phases 2–9.
 
 ## Definition of Done
 - major backend algorithms are tested
@@ -1360,7 +1273,7 @@ Phases 2–10.
 
 ---
 
-# Phase 12 — Deployment, Demo Readiness, and Portfolio Positioning
+# Phase 11 — Deployment, Demo Readiness, and Portfolio Positioning
 
 ## Objective
 Ship the project and make it presentable for recruiters, professors, and reviewers.
@@ -1378,13 +1291,13 @@ Even a technically strong build can lose impact if it is not deployed cleanly or
 
 ## Detailed Tasks
 
-### 12.1 Deploy Frontend
+### 11.1 Deploy Frontend
 Deploy on Vercel or equivalent.
 
-### 12.2 Deploy Backend
+### 11.2 Deploy Backend
 Deploy on Render, Railway, Fly, or equivalent.
 
-### 12.3 Configure Managed Services
+### 11.3 Configure Managed Services
 Set up:
 - PostgreSQL
 - Redis
@@ -1392,15 +1305,15 @@ Set up:
 - CORS
 - production secrets
 
-### 12.4 Verify Production Persistence
+### 11.4 Verify Production Persistence
 Test in production:
 - create scenario
 - create run
 - replay timeline
 - run benchmark
-- login if auth enabled
+- guest persistence restore after refresh
 
-### 12.5 Create Demo Presets
+### 11.5 Create Demo Presets
 Curate polished demo examples for:
 - BFS on simple graph
 - Dijkstra on weighted graph
@@ -1409,7 +1322,7 @@ Curate polished demo examples for:
 - LCS on short strings
 - Edit Distance on clear string pair
 
-### 12.6 Write Strong README
+### 11.6 Write Strong README
 README should include:
 - what the product is
 - why it is different
@@ -1420,14 +1333,14 @@ README should include:
 - key technical differentiators
 - future work
 
-### 12.7 Prepare Portfolio Assets
+### 11.7 Prepare Portfolio Assets
 Create:
 - architecture diagram image
 - product screenshots
 - short demo video or GIFs
 - bullet points for resume/LinkedIn
 
-### 12.8 Final Demo Pass
+### 11.8 Final Demo Pass
 Run through a full demo narrative:
 1. land on dashboard
 2. load preset
@@ -1438,13 +1351,85 @@ Run through a full demo narrative:
 7. open scenario library/history
 
 ## Dependencies
-Phases 2–11.
+Phases 2–10.
 
 ## Definition of Done
 - app is deployed and working
 - README is polished
 - demo presets are stable
 - project is presentable as a portfolio centerpiece
+
+---
+
+# Phase 12 — Auth, Account Sync, Settings, and Persistence Hardening
+
+## Objective
+Add user accounts, cloud-backed persistence, and migration from guest mode after the MVP is shipped.
+
+## Why This Phase Exists
+This phase adds product depth without slowing down the guest-first MVP.
+
+## Major Outputs
+- login/register flow
+- guest-to-account migration flow
+- protected resources
+- settings page
+- stronger ownership rules
+
+## Detailed Tasks
+
+### 12.1 Implement Authentication
+Support:
+- register
+- login
+- logout
+- get current user
+- route protection where necessary
+
+### 12.2 Apply Resource Ownership Rules
+Ensure only owners can:
+- edit/delete scenarios
+- access personal run history
+- access personal benchmark records
+
+Also define how guest-created data can be claimed or imported after signup.
+
+### 12.3 Build Settings Page
+Include user preferences for:
+- theme
+- default playback speed
+- explanation verbosity
+- animation detail
+- chart preferences
+
+### 12.4 Add Guest Fallback Where Needed
+Preserve the MVP guest workflow after auth launches:
+- local-first use still works without signup
+- prompt guest users to create an account for sync/backup
+- define which resources stay local versus sync to the server
+- support importing guest scenarios/history into a new account when practical
+
+### 12.5 Improve Persistence Reliability
+Add safeguards for:
+- large timeline records
+- safe JSON serialization/deserialization
+- data migrations if schema changes
+
+### 12.6 Extend Test Coverage for Auth and Migration
+Add or update coverage for:
+- signup/login/logout
+- guest data import into a new account
+- account-scoped scenario access
+- account-scoped run history access
+
+## Dependencies
+Stable guest MVP, including Phases 2–11.
+
+## Definition of Done
+- auth flows work
+- guest-to-account migration is defined and implemented for core resources
+- settings persist correctly
+- personal resources are scoped correctly
 
 ---
 
@@ -1585,9 +1570,11 @@ If you want the most practical build sequence, follow this exact order:
 13. run history
 14. dashboard recent activity
 15. basic benchmarking for sorting
-16. auth/settings if desired
-17. testing and polish
-18. deployment
+16. testing and polish for guest MVP
+17. deploy guest MVP
+18. auth/account sync
+19. settings hardening
+20. auth migration and ownership polish
 
 This order is strong because each new step reuses and validates the prior architecture.
 
@@ -1606,7 +1593,7 @@ The MVP should only be considered complete when all of the following are true:
 - every MVP algorithm runs through the same simulation contract
 - timelines are replayable step-by-step
 - explanations and metrics update correctly at each step
-- scenarios and runs persist correctly
+- guest scenarios and guest run history persist correctly
 
 ## UX Criteria
 - setup pages are usable
@@ -1639,10 +1626,13 @@ The MVP should only be considered complete when all of the following are true:
 **Mitigation:** preserve the shared simulation layout and progressive disclosure of controls.
 
 ## Risk 6: Persistence becomes overly complex
-**Mitigation:** use JSONB timeline storage first; defer object storage.
+**Mitigation:** keep MVP persistence local-first, keep backend contracts simple, and add account-backed sync later.
 
 ## Risk 7: Project starts looking like a class demo instead of a product
 **Mitigation:** prioritize persistence, run history, benchmarking, polish, and deployment.
+
+## Risk 8: Auth slows down the MVP before the core product works
+**Mitigation:** treat auth as a dedicated post-MVP phase and do not let it block guest-mode delivery.
 
 ---
 
@@ -1658,8 +1648,8 @@ If that principle is preserved, the project will scale cleanly across:
 - dynamic programming algorithms
 - comparison mode
 - benchmark mode
-- scenario persistence
-- run history
+- guest scenario persistence
+- guest run history
+- later account-backed sync and auth
 
 That is what turns the product from “a cool visualizer” into a **full-stack algorithm simulation platform**.
-
