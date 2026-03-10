@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.exceptions import DomainError, NotFoundException, PermissionError
 from app.schemas.errors import ErrorDetail, ErrorResponse
-from app.routes import metadata
+from app.routes import metadata, runs
 
 
 # to start:
@@ -23,7 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(metadata.router)
-
+app.include_router(runs.router)
 
 # EXCEPTION HANDLING
 
