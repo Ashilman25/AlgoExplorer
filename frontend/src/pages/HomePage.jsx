@@ -1,77 +1,227 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  Network,
+  BarChart3,
+  Grid3x3,
+  BookMarked,
+  Gauge,
+  ArrowRight,
+  Activity,
+  Columns2,
+} from 'lucide-react'
 import { api } from '../services/api'
 
-function HomePage() {
-  const [status, setStatus] = useState('checking...')
 
-  const statusClassName =
-    status === 'connected'
-      ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
-      : status === 'unreachable'
-        ? 'border-rose-400/30 bg-rose-400/10 text-rose-200'
-        : 'border-sky-400/30 bg-sky-400/10 text-sky-200'
+const LABS = [
+  {
+    label: 'Graph Lab',
+    to: '/graph',
+    icon: Network,
+    iconColor: 'text-brand-400',
+    iconBg: 'bg-brand-500/10',
+    borderHover: 'hover:border-brand-500/25',
+    phase: 'Phase 5',
+    description:
+      'Visualize graph and pathfinding algorithms step by step on an interactive node/edge canvas.',
+    algorithms: ['BFS', 'Dijkstra'],
+  },
+  {
+    label: 'Sorting Lab',
+    to: '/sorting',
+    icon: BarChart3,
+    iconColor: 'text-amber-400',
+    iconBg: 'bg-amber-500/10',
+    borderHover: 'hover:border-amber-500/25',
+    phase: 'Phase 6',
+    description:
+      'Watch sorting algorithms work through arrays in real time with comparison and swap tracking.',
+    algorithms: ['Quick Sort', 'Merge Sort'],
+  },
+  {
+    label: 'DP Lab',
+    to: '/dp',
+    icon: Grid3x3,
+    iconColor: 'text-violet-400',
+    iconBg: 'bg-violet-500/10',
+    borderHover: 'hover:border-violet-500/25',
+    phase: 'Phase 7',
+    description:
+      'Explore dynamic programming through cell-by-cell table construction with traceback overlays.',
+    algorithms: ['LCS', 'Edit Distance'],
+  },
+]
+
+const TOOLS = [
+  {
+    label: 'Scenario Library',
+    to: '/scenarios',
+    icon: BookMarked,
+    iconColor: 'text-sky-400',
+    iconBg: 'bg-sky-500/10',
+    borderHover: 'hover:border-sky-500/25',
+    description: 'Save, browse, and reload your custom algorithm inputs and configurations.',
+  },
+  {
+    label: 'Benchmark Lab',
+    to: '/benchmarks',
+    icon: Gauge,
+    iconColor: 'text-emerald-400',
+    iconBg: 'bg-emerald-500/10',
+    borderHover: 'hover:border-emerald-500/25',
+    description: 'Measure algorithm performance across input sizes and visualize runtime curves.',
+  },
+  {
+    label: 'Compare',
+    to: '/compare',
+    icon: Columns2,
+    iconColor: 'text-violet-400',
+    iconBg: 'bg-violet-500/10',
+    borderHover: 'hover:border-violet-500/25',
+    description: 'Run two algorithms side by side on identical inputs and compare their execution.',
+  },
+]
+
+const STATUS_COLOR = {
+  connected: 'text-emerald-400',
+  unreachable: 'text-rose-400',
+  checking: 'text-amber-400',
+}
+
+
+export default function HomePage() {
+  const [backendStatus, setBackendStatus] = useState('checking')
 
   useEffect(() => {
     api.health()
-      .then(() => setStatus('connected'))
-      .catch(() => setStatus('unreachable'))
+      .then(() => setBackendStatus('connected'))
+      .catch(() => setBackendStatus('unreachable'))
   }, [])
 
   return (
-    <main className="min-h-screen px-6 py-10 sm:px-10">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center">
-        <section className="grid w-full gap-8 rounded-[2rem] border border-white/10 bg-slate-950/55 p-8 shadow-2xl shadow-sky-950/30 backdrop-blur md:grid-cols-[1.5fr_1fr] md:p-12">
-          <div className="space-y-6">
-            <p className="text-sm font-medium uppercase tracking-[0.28em] text-sky-300/80">
-              Algorithm Explorer Web
-            </p>
-            <div className="space-y-4">
-              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                Simulation-first frontend foundation with Tailwind wired in globally.
-              </h1>
-              <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-                The frontend now uses a single global stylesheet for base tokens and layout rules,
-                while page-level styling stays in Tailwind utility classes.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3 text-sm text-slate-300">
-              <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                React + Vite
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                Tailwind CSS
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-                Router-ready shell
-              </span>
-            </div>
-          </div>
+    <div className = "max-w-5xl">
 
-          <aside className="flex flex-col justify-between gap-6 rounded-[1.5rem] border border-white/10 bg-white/5 p-6">
-            <div className="space-y-3">
-              <p className="text-sm font-medium uppercase tracking-[0.24em] text-slate-400">
-                Backend Health
-              </p>
-              <div className={`inline-flex rounded-full border px-3 py-1 text-sm font-medium ${statusClassName}`}>
-                {status}
-              </div>
-            </div>
+      <div className = "mb-10 animate-enter">
+        <p className = "text-[11px] font-semibold tracking-[0.12em] uppercase text-brand-400 mb-2">
+          Algorithm Explorer
+        </p>
 
-            <div className="space-y-3 text-sm text-slate-300">
-              <p className="rounded-2xl border border-white/10 bg-slate-900/70 p-4">
-                The API client is still hitting the FastAPI health endpoint and reporting the
-                connection state here.
-              </p>
-              <p className="text-slate-400">
-                Base theme, spacing, typography, and background treatment now live in one global
-                Tailwind entry stylesheet.
-              </p>
-            </div>
-          </aside>
-        </section>
+        <h1 className = "text-2xl font-semibold text-slate-100 tracking-tight mb-2">
+          Dashboard
+        </h1>
+
+        <p className = "text-sm text-slate-400 max-w-md leading-relaxed">
+          A browser-based simulation lab for visualizing, comparing, and benchmarking algorithms.
+          Pick a lab below to begin exploring.
+        </p>
+
+        {/* backend connection indicator */}
+        <div className = "mt-4 inline-flex items-center gap-1.5">
+          <Activity size = {12} strokeWidth = {1.5} className = {STATUS_COLOR[backendStatus]} />
+          <span className = "text-xs text-slate-600">
+            API <span className = {STATUS_COLOR[backendStatus]}>{backendStatus}</span>
+          </span>
+        </div>
       </div>
-    </main>
+
+
+      <section className = "mb-9 animate-enter stagger-1">
+        <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600 mb-4">
+          Algorithm Labs
+        </h2>
+
+        <div className = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {LABS.map(lab => (
+            <Link
+              key = {lab.to}
+              to = {lab.to}
+              className = {[
+                'group flex flex-col gap-5 rounded-xl p-5',
+                'bg-slate-800/50 border border-white/[0.07]',
+                'transition-all duration-[150ms]',
+                lab.borderHover,
+                'hover:bg-slate-800/80',
+              ].join(' ')}
+            >
+              {/* Icon + phase badge */}
+              <div className = "flex items-start justify-between">
+                <div className = {`p-2.5 rounded-xl ${lab.iconBg}`}>
+                  <lab.icon size = {17} strokeWidth = {1.5} className = {lab.iconColor} />
+                </div>
+
+                <span className = "text-[10px] font-mono font-medium text-slate-600 uppercase tracking-wide">
+                  {lab.phase}
+                </span>
+              </div>
+
+              {/* Title + description */}
+              <div className = "flex-1 space-y-1.5">
+                <h3 className = "text-sm font-semibold text-slate-100">{lab.label}</h3>
+                <p className = "text-xs text-slate-400 leading-relaxed">{lab.description}</p>
+              </div>
+
+              {/* Algorithms + arrow */}
+              <div className = "flex items-center justify-between gap-2">
+                <div className = "flex gap-1.5 flex-wrap">
+                  {lab.algorithms.map(alg => (
+                    <span
+                      key = {alg}
+                      className = "text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-500 border border-white/[0.05]"
+                    >
+                      {alg}
+                    </span>
+                  ))}
+                </div>
+
+                <ArrowRight
+                  size = {13}
+                  strokeWidth = {1.5}
+                  className = "text-slate-600 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all duration-[100ms] shrink-0"
+                />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Tools */}
+      <section className = "animate-enter stagger-2">
+        <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600 mb-4">
+          Tools
+        </h2>
+
+        <div className = "grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {TOOLS.map(tool => (
+            <Link
+              key = {tool.to}
+              to = {tool.to}
+              className = {[
+                'group flex items-start gap-3.5 rounded-xl p-4',
+                'bg-slate-800/50 border border-white/[0.07]',
+                'transition-all duration-[150ms]',
+                tool.borderHover,
+                'hover:bg-slate-800/80',
+              ].join(' ')}
+            >
+              <div className = {`p-2 rounded-lg shrink-0 ${tool.iconBg}`}>
+                <tool.icon size = {15} strokeWidth = {1.5} className = {tool.iconColor} />
+              </div>
+
+              <div className = "min-w-0 flex-1">
+                <div className = "flex items-center justify-between gap-1">
+                  <h3 className = "text-sm font-semibold text-slate-200">{tool.label}</h3>
+                  <ArrowRight
+                    size = {12}
+                    strokeWidth = {1.5}
+                    className = "text-slate-600 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all duration-[100ms] shrink-0"
+                  /> 
+                </div>
+                <p className = "mt-1 text-xs text-slate-500 leading-relaxed">{tool.description}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
   )
 }
-
-export default HomePage
