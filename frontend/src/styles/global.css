@@ -1,10 +1,122 @@
 @import "tailwindcss";
 
+/* ─── Dark mode: class-based (.dark on <html>, .light overrides) ─────────── */
+/* Default (:root) = dark. Add .light to <html> to switch.                    */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  DESIGN TOKENS                                                               */
+/*  Registered in @theme so Tailwind generates utility classes automatically.  */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 @theme {
+
+  /* ── Fonts ────────────────────────────────────────────────────────────── */
+  /* font-sans → IBM Plex Sans  |  font-mono → IBM Plex Mono                 */
   --font-sans: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", "Fira Code", monospace;
+
+  /* ── Brand Scale (cyan) ──────────────────────────────────────────────── */
+  /* Generates: bg-brand-*, text-brand-*, border-brand-*, etc.               */
+  --color-brand-50:  #ecfeff;
+  --color-brand-100: #cffafe;
+  --color-brand-200: #a5f3fc;
+  --color-brand-300: #67e8f9;
+  --color-brand-400: #22d3ee;
+  --color-brand-500: #06b6d4;
+  --color-brand-600: #0891b2;
+  --color-brand-700: #0e7490;
+  --color-brand-800: #155e75;
+  --color-brand-900: #164e63;
+
+  /* ── Algorithm State Colors ──────────────────────────────────────────── */
+  /* Generates: bg-state-*, text-state-*, border-state-*, fill-state-*, etc. */
+  /* These are the universal state semantics used across ALL algorithm labs.  */
+  --color-state-default:  #64748b;   /* slate-500   unvisited / inactive      */
+  --color-state-active:   #22d3ee;   /* cyan-400    current focus             */
+  --color-state-frontier: #fbbf24;   /* amber-400   frontier / comparing      */
+  --color-state-visited:  #38bdf8;   /* sky-400     explored / checked        */
+  --color-state-swap:     #fb923c;   /* orange-400  swapping / in-motion      */
+  --color-state-success:  #34d399;   /* emerald-400 path found / sorted       */
+  --color-state-source:   #a78bfa;   /* violet-400  source node / pivot       */
+  --color-state-target:   #fb7185;   /* rose-400    target node / error       */
+
+  /* ── Glow Shadows ────────────────────────────────────────────────────── */
+  /* Generates: shadow-glow-* utilities.                                     */
+  /* Use ONLY on algorithm state elements and primary CTAs. Never decorative. */
+  --shadow-glow-active:  0 0 0 2px #0f172a, 0 0 14px rgba(6, 182, 212, 0.50);
+  --shadow-glow-success: 0 0 0 2px #0f172a, 0 0 14px rgba(52, 211, 153, 0.50);
+  --shadow-glow-source:  0 0 0 2px #0f172a, 0 0 12px rgba(167, 139, 250, 0.45);
+  --shadow-glow-target:  0 0 0 2px #0f172a, 0 0 12px rgba(251, 113, 133, 0.45);
+  --shadow-glow-brand:   0 0 18px rgba(6, 182, 212, 0.35);
+
+  /* ── Transition Durations ────────────────────────────────────────────── */
+  /* Generates: duration-instant, duration-fast, duration-base, etc.         */
+  --duration-instant:  75ms;    /* hover bg swaps                            */
+  --duration-fast:     100ms;   /* button / badge state changes              */
+  --duration-base:     150ms;   /* panel toggles, nav transitions            */
+  --duration-moderate: 200ms;   /* drawer / panel slide in                   */
+  --duration-slow:     300ms;   /* algorithm node / cell state transitions   */
+
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  SEMANTIC CSS VARIABLES                                                      */
+/*  These switch between dark (default) and light (.light on <html>).          */
+/*  Used by .bg-surface, .text-muted, .border-subtle, etc.                     */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 @layer base {
+
+  /* ── Dark defaults (applied always via :root) ─────────────────────────── */
+  :root {
+
+    /* Backgrounds — five depth levels, never skip adjacent levels */
+    --bg-void:     #020617;              /* slate-950  deepest bg, body base   */
+    --bg-base:     #0f172a;              /* slate-900  main page bg            */
+    --bg-surface:  #1e293b;              /* slate-800  cards, panels           */
+    --bg-elevated: #293548;              /* slate-750  hover, selected rows    */
+    --bg-overlay:  rgba(30, 41, 59, 0.85); /* frosted glass modals            */
+
+    /* Borders — barely visible in dark mode; provide structure, not noise */
+    --border-hairline: rgba(148, 163, 184, 0.07);
+    --border-subtle:   rgba(148, 163, 184, 0.12);
+    --border-default:  rgba(148, 163, 184, 0.20);
+    --border-strong:   rgba(148, 163, 184, 0.35);
+    --border-focus:    #06b6d4;          /* cyan-500 focus ring                */
+
+    /* Text — four levels of hierarchy */
+    --text-primary:   #f8fafc;           /* slate-50   headings, key values    */
+    --text-secondary: #cbd5e1;           /* slate-300  body text, labels       */
+    --text-muted:     #94a3b8;           /* slate-400  descriptions, helpers   */
+    --text-faint:     #475569;           /* slate-600  placeholders, disabled  */
+    --text-inverted:  #0f172a;           /* slate-900  text on colored bg      */
+  }
+
+  /* ── Light mode overrides (.light on <html>) ──────────────────────────── */
+  .light {
+
+    --bg-void:     #ffffff;
+    --bg-base:     #f0f5fb;              /* cool-tinted light page bg          */
+    --bg-surface:  #ffffff;              /* cards and panels are white         */
+    --bg-elevated: #e8eef5;              /* hover/selected rows                */
+    --bg-overlay:  rgba(255, 255, 255, 0.92);
+
+    --border-hairline: rgba(15, 23, 42, 0.08);
+    --border-subtle:   rgba(15, 23, 42, 0.12);
+    --border-default:  rgba(15, 23, 42, 0.18);
+    --border-strong:   rgba(15, 23, 42, 0.30);
+    --border-focus:    #0891b2;          /* brand-600 — darker for light bg    */
+
+    --text-primary:   #0f172a;           /* slate-900 — headings               */
+    --text-secondary: #1e293b;           /* slate-800 — body text              */
+    --text-muted:     #475569;           /* slate-600 — helper text, ~6:1      */
+    --text-faint:     #64748b;           /* slate-500 — placeholders, ~4.5:1   */
+    --text-inverted:  #f8fafc;           /* slate-50                           */
+  }
+
+  /* ── Reset ────────────────────────────────────────────────────────────── */
+
   * {
     box-sizing: border-box;
   }
@@ -13,24 +125,61 @@
     scroll-behavior: smooth;
   }
 
+  #root {
+    min-height: 100vh;
+  }
+
+  /* ── Body: Dark (default) ─────────────────────────────────────────────── */
+
   body {
     min-width: 320px;
     min-height: 100vh;
     margin: 0;
     font-family: var(--font-sans);
+    font-size: 0.875rem;   /* 14px — base body size */
+    line-height: 1.5;
+    color: var(--text-secondary);
     background:
       radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 32%),
       radial-gradient(circle at bottom right, rgba(249, 115, 22, 0.14), transparent 28%),
       linear-gradient(180deg, #020617 0%, #0f172a 45%, #111827 100%);
-    color: #e2e8f0;
+    background-attachment: fixed;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* ── Body: Light ──────────────────────────────────────────────────────── */
+
+  .light body {
+    color: var(--text-secondary);
+    background:
+      radial-gradient(ellipse at top left,  rgba(6, 182, 212, 0.09) 0%, transparent 55%),
+      radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.06) 0%, transparent 55%),
+      linear-gradient(160deg, #eef4fb 0%, #f0f5fb 50%, #f4f8fc 100%);
+    background-attachment: fixed;
+  }
+
+  /* ── Typography defaults ──────────────────────────────────────────────── */
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.25;
+  }
+
+  p {
+    color: var(--text-secondary);
+  }
+
   a {
     color: inherit;
     text-decoration: none;
+  }
+
+  code, kbd, pre, samp {
+    font-family: var(--font-mono);
   }
 
   button,
@@ -40,12 +189,328 @@
     font: inherit;
   }
 
+  /* ── Focus visible ────────────────────────────────────────────────────── */
+
+  :focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* ── Text selection ───────────────────────────────────────────────────── */
+
   ::selection {
-    background: rgba(56, 189, 248, 0.28);
+    background: rgba(6, 182, 212, 0.25);
     color: #f8fafc;
   }
 
-  #root {
-    min-height: 100vh;
+  .light ::selection {
+    background: rgba(6, 182, 212, 0.18);
+    color: #0f172a;
   }
+
+  /* ── Scrollbars ───────────────────────────────────────────────────────── */
+  /* Thin 4px scrollbar on all scrollable panels. Invisible track.           */
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.20);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.38);
+  }
+
+  /* ── Range inputs ─────────────────────────────────────────────────────── */
+
+  input[type="range"] {
+    accent-color: #06b6d4; /* brand-500 */
+  }
+
+  /* ── Light mode: structural shell (non-utility overrides) ─────────────── */
+  /* These target HTML elements, not Tailwind utility classes, so @layer     */
+  /* base is the right place for them.                                       */
+
+  .light header {
+    background: rgba(255, 255, 255, 0.97) !important;
+    border-bottom-color: rgba(15, 23, 42, 0.09) !important;
+  }
+
+  .light aside {
+    background: #f4f7fb !important;
+    border-right-color: rgba(15, 23, 42, 0.09) !important;
+  }
+
+  .light header button:hover {
+    background-color: rgba(15, 23, 42, 0.06) !important;
+  }
+
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  SEMANTIC UTILITY CLASSES                                                    */
+/*  Mode-aware utilities that read from the semantic CSS variables above.       */
+/*  These abstract away dark/light differences so components stay clean.        */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+
+  /* ── Semantic backgrounds ─────────────────────────────────────────────── */
+  /* Use these instead of hardcoding bg-slate-800 in components.              */
+
+  .bg-void     { background-color: var(--bg-void); }
+  .bg-base     { background-color: var(--bg-base); }
+  .bg-surface  { background-color: var(--bg-surface); }
+  .bg-elevated { background-color: var(--bg-elevated); }
+  .bg-overlay  { background-color: var(--bg-overlay); }
+
+  /* ── Semantic text ────────────────────────────────────────────────────── */
+
+  .text-primary   { color: var(--text-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-muted     { color: var(--text-muted); }
+  .text-faint     { color: var(--text-faint); }
+  .text-inverted  { color: var(--text-inverted); }
+
+  /* ── Semantic borders ─────────────────────────────────────────────────── */
+
+  .border-hairline { border-color: var(--border-hairline); }
+  .border-subtle   { border-color: var(--border-subtle); }
+  .border-default  { border-color: var(--border-default); }
+  .border-strong   { border-color: var(--border-strong); }
+  .border-focus    { border-color: var(--border-focus); }
+
+  /* ── Glass / frosted panel ────────────────────────────────────────────── */
+
+  .glass {
+    background-color: var(--bg-overlay);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* ── Panel — base visual container ───────────────────────────────────── */
+  /* Dark: translucent slate with hairline border.                            */
+  /* Light: solid white with slate-200 border and soft shadow.               */
+
+  .panel {
+    background-color: rgb(30 41 59 / 0.80);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.75rem;
+  }
+
+  .light .panel {
+    background-color: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ── Panel header row ─────────────────────────────────────────────────── */
+
+  .panel-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-hairline);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* ── Metric card — stats and counter displays ─────────────────────────── */
+
+  .metric-card {
+    background-color: rgb(30 41 59 / 0.60);
+    border: 1px solid var(--border-hairline);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .light .metric-card {
+    background-color: #f8fafc;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  /* ── Monospace display helpers ────────────────────────────────────────── */
+  /* For metric values, step counters, algorithm output, index labels.        */
+
+  .mono-value {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--text-primary);
+  }
+
+  .mono-label {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .mono-sm {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+  }
+
+  /* ── Page entry animation ─────────────────────────────────────────────── */
+  /* Fade + subtle rise. Apply to panels on mount.                            */
+
+  .animate-enter {
+    animation: ax-enter var(--duration-moderate) ease-out both;
+  }
+
+  @keyframes ax-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Stagger delays for sequential panel reveals */
+  .stagger-1 { animation-delay: 50ms; }
+  .stagger-2 { animation-delay: 100ms; }
+  .stagger-3 { animation-delay: 150ms; }
+  .stagger-4 { animation-delay: 200ms; }
+  .stagger-5 { animation-delay: 250ms; }
+
+  /* ── DP cell flash ────────────────────────────────────────────────────── */
+  /* Brief highlight when a DP cell is read as a dependency.                  */
+
+  .animate-cell-read {
+    animation: ax-cell-read 0.4s ease-out both;
+  }
+
+  @keyframes ax-cell-read {
+    0%   { background-color: rgba(56, 189, 248, 0.20); }
+    100% { background-color: transparent; }
+  }
+
+  /* ── Truncate text ────────────────────────────────────────────────────── */
+
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════ */
+  /*  LIGHT MODE: UTILITY CLASS OVERRIDES                                    */
+  /*                                                                         */
+  /*  Components use hardcoded dark Tailwind utilities. These overrides must */
+  /*  live in @layer utilities (same layer as Tailwind's generated classes)  */
+  /*  so selector specificity wins, not layer order.                         */
+  /*                                                                         */
+  /*  Scoping rules:                                                          */
+  /*    .light header  — top nav                                              */
+  /*    .light aside   — sidebar                                              */
+  /*    .light main    — all page content                                     */
+  /*                                                                         */
+  /*  Dark mode is completely untouched by everything below.                 */
+  /* ═══════════════════════════════════════════════════════════════════════ */
+
+  /* ── Header: text and icon colours ───────────────────────────────────── */
+
+  .light header .text-brand-400 { color: #0891b2; text-shadow: none; }
+  .light header .text-slate-500 { color: #64748b; }
+  .light header .text-slate-400 { color: #64748b; }
+  .light header .text-slate-300 { color: #475569; }
+  .light header .hover\:text-slate-300:hover { color: #0f172a; }
+
+  /* ── Sidebar: text, hover, and active colours ─────────────────────────── */
+
+  .light aside .text-slate-600        { color: #94a3b8; }   /* section labels */
+  .light aside .text-slate-400        { color: #475569; }   /* inactive items  */
+  .light aside .text-brand-400        { color: #0891b2; }   /* active item     */
+  .light aside .hover\:text-slate-200:hover { color: #0f172a; }
+  .light aside .hover\:bg-slate-800\/70:hover { background-color: rgba(15, 23, 42, 0.07); }
+
+  /* ── Main: text ───────────────────────────────────────────────────────── */
+  /* Every hardcoded light-on-dark shade mapped to dark-on-light equivalent. */
+
+  .light main .text-slate-50  { color: #0f172a; }
+  .light main .text-slate-100 { color: #0f172a; }
+  .light main .text-slate-200 { color: #1e293b; }
+  .light main .text-slate-300 { color: #334155; }
+  .light main .text-slate-400 { color: #475569; }
+  .light main .text-slate-500 { color: #64748b; }
+  .light main .text-slate-600 { color: #475569; }
+
+  /* Brand accent: cyan-400 is 1.9:1 on white — use brand-700 instead       */
+  .light main .text-brand-400 { color: #0e7490; }
+
+  /* Group-hover arrow colours                                               */
+  .light main .group-hover\:text-slate-400 { color: #475569; }
+  .light main .group:hover .group-hover\:text-slate-400 { color: #475569; }
+
+  /* ── Main: backgrounds ────────────────────────────────────────────────── */
+
+  .light main .bg-slate-800\/50 { background-color: #ffffff; }
+  .light main .bg-slate-800\/60 { background-color: #ffffff; }
+  .light main .bg-slate-800\/70 { background-color: #f8fafc; }
+  .light main .bg-slate-800\/80 { background-color: #f4f7fb; }
+  .light main .bg-slate-800\/30 { background-color: rgba(15, 23, 42, 0.025); }
+  .light main .bg-slate-900\/80 { background-color: rgba(255, 255, 255, 0.97); }
+  .light main .bg-slate-700\/60 { background-color: rgba(15, 23, 42, 0.06); }
+  .light main .bg-slate-700\/80 { background-color: rgba(15, 23, 42, 0.07); }
+  .light main .bg-slate-700\/50 { background-color: rgba(15, 23, 42, 0.05); }
+
+  /* ── Main: hover backgrounds ──────────────────────────────────────────── */
+
+  .light main .hover\:bg-slate-800\/80:hover { background-color: #eef4fb; }
+  .light main .hover\:bg-slate-800\/90:hover { background-color: #e8eef5; }
+  .light main .hover\:bg-slate-800\/70:hover { background-color: rgba(15, 23, 42, 0.05); }
+
+  /* ── Main: borders ────────────────────────────────────────────────────── */
+  /* white/opacity borders are invisible on white backgrounds               */
+
+  .light main .border-white\/\[0\.07\] { border-color: rgba(15, 23, 42, 0.11); }
+  .light main .border-white\/\[0\.06\] { border-color: rgba(15, 23, 42, 0.09); }
+  .light main .border-white\/\[0\.10\] { border-color: rgba(15, 23, 42, 0.14); }
+  .light main .border-white\/\[0\.05\] { border-color: rgba(15, 23, 42, 0.08); }
+  .light main .border-dashed          { border-color: rgba(15, 23, 42, 0.20); }
+
+  /* Hover border tints on cards                                             */
+  .light main .hover\:border-brand-500\/25:hover  { border-color: rgba(6, 182, 212, 0.40); }
+  .light main .hover\:border-amber-500\/25:hover  { border-color: rgba(245, 158, 11, 0.40); }
+  .light main .hover\:border-violet-500\/25:hover { border-color: rgba(139, 92, 246, 0.40); }
+  .light main .hover\:border-sky-500\/25:hover    { border-color: rgba(14, 165, 233, 0.40); }
+  .light main .hover\:border-emerald-500\/25:hover{ border-color: rgba(16, 185, 129, 0.40); }
+
+  /* ── Main: card depth via shadow ──────────────────────────────────────── */
+  /* White cards need a shadow to lift off the light background             */
+
+  .light main .rounded-xl {
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Inspector panel (nested rounded-xl inside the lab shell row)           */
+  .light main .rounded-xl .rounded-xl {
+    box-shadow: none;
+  }
+
 }
