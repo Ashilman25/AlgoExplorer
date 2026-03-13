@@ -1,16 +1,25 @@
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any
+from pydantic import BaseModel
+
+
+class HighlightedEntity(BaseModel):
+    id: str | int | list[int]
+    state: str
+    label: str | None = None
+
 
 class TimelineStep(BaseModel):
     step_index: int
-    label: str
+    event_type: str   
     
-    highlighted_entities: dict[str, Any]
-    metric_snapshot: dict[str, Any]
+    state_payload: dict[str, Any]          
+    highlighted_entities: list[HighlightedEntity] 
+    metrics_snapshot: dict[str, Any]          
+    
+    explanation: str | None = None  
+    timestamp_or_order: int = 0     
 
-    explanation: str | None = None
-    
+
 class TimelineResponse(BaseModel):
     run_id: int
     total_steps: int
@@ -19,3 +28,5 @@ class TimelineResponse(BaseModel):
     algorithm_key: str
     
     steps: list[TimelineStep]
+    offset: int = 0
+    limit: int | None = None
