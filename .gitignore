@@ -1,3 +1,4 @@
 _docs
 .vscode/*
 **/.env
+**/*.db

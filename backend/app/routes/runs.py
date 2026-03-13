@@ -4,7 +4,8 @@ from app.exceptions import NotFoundException, DomainError
 from app.schemas.runs import CreateRunRequest, CreateRunResponse, RunSummary
 from app.schemas.timeline import TimelineResponse
 from app.db import get_db
-from app.data.models import SimulationRun 
+from app.data.models import SimulationRun
+from app.simulation.orchestrator import run_simulation 
 
 router = APIRouter(prefix = "/api/runs")
 
@@ -22,7 +23,7 @@ def get_run_info(run_id: int, db = Depends(get_db)):
 #runs algorithm, saves result to simulation run, returns run response
 @router.post("/", response_model = CreateRunResponse)
 def run_algorithm(body: CreateRunRequest, db = Depends(get_db)):
-    raise DomainError("Run execution not yet implemented")
+    return run_simulation(body, db)
 
 
 
