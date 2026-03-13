@@ -1,15 +1,14 @@
 import { usePlaybackStore } from '../../stores/usePlaybackStore'
-import { useTimelineStore } from '../../stores/useTimelineStore'
 import Skeleton from '../ui/Skeleton'
 
 
 export default function StepInspector({ metrics = [] }) {
   const stepIndex = usePlaybackStore((s) => s.stepIndex)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
-  const {steps, isLoading} = useTimelineStore()
+  const isLoading = usePlaybackStore((s) => s.isLoading)
+  const currentStep = usePlaybackStore((s) => s.currentStep)
 
-  const hasTimeline = steps.length > 0
-  const currentStep = steps[stepIndex] ?? null
+  const hasTimeline = totalSteps > 0
 
   const displayMetrics = metrics.length > 0 ? metrics : [
     {label: 'Steps total',  value: hasTimeline ? totalSteps : '—'},

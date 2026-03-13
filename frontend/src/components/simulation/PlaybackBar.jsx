@@ -11,15 +11,16 @@ export default function PlaybackBar() {
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const speed = usePlaybackStore((s) => s.speed)
-  const {play, pause, next, prev, jumpToStart, jumpToEnd, jumpTo, setSpeed} = usePlaybackStore()
+  const isScrubbing = usePlaybackStore((s) => s.isScrubbing)
+  const {play, pause, next, prev, jumpToStart, jumpToEnd, jumpTo, setSpeed, beginScrub, endScrub} = usePlaybackStore()
 
   const hasSteps = totalSteps > 0
   const atStart = stepIndex === 0
   const atEnd = stepIndex >= totalSteps - 1
 
-  // Auto-advance when playing 
+  //auto advance when playing
   useEffect(() => {
-    if (!isPlaying || !hasSteps) return
+    if (!isPlaying || !hasSteps || isScrubbing) return
 
     const delay = Math.round(BASE_DELAY_MS / speed)
     const id = setInterval(() => {
@@ -27,6 +28,7 @@ export default function PlaybackBar() {
 
       if (s.stepIndex >= s.totalSteps - 1) {
         s.pause()
+
       } else {
         s.next()
       }
@@ -34,7 +36,7 @@ export default function PlaybackBar() {
     }, delay)
 
     return () => clearInterval(id)
-  }, [isPlaying, speed, hasSteps])
+  }, [isPlaying, speed, hasSteps, isScrubbing])
 
   return (
     <div className = "flex items-center gap-4 px-5 rounded-xl border border-white/[0.07] bg-slate-900/80 h-[72px] flex-none">
@@ -51,12 +53,14 @@ export default function PlaybackBar() {
         max = {Math.max(0, totalSteps - 1)}
         value = {stepIndex}
         disabled = {!hasSteps}
+        onPointerDown = {() => hasSteps && beginScrub()}
+        onPointerUp = {() => endScrub()}
         onChange = {(e) => jumpTo(Number(e.target.value))}
         className = "flex-1 h-1 rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
       />
 
       {/* Transport controls */}
-      <div className="flex items-center gap-1">
+      <div className = "flex items-center gap-1">
         <CtrlBtn icon = {SkipBack} onClick = {jumpToStart} disabled = {!hasSteps || atStart} title = "Jump to start" />
         <CtrlBtn icon = {ChevronLeft} onClick = {prev} disabled = {!hasSteps || atStart} title = "Step back" />
         <CtrlBtn
@@ -67,7 +71,7 @@ export default function PlaybackBar() {
           accent
         />
         <CtrlBtn icon = {ChevronRight} onClick = {next} disabled = {!hasSteps || atEnd} title = "Step forward" />
-        <CtrlBtn icon = {SkipForward} onClick = {jumpToEnd} disabled = {!hasSteps || atEnd} title = "Jump to end" />
+        <CtrlBtn icon = {SkipForward}  onClick = {jumpToEnd} disabled = {!hasSteps || atEnd} title = "Jump to end" />
       </div>
 
       {/* Speed selector */}
