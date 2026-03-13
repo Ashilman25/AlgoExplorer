@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { ToastProvider } from './components/ui'
 import AppShell from './components/layout/AppShell'
 import HomePage from './pages/HomePage'
 import GraphLabPage from './pages/GraphLabPage'
@@ -12,6 +13,7 @@ import NotFoundPage from './pages/NotFoundPage'
 
 export default function App() {
   return (
+    <ToastProvider>
     <BrowserRouter>
       <Routes>
 
@@ -29,5 +31,6 @@ export default function App() {
 
       </Routes>
     </BrowserRouter>
+    </ToastProvider>
   )
 }
