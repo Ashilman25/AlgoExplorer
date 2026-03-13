@@ -2,37 +2,92 @@ import { create } from 'zustand'
 
 const DEFAULT_SPEED = 1
 
-export const usePlaybackStore = create((set) => ({
+function clampIndex(index, totalSteps) {
+  return Math.max(0, Math.min(index, Math.max(0, totalSteps - 1)))
+}
+
+
+export const usePlaybackStore = create((set, get) => ({
+
+  steps: [],
+  isLoading: false,
+  error: null,
+
   stepIndex: 0,
-  totalSteps: 0,   // kept in sync when a timeline is loaded
+  totalSteps: 0,
   isPlaying: false,
   speed: DEFAULT_SPEED,
+  isScrubbing: false,
 
-  // Call this when a new timeline is loaded to sync total length
-  setTotalSteps: (totalSteps) => set({ totalSteps, stepIndex: 0, isPlaying: false }),
+  currentStep: null,
 
-  play: () => set({ isPlaying: true }),
-  pause: () => set({ isPlaying: false }),
+  setTimeline: (steps) =>
+    set({
+      steps,
+      totalSteps: steps.length,
+      stepIndex: 0,
+      currentStep: steps[0] ?? null,
+      isPlaying: false,
+      error: null,
+    }),
+
+  clearTimeline: () =>
+    set({
+      steps: [],
+      totalSteps: 0,
+      stepIndex: 0,
+      currentStep: null,
+      isPlaying: false,
+      isScrubbing: false,
+    }),
+
+  setLoading: (isLoading) => set({isLoading}),
+  setError: (error) => set({error, isLoading: false}),
+
+  play: () => set({isPlaying: true}),
+  pause: () => set({isPlaying: false}),
 
   next: () =>
-    set((s) => ({
-      stepIndex: Math.min(s.stepIndex + 1, Math.max(0, s.totalSteps - 1)),
-    })),
+    set((s) => {
+      const stepIndex = Math.min(s.stepIndex + 1, Math.max(0, s.totalSteps - 1))
+      return { stepIndex, currentStep: s.steps[stepIndex] ?? null }
+    }),
 
   prev: () =>
-    set((s) => ({ stepIndex: Math.max(s.stepIndex - 1, 0) })),
+    set((s) => {
+      const stepIndex = Math.max(s.stepIndex - 1, 0)
+      return { stepIndex, currentStep: s.steps[stepIndex] ?? null }
+    }),
 
   jumpTo: (index) =>
+    set((s) => {
+      const stepIndex = clampIndex(index, s.totalSteps)
+      return { stepIndex, currentStep: s.steps[stepIndex] ?? null }
+    }),
+
+  jumpToStart: () =>
     set((s) => ({
-      stepIndex: Math.max(0, Math.min(index, Math.max(0, s.totalSteps - 1))),
+      stepIndex: 0,
+      currentStep: s.steps[0] ?? null,
+      isPlaying: false,
     })),
 
-  jumpToStart: () => set({ stepIndex: 0 }),
-
   jumpToEnd: () =>
-    set((s) => ({ stepIndex: Math.max(0, s.totalSteps - 1) })),
+    set((s) => {
+      const stepIndex = Math.max(0, s.totalSteps - 1)
+      return { stepIndex, currentStep: s.steps[stepIndex] ?? null, isPlaying: false }
+    }),
 
   setSpeed: (speed) => set({ speed }),
+  beginScrub: () => set({ isScrubbing: true, isPlaying: false }),
+  endScrub: () => set({ isScrubbing: false }),
 
-  reset: () => set({ stepIndex: 0, isPlaying: false, speed: DEFAULT_SPEED }),
+  reset: () =>
+    set((s) => ({
+      stepIndex: 0,
+      currentStep: s.steps[0] ?? null,
+      isPlaying: false,
+      speed: DEFAULT_SPEED,
+      isScrubbing: false,
+    })),
 }))
