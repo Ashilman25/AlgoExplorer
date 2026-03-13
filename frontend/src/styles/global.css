@@ -484,6 +484,7 @@
   .light main .hover\:bg-slate-800\/80:hover { background-color: #eef4fb; }
   .light main .hover\:bg-slate-800\/90:hover { background-color: #e8eef5; }
   .light main .hover\:bg-slate-800\/70:hover { background-color: rgba(15, 23, 42, 0.05); }
+  .light main .hover\:bg-slate-700\/50:hover { background-color: rgba(15, 23, 42, 0.06); }
 
   /* ── Main: borders ────────────────────────────────────────────────────── */
   /* white/opacity borders are invisible on white backgrounds               */
