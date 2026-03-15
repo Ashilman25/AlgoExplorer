@@ -1,9 +1,12 @@
 from collections import deque
 
+from pydantic import ValidationError
+
 from app.simulation.contract import BaseAlgorithm
 from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
+from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
 
 @register("graph", "bfs")
@@ -18,38 +21,41 @@ class BFSAlgorithm(BaseAlgorithm):
     
     
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        payload = algo_input.input_payload
         explain = algo_input.explanation_level
-        
-        
-        # payload parse
-        node_ids = []
-        for n in payload.get("nodes", []):
-            node_ids.append(str(n["id"]))
+
+        # payload parse + validation
+        try:
+            graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
             
-        edges_raw = payload.get("edges", [])
-        source: str = str(payload["source"])
-        target = str(payload["target"]) if payload.get("target") else None
+        except ValidationError as e:
+            raise DomainError("Invalid graph input.", details = {"errors": e.errors()})
+
+        node_ids: list[str] = []
+        for n in graph_input.nodes:
+            node_ids.append(str(n.id))
         
-        #validations
+        source: str = str(graph_input.source)
+        target: str | None = str(graph_input.target) if graph_input.target is not None else None
+
         if source not in node_ids:
             raise DomainError(f"Source node '{source}' not found in node list")
-    
+
         if target and target not in node_ids:
             raise DomainError(f"Target node '{target}' not found in node list")
-        
-        
+
         #adjacency list
         adj: dict[str, list[str]] = {}
         for n in node_ids:
             adj[n] = []
-            
-        for e in edges_raw:
-            u = str(e["source"])
-            v = str(e["target"])
+                    
+        for e in graph_input.edges:
+            u = str(e.source)
+            v = str(e.target)
             
             adj[u].append(v)
-            adj[v].append(u)
+            
+            if not graph_input.directed:
+                adj[v].append(u)
             
         
         #simulation state
@@ -281,8 +287,8 @@ class BFSAlgorithm(BaseAlgorithm):
         alg_metadata = self.build_metadata(algo_input) | {
             "time_complexity" : "O(V + E)",
             "space_complexity" : "O(V)",
-            "weighted" : False,
-            "directed" : False
+            "weighted" : graph_input.weighted,
+            "directed" : graph_input.directed
         }
         
         final_output = AlgorithmOutput(

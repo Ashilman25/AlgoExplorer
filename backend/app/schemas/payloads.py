@@ -1,5 +1,47 @@
-from typing import Any
-from pydantic import BaseModel, Field
+from typing import Any, Literal
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class GraphNode(BaseModel):
+    id: str | int
+
+
+class GraphEdge(BaseModel):
+    source: str | int
+    target: str | int
+    weight: float | None = None
+
+
+class GraphInputPayload(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
+    
+    source: str | int
+    target: str | int | None = None
+    
+    weighted: bool = False
+    directed: bool = False
+    
+    mode: Literal["graph"] = "graph"
+
+
+#for grid/maze stuff
+class GridCell(BaseModel):
+    row: int
+    col: int
+
+
+class GridInputPayload(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    grid: list[list[int]]  # 0 = passable, 1 = wall
+    source: GridCell
+    target: GridCell
+    
+    weighted: bool = False
+    mode: Literal["grid"] = "grid"
 
 
 class GraphEvents:
