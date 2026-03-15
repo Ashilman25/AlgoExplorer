@@ -27,6 +27,10 @@ def validate_graph_payload(input_payload: dict):
     nodes = input_payload["nodes"]
     edges = input_payload["edges"]
 
+    # graph not empty
+    if len(nodes) < 1:
+        raise DomainError("Graph must have at least one node")
+
     ids = set()
     for node in nodes:
         if "id" not in node:
@@ -48,6 +52,27 @@ def validate_graph_payload(input_payload: dict):
 
         if edge["target"] not in ids:
             raise DomainError(f"Edge target '{edge['target']}' does not reference a valid node")
+        
+        if "weight" in edge and edge["weight"] is not None:
+            w = edge["weight"]
+            
+            if not isinstance(w, (int, float)):
+                raise DomainError(f"Edge weight '{w}' must be a number")
+            
+            if math.isnan(w) or math.isinf(w):
+                raise DomainError(f"Edge weight must not be NaN or infinity")
+            
+            if w < 0:
+                raise DomainError(f"Edge weight '{w}' must not be negative")
+
+    # valid source and target
+    source = input_payload.get("source")
+    if source is not None and source not in ids:
+        raise DomainError(f"Source '{source}' does not reference a valid node")
+
+    target = input_payload.get("target")
+    if target is not None and target not in ids:
+        raise DomainError(f"Target '{target}' does not reference a valid node")
         
         
         
