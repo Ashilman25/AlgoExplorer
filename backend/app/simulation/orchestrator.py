@@ -82,6 +82,6 @@ def _validate_payload(module_type: str, algorithm_key: str, input_payload: dict)
         raise DomainError(f"No payload validator for unknown module '{module_type}'")
 
 
-# from app.algorithms import graph     # Phase 5
-# from app.algorithms import sorting   # Phase 6
-# from app.algorithms import dp        # Phase 7
+from app.algorithms import graph        
+# from app.algorithms import sorting   
+# from app.algorithms import dp        
