@@ -1,48 +1,106 @@
 import { usePlaybackStore } from '../../stores/usePlaybackStore'
-import { useTimelineStore } from '../../stores/useTimelineStore'
+import { useRunStore } from '../../stores/useRunStore'
 import Skeleton from '../ui/Skeleton'
+
+const ENTITY_STATE_CLASSES = {
+  active:   'text-state-active   bg-state-active/10   border-state-active/30',
+  frontier: 'text-state-frontier bg-state-frontier/10 border-state-frontier/30',
+  visited:  'text-state-visited  bg-state-visited/10  border-state-visited/30',
+  swap:     'text-state-swap     bg-state-swap/10     border-state-swap/30',
+  success:  'text-state-success  bg-state-success/10  border-state-success/30',
+  source:   'text-state-source   bg-state-source/10   border-state-source/30',
+  target:   'text-state-target   bg-state-target/10   border-state-target/30',
+  default:  'text-state-default  bg-state-default/10  border-state-default/30',
+}
+
+function entityClasses(state) {
+  return ENTITY_STATE_CLASSES[state] ?? ENTITY_STATE_CLASSES.default
+}
+
+
+const ALGO_LABELS = {
+  bfs: 'BFS',
+  dfs: 'DFS',
+  dijkstra: "Dijkstra's",
+  quicksort: 'Quick Sort',
+  mergesort: 'Merge Sort',
+  lcs: 'LCS',
+  edit_distance: 'Edit Distance',
+}
+
+const MODULE_LABELS = {
+  graph: 'Graph',
+  sorting: 'Sorting',
+  dp: 'DP',
+}
+
+function fmtAlgo(key) {
+  return ALGO_LABELS[key] ?? key?.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) ?? '—'
+}
+
+function fmtModule(key) {
+  return MODULE_LABELS[key] ?? key ?? '—'
+}
 
 
 export default function StepInspector({ metrics = [] }) {
   const stepIndex = usePlaybackStore((s) => s.stepIndex)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
-  const {steps, isLoading} = useTimelineStore()
+  const isLoading = usePlaybackStore((s) => s.isLoading)
+  const currentStep = usePlaybackStore((s) => s.currentStep)
 
-  const hasTimeline = steps.length > 0
-  const currentStep = steps[stepIndex] ?? null
+  const runId = useRunStore((s) => s.runId)
+  const summary = useRunStore((s) => s.summary)
 
-  const displayMetrics = metrics.length > 0 ? metrics : [
-    {label: 'Steps total',  value: hasTimeline ? totalSteps : '—'},
-    {label: 'Current step', value: hasTimeline ? stepIndex + 1 : '—'},
-  ]
+  const hasTimeline = totalSteps > 0
+
+  const displayMetrics = metrics.length > 0
+    ? metrics
+    : summary?.summary && Object.keys(summary.summary).length > 0
+      ? Object.entries(summary.summary).map(([k, v]) => ({
+          label: k.replace(/_/g, ' '),
+          value: String(v),
+        }))
+      : [
+          {label: 'Steps total',  value: hasTimeline ? totalSteps : '—'},
+          {label: 'Current step', value: hasTimeline ? stepIndex + 1 : '—'},
+        ]
 
   return (
     <>
-      <div className="panel-header shrink-0">Step Inspector</div>
+      {/* header */}
+      <div className = "panel-header shrink-0 flex items-center justify-between">
+        <span>Step Inspector</span>
+
+        {runId && (
+          <span className = "font-mono text-[9px] text-slate-600 tabular-nums">
+            #{runId}
+          </span>
+        )}
+      </div>
 
       {/* scrollable body */}
       <div className = "flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
-          <div className = "p-4 space-y-3">
-            <Skeleton className = "h-3 w-20" />
-            <Skeleton className = "h-14 w-full" />
-            <Skeleton className = "h-3 w-28" />
-            <Skeleton className = "h-3 w-24" />
-          </div>
+          <LoadingSkeleton />
 
         ) : !hasTimeline ? (
-          <div className = "flex flex-col items-center justify-center h-full gap-3 p-6 text-center">
-            <div className = "w-8 h-8 rounded-full bg-slate-800/60 border border-white/[0.06] flex items-center justify-center">
-              <span className = "text-slate-600 text-sm font-mono">∅</span>
-            </div>
+          <EmptyState />
 
-            <p className = "text-xs text-slate-600 leading-relaxed max-w-[180px]">
-              Step details, highlighted entities, and explanations will appear here during playback.
-            </p>
-          </div>
+
         ) : (
-          <StepDetail step = {currentStep} stepIndex = {stepIndex} />
+          <div className = "flex flex-col divide-y divide-white/[0.05]">
+            <StepDetail step = {currentStep} stepIndex = {stepIndex} />
+
+            {summary && (
+              <AlgoSummary
+                algorithmKey = {summary.algorithm_key}
+                moduleType = {summary.module_type}
+              />
+            )}
+          </div>
         )}
+
       </div>
 
       {/* footer */}
@@ -67,7 +125,7 @@ function StepDetail({ step, stepIndex }) {
   const snapshot = step.metrics_snapshot ?? step.metricsSnapshot ?? {}
 
   return (
-    <div className="p-4 space-y-4">
+    <div className = "p-4 space-y-4">
 
       {/* Event type badge + step number */}
       <div className = "flex items-center gap-2 flex-wrap">
@@ -86,36 +144,95 @@ function StepDetail({ step, stepIndex }) {
         </div>
       )}
 
-      {/* Highlighted entities */}
+      {/* changed entities */}
       {entities.length > 0 && (
         <div className = "space-y-1.5">
-          <p className = "mono-label">Highlighted</p>
+          <p className = "mono-label">Changed Entities</p>
+
           <div className = "flex flex-wrap gap-1.5">
-            {entities.map((e, i) => (
-              <span
-                key = {i}
-                className = "font-mono text-[10px] px-2 py-0.5 rounded bg-slate-700/50 border border-white/[0.06] text-slate-300"
+            {entities.map((e, i) => {
+              const state = e.state ?? 'default'
+              const label = e.label ?? (e.id != null ? String(e.id) : `entity-${i}`)
+
+              return (
+                <span
+                  key = {i}
+                  title = {`state: ${state}`}
+                  className = {`font-mono text-[10px] px-2 py-0.5 rounded border ${entityClasses(state)}`}
+                >
+                  {label}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* metrics */}
+      {Object.keys(snapshot).length > 0 && (
+        <div className = "space-y-1.5">
+          <p className = "mono-label">Step Snapshot</p>
+
+          <div className = "space-y-1">
+            {Object.entries(snapshot).map(([k, v]) => (
+              <div
+                key = {k}
+                className = "flex items-center justify-between rounded-lg bg-slate-800/50 border border-white/[0.05] px-2.5 py-1.5"
               >
-                {typeof e === 'object' ? JSON.stringify(e) : String(e)}
-              </span>
+                <span className = "mono-sm">{k.replace(/_/g, ' ')}</span>
+                <span className = "font-mono text-xs text-slate-300 tabular-nums">{String(v)}</span>
+              </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Metrics snapshot */}
-      {Object.keys(snapshot).length > 0 && (
-        <div className = "space-y-1.5">
-          <p className = "mono-label">Snapshot</p>
-          {Object.entries(snapshot).map(([k, v]) => (
-            <div key = {k} className = "flex items-center justify-between">
-              <span className = "mono-sm">{k}</span>
-              <span className = "mono-value text-sm">{String(v)}</span>
-            </div>
-          ))}
-        </div>
-      )}
+    </div>
+  )
+}
 
+function AlgoSummary({ algorithmKey, moduleType }) {
+  return (
+    <div className = "p-4 space-y-2.5">
+      <p className = "mono-label">Algorithm</p>
+
+      <div className = "flex items-center gap-2 flex-wrap">
+
+        {/* alg name */}
+        <span className = "text-xs font-medium text-slate-300">
+          {fmtAlgo(algorithmKey)}
+        </span>
+
+        {/* module badge */}
+        <span className = "font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-700/60 border border-white/[0.06] text-slate-500">
+          {fmtModule(moduleType)}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className = "p-4 space-y-3">
+      <Skeleton className = "h-3 w-20" />
+      <Skeleton className = "h-14 w-full" />
+      <Skeleton className = "h-3 w-28" />
+      <Skeleton className = "h-3 w-24" />
+    </div>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className = "flex flex-col items-center justify-center h-full gap-3 p-6 text-center">
+      <div className = "w-8 h-8 rounded-full bg-slate-800/60 border border-white/[0.06] flex items-center justify-center">
+        <span className = "text-slate-600 text-sm font-mono">∅</span>
+      </div>
+
+      <p className = "text-xs text-slate-600 leading-relaxed max-w-[180px]">
+        Step details, changed entities, and explanations will appear here during playback.
+      </p>
     </div>
   )
 }

@@ -11,15 +11,19 @@ export default function PlaybackBar() {
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const speed = usePlaybackStore((s) => s.speed)
-  const {play, pause, next, prev, jumpToStart, jumpToEnd, jumpTo, setSpeed} = usePlaybackStore()
+  const isScrubbing = usePlaybackStore((s) => s.isScrubbing)
+  const {play, pause, next, prev, jumpToStart, jumpToEnd, jumpTo, setSpeed, beginScrub, endScrub} = usePlaybackStore()
 
   const hasSteps = totalSteps > 0
   const atStart = stepIndex === 0
   const atEnd = stepIndex >= totalSteps - 1
 
-  // Auto-advance when playing 
+  //percent of scrub bar
+  const scrubPct = totalSteps > 1 ? (stepIndex / (totalSteps - 1)) * 100 : 0
+
+  //auto play scrub
   useEffect(() => {
-    if (!isPlaying || !hasSteps) return
+    if (!isPlaying || !hasSteps || isScrubbing) return
 
     const delay = Math.round(BASE_DELAY_MS / speed)
     const id = setInterval(() => {
@@ -27,6 +31,7 @@ export default function PlaybackBar() {
 
       if (s.stepIndex >= s.totalSteps - 1) {
         s.pause()
+
       } else {
         s.next()
       }
@@ -34,7 +39,7 @@ export default function PlaybackBar() {
     }, delay)
 
     return () => clearInterval(id)
-  }, [isPlaying, speed, hasSteps])
+  }, [isPlaying, speed, hasSteps, isScrubbing])
 
   return (
     <div className = "flex items-center gap-4 px-5 rounded-xl border border-white/[0.07] bg-slate-900/80 h-[72px] flex-none">
@@ -51,12 +56,15 @@ export default function PlaybackBar() {
         max = {Math.max(0, totalSteps - 1)}
         value = {stepIndex}
         disabled = {!hasSteps}
+        onPointerDown = {() => hasSteps && beginScrub()}
+        onPointerUp = {() => endScrub()}
         onChange = {(e) => jumpTo(Number(e.target.value))}
-        className = "flex-1 h-1 rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+        className = "scrubber flex-1 min-w-0"
+        style = {{'--pct': `${scrubPct}%`}}
       />
 
       {/* Transport controls */}
-      <div className="flex items-center gap-1">
+      <div className = "flex items-center gap-1">
         <CtrlBtn icon = {SkipBack} onClick = {jumpToStart} disabled = {!hasSteps || atStart} title = "Jump to start" />
         <CtrlBtn icon = {ChevronLeft} onClick = {prev} disabled = {!hasSteps || atStart} title = "Step back" />
         <CtrlBtn
@@ -70,28 +78,51 @@ export default function PlaybackBar() {
         <CtrlBtn icon = {SkipForward} onClick = {jumpToEnd} disabled = {!hasSteps || atEnd} title = "Jump to end" />
       </div>
 
-      {/* Speed selector */}
-      <div className = "flex items-center gap-0.5 ml-1">
-        {SPEEDS.map((s) => (
-          <button
-            key = {s}
-            onClick = {() => setSpeed(s)}
-            title = {`${s}x speed`}
-            className = {cn(
-              'font-mono text-[10px] px-1.5 py-0.5 rounded transition-colors duration-fast',
-              speed === s
-                ? 'text-brand-400 bg-brand-500/15'
-                : 'text-slate-600 hover:text-slate-400',
-            )}
-          >
-            {s}x
-          </button>
-        ))}
-      </div>
+      {/* Speed slider */}
+      <SpeedControl speed = {speed} setSpeed = {setSpeed} />
 
     </div>
   )
 }
+
+//speed slider
+
+function SpeedControl({ speed, setSpeed }) {
+  const speedIndex = SPEEDS.indexOf(speed)
+
+  const safeIndex  = speedIndex === -1 ? SPEEDS.indexOf(1) : speedIndex
+
+  return (
+    <div className = "flex flex-col justify-center gap-1.5 flex-none" style = {{ width: '76px' }}>
+      <div className = "flex items-center justify-between">
+        <span className = "mono-label">SPEED</span>
+        <span className = "font-mono text-[11px] text-brand-400 font-medium leading-none">
+          {speed}x
+        </span>
+      </div>
+
+      <input
+        type = "range"
+        min = {0}
+        max = {SPEEDS.length - 1}
+        step = {1}
+        value = {safeIndex}
+        onChange = {(e) => setSpeed(SPEEDS[Number(e.target.value)])}
+        className = "speed-slider"
+        title = {`Playback speed: ${speed}×`}
+      />
+
+      {/* the tick labels, like .5x, 1x, 2x*/}
+      <div className = "flex justify-between">
+        <span className = "font-mono text-[8px] text-slate-700 leading-none">¼×</span>
+        <span className = "font-mono text-[8px] text-slate-700 leading-none">1×</span>
+        <span className = "font-mono text-[8px] text-slate-700 leading-none">4×</span>
+      </div>
+    </div>
+  )
+}
+
+//transport buttons
 
 function CtrlBtn({ icon: Icon, onClick, disabled, title, accent }) {
   return (

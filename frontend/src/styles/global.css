@@ -230,10 +230,116 @@
     background: rgba(148, 163, 184, 0.38);
   }
 
-  /* ── Range inputs ─────────────────────────────────────────────────────── */
+  /* ── Range inputs (default) ──────────────────────────────────────────── */
 
   input[type="range"] {
     accent-color: #06b6d4; /* brand-500 */
+  }
+
+  /* ── Scrubber — timeline seek bar with filled-track ──────────────────── */
+  /* Usage: add className="scrubber" and style={{'--pct': `${percent}%`}}.  */
+  /* --pct drives both the webkit gradient and Firefox range-progress.       */
+
+  .scrubber {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 9999px;
+    background: linear-gradient(
+      to right,
+      #06b6d4 var(--pct, 0%),
+      rgba(148, 163, 184, 0.15) var(--pct, 0%)
+    );
+    cursor: pointer;
+    outline: none;
+  }
+
+  .scrubber:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .scrubber::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #06b6d4;
+    cursor: pointer;
+    transition: transform var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+  }
+
+  .scrubber:not(:disabled)::-webkit-slider-thumb:hover,
+  .scrubber:not(:disabled):active::-webkit-slider-thumb {
+    transform: scale(1.35);
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.20);
+  }
+
+  .scrubber::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #06b6d4;
+    border: none;
+    cursor: pointer;
+  }
+
+  .scrubber::-moz-range-progress {
+    background-color: #06b6d4;
+    height: 4px;
+    border-radius: 9999px;
+  }
+
+  .scrubber::-moz-range-track {
+    background: rgba(148, 163, 184, 0.15);
+    height: 4px;
+    border-radius: 9999px;
+  }
+
+  /* ── Speed slider — compact discrete-step range ──────────────────────── */
+  /* Identical track styling to .scrubber but no filled gradient.           */
+
+  .speed-slider {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    border-radius: 9999px;
+    background: rgba(148, 163, 184, 0.15);
+    cursor: pointer;
+    outline: none;
+  }
+
+  .speed-slider::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #06b6d4;
+    cursor: pointer;
+    transition: transform var(--duration-fast) ease;
+  }
+
+  .speed-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+  }
+
+  .speed-slider::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #06b6d4;
+    border: none;
+    cursor: pointer;
+  }
+
+  .speed-slider::-moz-range-track {
+    background: rgba(148, 163, 184, 0.15);
+    height: 3px;
+    border-radius: 9999px;
   }
 
   /* ── Light mode: structural shell (non-utility overrides) ─────────────── */
