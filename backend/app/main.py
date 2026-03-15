@@ -7,12 +7,18 @@ from app.config import settings
 from app.exceptions import DomainError, NotFoundException, PermissionError
 from app.schemas.errors import ErrorDetail, ErrorResponse
 from app.routes import metadata, runs, benchmarks
+from app.db import init_db
 
 
 # to start:
 # python -m uvicorn app.main:app --reload
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+def on_startup():
+    init_db()
 
 app.add_middleware(
     CORSMiddleware,
