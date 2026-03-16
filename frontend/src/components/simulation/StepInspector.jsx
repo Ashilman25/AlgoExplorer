@@ -90,14 +90,12 @@ export default function StepInspector({ metrics = [] }) {
 
         ) : (
           <div className = "flex flex-col divide-y divide-white/[0.05]">
-            <StepDetail step = {currentStep} stepIndex = {stepIndex} />
-
-            {summary && (
-              <AlgoSummary
-                algorithmKey = {summary.algorithm_key}
-                moduleType = {summary.module_type}
-              />
-            )}
+            <StepDetail
+              step = {currentStep}
+              stepIndex = {stepIndex}
+              algorithmKey = {summary?.algorithm_key}
+              moduleType = {summary?.module_type}
+            />
           </div>
         )}
 
@@ -116,7 +114,7 @@ export default function StepInspector({ metrics = [] }) {
   )
 }
 
-function StepDetail({ step, stepIndex }) {
+function StepDetail({ step, stepIndex, algorithmKey, moduleType }) {
   if (!step) return null
 
   const eventType = step.event_type ?? step.eventType ?? 'STEP'
@@ -127,13 +125,19 @@ function StepDetail({ step, stepIndex }) {
   return (
     <div className = "p-4 space-y-4">
 
-      {/* Event type badge + step number */}
+      {/* Event type badge + step number + algorithm */}
       <div className = "flex items-center gap-2 flex-wrap">
         <span className = "font-mono text-[10px] font-semibold uppercase tracking-widest text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full border border-brand-500/20">
           {eventType}
         </span>
 
         <span className = "mono-label">#{stepIndex + 1}</span>
+
+        {algorithmKey && (
+          <span className = "ml-auto font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-700/60 border border-white/[0.06] text-slate-500">
+            {fmtAlgo(algorithmKey)}
+          </span>
+        )}
       </div>
 
       {/* Explanation text */}
@@ -191,26 +195,6 @@ function StepDetail({ step, stepIndex }) {
   )
 }
 
-function AlgoSummary({ algorithmKey, moduleType }) {
-  return (
-    <div className = "p-4 space-y-2.5">
-      <p className = "mono-label">Algorithm</p>
-
-      <div className = "flex items-center gap-2 flex-wrap">
-
-        {/* alg name */}
-        <span className = "text-xs font-medium text-slate-300">
-          {fmtAlgo(algorithmKey)}
-        </span>
-
-        {/* module badge */}
-        <span className = "font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-700/60 border border-white/[0.06] text-slate-500">
-          {fmtModule(moduleType)}
-        </span>
-      </div>
-    </div>
-  )
-}
 
 function LoadingSkeleton() {
   return (
