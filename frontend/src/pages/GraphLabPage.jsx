@@ -576,10 +576,8 @@ function DataStructurePanel({ algorithm, frontier, distances, path }) {
   const hasDistances = algorithm === 'dijkstra' && distances && Object.keys(distances).length > 0
   const hasPath = path && path.length > 0
 
-  if (!hasQueue && !hasDistances && !hasPath) return null
-
   return (
-    <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto">
+    <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
 
       {/* BFS queue */}
       {hasQueue && (
