@@ -1,3 +1,5 @@
+import time
+
 from pydantic import ValidationError
 
 from app.simulation.contract import BaseAlgorithm
@@ -42,6 +44,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
             "array_accesses": 0,
             "recursion_depth": 0,
             "max_recursion_depth": 0,
+            "array_length": n,
         }
 
 
@@ -247,7 +250,10 @@ class MergeSortAlgorithm(BaseAlgorithm):
 
 
 
+        t_start = time.perf_counter()
         mergesort(0, n - 1, 0)
+        t_end = time.perf_counter()
+        metrics["runtime_ms"] = round((t_end - t_start) * 1000, 3)
 
 
         # COMPLETE

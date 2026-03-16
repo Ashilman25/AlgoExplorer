@@ -1,3 +1,5 @@
+import time
+
 from pydantic import ValidationError
 
 from app.simulation.contract import BaseAlgorithm
@@ -38,9 +40,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
         metrics = {
             "comparisons": 0,
             "swaps": 0,
+            "writes": 0,
             "array_accesses": 0,
             "recursion_depth": 0,
             "max_recursion_depth": 0,
+            "array_length": n,
         }
 
 
@@ -254,7 +258,10 @@ class QuickSortAlgorithm(BaseAlgorithm):
 
 
         # run the sort
+        t_start = time.perf_counter()
         quicksort(0, n - 1, 0)
+        t_end = time.perf_counter()
+        metrics["runtime_ms"] = round((t_end - t_start) * 1000, 3)
 
 
         # COMPLETE
