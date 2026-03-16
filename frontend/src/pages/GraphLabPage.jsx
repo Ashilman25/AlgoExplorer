@@ -252,14 +252,42 @@ function edgeColor(s) {
   return 'rgba(100,116,139,0.20)'
 }
 
-function GraphCanvas({nodes, edges, weighted}) {
+// Shorten a line so the arrow tip stops at the node edge (radius 15) instead of the center.
+function shortenLine(x1, y1, x2, y2, pad = 15) {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const len = Math.sqrt(dx * dx + dy * dy)
+  if (len === 0) return { x1, y1, x2, y2 }
+  const ux = dx / len
+  const uy = dy / len
+  return { x1: x1 + ux * pad, y1: y1 + uy * pad, x2: x2 - ux * pad, y2: y2 - uy * pad }
+}
+
+function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, target }) {
   const currentStep = usePlaybackStore((s) => s.currentStep)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
   const isLoading = usePlaybackStore((s) => s.isLoading)
   const error = usePlaybackStore((s) => s.error)
 
-  const nodeStates = currentStep?.state_payload?.node_states ?? {}
+  // When no simulation is running, build a "step 0" baseline from the config:
+  // source node → source color, target node → target color, everything else → default.
+  const baselineNodeStates = useMemo(() => {
+    const states = {}
+    for (const n of nodes) {
+      const nid = String(n.id)
+      if (nid === source)      states[nid] = 'source'
+      else if (nid === target) states[nid] = 'target'
+      else                     states[nid] = 'default'
+    }
+    return states
+  }, [nodes, source, target])
+
+  const hasSimulation = currentStep != null
+  const nodeStates = hasSimulation ? (currentStep.state_payload?.node_states ?? baselineNodeStates) : baselineNodeStates
   const edgeStates = currentStep?.state_payload?.edge_states ?? {}
+  const frontier = currentStep?.state_payload?.frontier ?? []
+  const distances = currentStep?.state_payload?.distances ?? null
+  const pathData = currentStep?.state_payload?.path ?? null
 
   const nodePos = useMemo(() => computeNodePositions(nodes), [nodes])
 
@@ -283,120 +311,218 @@ function GraphCanvas({nodes, edges, weighted}) {
     )
   }
 
-  if (!totalSteps) {
-    return (
-      <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className = "text-sm font-medium text-slate-500">Graph canvas</p>
-
-        <p className = "text-xs text-slate-600 max-w-[200px] leading-relaxed">
-          Click <span className = "text-slate-400 font-medium">Run Simulation</span> to begin playback.
-        </p>
-      </div>
-    )
-  }
-
   const HIGHLIGHTED = new Set(['active', 'frontier', 'success', 'source', 'target'])
 
   return (
-    <div className = "flex-1 flex items-center justify-center p-6">
-      <svg
-        viewBox   = "0 0 340 280"
-        className = "w-full"
-        style = {{ maxWidth: '400px', maxHeight: '400px' }}
-      >
-        {/* edges */}
-        {edges.map((e) => {
-          const src = String(e.source)
-          const tgt = String(e.target)
+    <div className = "flex-1 flex flex-col min-h-0">
+      {/* ── SVG graph ─────────────────────────────────────────────────────── */}
+      <div className = "flex-1 flex items-center justify-center p-6">
+        <svg
+          viewBox = "0 0 340 280"
+          className = "w-full"
+          style = {{ maxWidth: '400px', maxHeight: '400px' }}
+        >
+          {/* arrow marker for directed edges */}
+          {directed && (
+            <defs>
+              <marker id = "arrow-default"  markerWidth = "8" markerHeight = "6" refX = "8" refY = "3" orient = "auto">
+                <path d = "M0,0 L8,3 L0,6" fill = "rgba(100,116,139,0.35)" />
+              </marker>
 
-          const from = nodePos[src]
-          const to = nodePos[tgt]
+              <marker id = "arrow-frontier" markerWidth = "8" markerHeight = "6" refX = "8" refY = "3" orient = "auto">
+                <path d = "M0,0 L8,3 L0,6" fill = "var(--color-state-frontier)" />
+              </marker>
 
-          if (!from || !to) return null
+              <marker id = "arrow-visited"  markerWidth = "8" markerHeight = "6" refX = "8" refY = "3" orient = "auto">
+                <path d = "M0,0 L8,3 L0,6" fill = "var(--color-state-visited)" />
+              </marker>
 
-          const key = `${src}-${tgt}`
-          const keyRev = `${tgt}-${src}`
-          const state = edgeStates[key] ?? edgeStates[keyRev] ?? 'default'
+              <marker id = "arrow-success"  markerWidth = "8" markerHeight = "6" refX = "8" refY = "3" orient = "auto">
+                <path d = "M0,0 L8,3 L0,6" fill = "var(--color-state-success)" />
+              </marker>
+            </defs>
+          )}
 
-          // midpoint for weight label
-          const mx = (from.cx + to.cx) / 2
-          const my = (from.cy + to.cy) / 2
+          {/* edges */}
+          {edges.map((e) => {
+            const src  = String(e.source)
+            const tgt  = String(e.target)
+            const from = nodePos[src]
+            const to   = nodePos[tgt]
+            if (!from || !to) return null
 
-          return (
-            <g key = {key}>
-              <line
-                x1 = {from.cx}
-                y1 = {from.cy}
-                x2 = {to.cx}
-                y2 = {to.cy}
-                stroke = {edgeColor(state)}
-                strokeWidth = {state === 'default' ? 1.5 : 2.5}
-                strokeLinecap = "round"
-                style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
-              />
-              {weighted && e.weight != null && (
+            const key    = `${src}-${tgt}`
+            const keyRev = `${tgt}-${src}`
+            const state  = edgeStates[key] ?? edgeStates[keyRev] ?? 'default'
+
+            const line = directed
+              ? shortenLine(from.cx, from.cy, to.cx, to.cy)
+              : { x1: from.cx, y1: from.cy, x2: to.cx, y2: to.cy }
+
+            const arrowState = state === 'default' ? 'default'
+              : state === 'success' ? 'success'
+              : state === 'visited' ? 'visited'
+              : 'frontier'
+
+            const mx = (from.cx + to.cx) / 2
+            const my = (from.cy + to.cy) / 2
+
+            return (
+              <g key = {key}>
+                <line
+                  x1 = {line.x1}
+                  y1 = {line.y1}
+                  x2 = {line.x2}
+                  y2 = {line.y2}
+                  stroke = {edgeColor(state)}
+                  strokeWidth = {state === 'default' ? 1.5 : 2.5}
+                  strokeLinecap = "round"
+                  markerEnd = {directed ? `url(#arrow-${arrowState})` : undefined}
+                  style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
+                />
+                {weighted && e.weight != null && (
+                  <text
+                    x = {mx}
+                    y = {my - 6}
+                    textAnchor = "middle"
+                    fill = "var(--color-state-frontier)"
+                    fontSize = {9}
+                    fontFamily = "'IBM Plex Mono', monospace"
+                    fontWeight = "500"
+                    opacity = {0.8}
+                  >
+                    {e.weight}
+                  </text>
+                )}
+              </g>
+            )
+          })}
+
+          {/* Nodes */}
+          {nodes.map(({ id }) => {
+            const nid = String(id)
+            const pos = nodePos[nid]
+            if (!pos) return null
+
+            const { cx, cy } = pos
+            const state  = nodeStates[nid] ?? 'default'
+            const color = stateColor(state)
+            const active = HIGHLIGHTED.has(state)
+
+            return (
+              <g key = {nid} style = {{ transition: 'all 0.2s ease' }}>
+
+                {active && (
+                  <circle cx = {cx} cy = {cy} r = {20} fill = {color} opacity = {0.12} />
+                )}
+
+                <circle
+                  cx = {cx}
+                  cy = {cy}
+                  r = {15}
+                  fill = "rgba(15, 23, 42, 0.92)"
+                  stroke = {color}
+                  strokeWidth = {active ? 2.5 : 1.5}
+                  style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
+                />
+
                 <text
-                  x = {mx}
-                  y = {my - 6}
-                  textAnchor = "middle"
-                  fill = "var(--color-state-frontier)"
-                  fontSize = {9}
+                  x = {cx}
+                  y = {cy}
+                  textAnchor  = "middle"
+                  dominantBaseline = "central"
+                  fill = {color}
+                  fontSize = {12}
                   fontFamily = "'IBM Plex Mono', monospace"
-                  fontWeight = "500"
-                  opacity = {0.8}
+                  fontWeight = "600"
+                  style = {{ transition: 'fill 0.2s ease' }}
                 >
-                  {e.weight}
+                  {nid}
                 </text>
-              )}
-            </g>
-          )
-        })}
+              </g>
+            )
+          })}
+        </svg>
+      </div>
 
-        {/* Nodes */}
-        {nodes.map(({ id }) => {
-          const nid = String(id)
-          const pos = nodePos[nid]
-          if (!pos) return null
+      {/* data structure inspector  */}
+      <DataStructurePanel
+        algorithm = {algorithm}
+        frontier = {frontier}
+        distances = {distances}
+        path = {pathData}
+      />
+    </div>
+  )
+}
 
-          const {cx, cy} = pos
-          const state = nodeStates[nid] ?? 'default'
-          const color = stateColor(state)
-          const active = HIGHLIGHTED.has(state)
 
-          return (
-            <g key = {nid} style = {{ transition: 'all 0.2s ease' }}>
+// Data structure inspector (queue / distances / path) 
 
-              {active && (
-                <circle cx = {cx} cy = {cy} r = {20} fill = {color} opacity = {0.12} />
-              )}
+function DataStructurePanel({ algorithm, frontier, distances, path }) {
+  const hasQueue = algorithm === 'bfs' && frontier.length > 0
+  const hasDistances = algorithm === 'dijkstra' && distances && Object.keys(distances).length > 0
+  const hasPath = path && path.length > 0
 
-              <circle
-                cx = {cx}
-                cy = {cy}
-                r = {15}
-                fill = "rgba(15, 23, 42, 0.92)"
-                stroke = {color}
-                strokeWidth = {active ? 2.5 : 1.5}
-                style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
-              />
+  if (!hasQueue && !hasDistances && !hasPath) return null
 
-              <text
-                x = {cx}
-                y = {cy}
-                textAnchor = "middle"
-                dominantBaseline = "central"
-                fill = {color}
-                fontSize = {12}
-                fontFamily = "'IBM Plex Mono', monospace"
-                fontWeight = "600"
-                style = {{ transition: 'fill 0.2s ease' }}
+  return (
+    <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto">
+
+      {/* BFS queue */}
+      {hasQueue && (
+        <div className = "flex items-center gap-2">
+          <span className = "mono-label shrink-0">Queue</span>
+
+          <div className = "flex gap-1">
+            {frontier.map((id, i) => (
+              <span
+                key = {i}
+                className = "font-mono text-[10px] px-1.5 py-0.5 rounded border text-state-frontier bg-state-frontier/10 border-state-frontier/30"
               >
-                {nid}
-              </text>
-            </g>
-          )
-        })}
-      </svg>
+                {id}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dijkstra distances */}
+      {hasDistances && (
+        <div className = "flex items-center gap-2">
+          <span className = "mono-label shrink-0">Dist</span>
+          <div className = "flex gap-1 flex-wrap">
+            {Object.entries(distances).map(([node, d]) => (
+              <span
+                key = {node}
+                className = "font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/[0.08] bg-slate-800/50 text-slate-400"
+              >
+                {node}:<span className = {d === 'inf' ? 'text-slate-600' : 'text-state-active'}>{d}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Path */}
+      {hasPath && (
+        <div className = "flex items-center gap-2">
+          <span className = "mono-label shrink-0">Path</span>
+
+          <div className = "flex items-center gap-0.5">
+            {path.map((id, i) => (
+              <span key = {i} className = "flex items-center gap-0.5">
+                <span className = "font-mono text-[10px] px-1.5 py-0.5 rounded border text-state-success bg-state-success/10 border-state-success/30">
+                  {id}
+                </span>
+                {i < path.length - 1 && (
+                  <span className = "text-[10px] text-slate-600">→</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -409,14 +535,14 @@ export default function GraphLabPage() {
   const {saveScenario} = useGuestStore()
 
   // ── Config state ───────────────────────────────────────────────────────────
-  const [algorithm, setAlgorithm]             = useState('bfs')
-  const [presetKey, setPresetKey]             = useState('bfs-demo')
-  const [source, setSource]                   = useState(GRAPH_PRESETS[0].source)
-  const [target, setTarget]                   = useState(GRAPH_PRESETS[0].target)
-  const [weighted, setWeighted]               = useState(false)
-  const [directed, setDirected]               = useState(false)
+  const [algorithm, setAlgorithm] = useState('bfs')
+  const [presetKey, setPresetKey] = useState('bfs-demo')
+  const [source, setSource] = useState(GRAPH_PRESETS[0].source)
+  const [target, setTarget] = useState(GRAPH_PRESETS[0].target)
+  const [weighted, setWeighted] = useState(false)
+  const [directed, setDirected] = useState(false)
   const [explanationLevel, setExplanationLevel] = useState('standard')
-  const [mode, setMode]                       = useState('graph')
+  const [mode, setMode] = useState('graph')
 
   const currentPreset = GRAPH_PRESETS.find((p) => p.value === presetKey) ?? GRAPH_PRESETS[0]
 
@@ -439,18 +565,18 @@ export default function GraphLabPage() {
 
   const handleRun = useCallback(() => {
     run({
-      module_type:       'graph',
-      algorithm_key:     algorithm,
-      input_payload:     {
-        nodes:    currentPreset.nodes,
-        edges:    currentPreset.edges,
+      module_type: 'graph',
+      algorithm_key: algorithm,
+      input_payload: {
+        nodes: currentPreset.nodes,
+        edges: currentPreset.edges,
         source,
         target,
         weighted,
         directed,
         mode,
       },
-      execution_mode:    'simulate',
+      execution_mode: 'simulate',
       explanation_level: explanationLevel,
     })
   }, [run, algorithm, currentPreset, source, target, weighted, directed, mode, explanationLevel])
@@ -464,12 +590,12 @@ export default function GraphLabPage() {
     const id = `graph-${Date.now()}`
     saveScenario({
       id,
-      name:          `${currentPreset.label} — ${algorithm.toUpperCase()}`,
-      module_type:   'graph',
+      name: `${currentPreset.label} — ${algorithm.toUpperCase()}`,
+      module_type: 'graph',
       algorithm_key: algorithm,
       input_payload: {
-        nodes:    currentPreset.nodes,
-        edges:    currentPreset.edges,
+        nodes: currentPreset.nodes,
+        edges: currentPreset.edges,
         source,
         target,
         weighted,
@@ -483,42 +609,42 @@ export default function GraphLabPage() {
   return (
     <>
       <PageHeader
-        icon        = {Network}
-        title       = "Graph Lab"
+        icon = {Network}
+        title = "Graph Lab"
         description = "Interactive graph traversal and pathfinding simulations."
-        accent      = "brand"
-        badge       = "Phase 5"
+        accent = "brand"
+        badge = "Phase 5"
       />
 
       <SimulationLayout
         configPanel = {
           <GraphConfig
-            algorithm        = {algorithm}
+            algorithm = {algorithm}
             onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
-            preset           = {presetKey}
-            onPresetChange   = {handlePresetChange}
-            source           = {source}
-            onSourceChange   = {(e) => setSource(e.target.value)}
-            target           = {target}
-            onTargetChange   = {(e) => setTarget(e.target.value)}
-            weighted         = {weighted}
+            preset = {presetKey}
+            onPresetChange = {handlePresetChange}
+            source = {source}
+            onSourceChange = {(e) => setSource(e.target.value)}
+            target = {target}
+            onTargetChange = {(e) => setTarget(e.target.value)}
+            weighted = {weighted}
             onWeightedChange = {(e) => setWeighted(e.target.checked)}
-            directed         = {directed}
+            directed = {directed}
             onDirectedChange = {(e) => setDirected(e.target.checked)}
             explanationLevel = {explanationLevel}
             onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
-            mode             = {mode}
-            onModeChange     = {(e) => setMode(e.target.value)}
-            nodeOptions      = {nodeOptions}
-            onRun            = {handleRun}
-            onReset          = {handleReset}
-            onSave           = {handleSave}
-            isRunning        = {isRunning}
-            error            = {timelineError}
+            mode = {mode}
+            onModeChange = {(e) => setMode(e.target.value)}
+            nodeOptions = {nodeOptions}
+            onRun = {handleRun}
+            onReset = {handleReset}
+            onSave = {handleSave}
+            isRunning = {isRunning}
+            error = {timelineError}
           />
         }
       >
-        <GraphCanvas nodes = {currentPreset.nodes} edges = {currentPreset.edges} weighted = {weighted} />
+        <GraphCanvas nodes = {currentPreset.nodes} edges = {currentPreset.edges} weighted = {weighted} directed = {directed} algorithm = {algorithm} source = {source} target = {target} />
       </SimulationLayout>
     </>
   )

@@ -12,7 +12,7 @@ export function useRunSimulation() {
   const [isRunning, setIsRunning] = useState(false)
 
   const {setRun, clearRun, setLoading: setRunLoading, setError: setRunError} = useRunStore()
-  const {setTimeline, clearTimeline, setLoading: setTimelineLoading, setError: setTimelineError} = usePlaybackStore()
+  const {setTimeline, clearTimeline, setLoading: setTimelineLoading, setError: setTimelineError, play} = usePlaybackStore()
 
   const run = useCallback(async (request) => {
     setIsRunning(true)
@@ -31,6 +31,7 @@ export function useRunSimulation() {
       const timelineResponse = await runsService.getTimeline(runResponse.id)
       setTimeline(timelineResponse.steps)
       setTimelineLoading(false)
+      play()
 
     } catch (err) {
       const message = err?.message ?? 'Simulation failed.'
@@ -42,7 +43,7 @@ export function useRunSimulation() {
       setIsRunning(false)
     }
 
-  }, [clearRun, clearTimeline, setRun, setRunError, setRunLoading, setTimeline, setTimelineError, setTimelineLoading])
+  }, [clearRun, clearTimeline, setRun, setRunError, setRunLoading, setTimeline, setTimelineError, setTimelineLoading, play])
 
   return {run, isRunning}
 }
