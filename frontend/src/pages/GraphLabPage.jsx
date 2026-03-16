@@ -1,52 +1,156 @@
-import { useCallback } from 'react'
-import { Network, Play, RotateCcw } from 'lucide-react'
+import { useCallback, useState, useMemo } from 'react'
+import { Network, Play, RotateCcw, Save } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
+import { useGuestStore } from '../stores/useGuestStore'
 
-// demo
-// 6-node, 6-edge graph with a clear BFS traversal from A to F.
-// Levels: A → {B,C} → {D,E} → F
 
-const DEMO_NODES = [
-  {id: 'A'}, {id: 'B'}, {id: 'C'},
-  {id: 'D'}, {id: 'E'}, {id: 'F'},
+const GRAPH_PRESETS = [
+  {
+    value: 'bfs-demo',
+    label: 'BFS Demo — 6 nodes',
+    nodes: [{id:'A'},{id:'B'},{id:'C'},{id:'D'},{id:'E'},{id:'F'}],
+    edges: [
+      {source:'A',target:'B'},{source:'A',target:'C'},
+      {source:'B',target:'D'},{source:'C',target:'E'},
+      {source:'D',target:'F'},{source:'E',target:'F'},
+    ],
+    source: 'A',
+    target: 'F',
+    weighted: false,
+  },
+  {
+    value: 'weighted-diamond',
+    label: 'Weighted Diamond — 5 nodes',
+    nodes: [{id:'S'},{id:'A'},{id:'B'},{id:'C'},{id:'T'}],
+    edges: [
+      {source:'S',target:'A',weight:1},{source:'S',target:'B',weight:4},
+      {source:'A',target:'C',weight:2},{source:'B',target:'C',weight:1},
+      {source:'C',target:'T',weight:3},{source:'A',target:'B',weight:2},
+    ],
+    source: 'S',
+    target: 'T',
+    weighted: true,
+  },
+  {
+    value: 'weighted-grid',
+    label: 'Weighted 4x4 Grid — 8 nodes',
+    nodes: [{id:'1'},{id:'2'},{id:'3'},{id:'4'},{id:'5'},{id:'6'},{id:'7'},{id:'8'}],
+    edges:  [
+      {source:'1',target:'2',weight:2},{source:'1',target:'3',weight:5},
+      {source:'2',target:'4',weight:3},{source:'2',target:'5',weight:1},
+      {source:'3',target:'5',weight:2},{source:'3',target:'6',weight:4},
+      {source:'4',target:'7',weight:1},{source:'5',target:'7',weight:6},
+      {source:'5',target:'8',weight:3},{source:'6',target:'8',weight:2},
+      {source:'7',target:'8',weight:1},
+    ],
+    source: '1',
+    target: '8',
+    weighted: true,
+  },
 ]
 
-const DEMO_EDGES = [
-  {source: 'A', target: 'B'},
-  {source: 'A', target: 'C'},
-  {source: 'B', target: 'D'},
-  {source: 'C', target: 'E'},
-  {source: 'D', target: 'F'},
-  {source: 'E', target: 'F'},
+const GRAPH_ALGOS = [
+  { value: 'bfs',      label: 'BFS — Breadth-First Search' },
+  { value: 'dijkstra',  label: 'Dijkstra — Shortest Path' },
 ]
 
-const DEMO_SOURCE = 'A'
-const DEMO_TARGET = 'F'
+const EXPLANATION_LEVELS = [
+  { value: 'standard', label: 'Standard' },
+  { value: 'detailed', label: 'Detailed' },
+  { value: 'none',     label: 'None' },
+]
+
+const MODE_OPTIONS = [
+  { value: 'graph', label: 'Graph' },
+  { value: 'grid',  label: 'Grid', disabled: true },
+]
 
 
-
-const GRAPH_ALGOS = [{ value: 'bfs', label: 'BFS — Breadth-First Search' }]
-
-function GraphConfig({ onRun, onReset, isRunning, error }) {
+function GraphConfig({
+  algorithm, onAlgorithmChange,
+  preset, onPresetChange,
+  source, onSourceChange,
+  target, onTargetChange,
+  weighted, onWeightedChange,
+  directed, onDirectedChange,
+  explanationLevel, onExplanationLevelChange,
+  mode, onModeChange,
+  nodeOptions,
+  onRun, onReset, onSave,
+  isRunning, error,
+}) {
   return (
     <ConfigPanel title = "Graph Lab">
 
-      <ConfigSection title = "Algorithm">
-        <Select options = {GRAPH_ALGOS} value = "bfs" />
+      <ConfigSection title = "Mode">
+        <Select options = {MODE_OPTIONS} value = {mode} onChange = {onModeChange} />
       </ConfigSection>
 
-      <ConfigSection title = "Input Graph">
+      <ConfigSection title = "Algorithm">
+        <Select options = {GRAPH_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
+      </ConfigSection>
+
+      <ConfigSection title = "Preset">
+        <Select
+          options = {GRAPH_PRESETS.map((p) => ({ value: p.value, label: p.label }))}
+          value = {preset}
+          onChange = {onPresetChange}
+        />
+      </ConfigSection>
+
+      <ConfigSection title = "Source / Target">
+        <div className = "grid grid-cols-2 gap-2">
+          <Select label = "Source" options = {nodeOptions} value = {source} onChange = {onSourceChange} />
+          <Select label = "Target" options = {nodeOptions} value = {target} onChange = {onTargetChange} />
+        </div>
+      </ConfigSection>
+
+      <ConfigSection title = "Options">
+        <label className = "flex items-center gap-2 cursor-pointer">
+          <input
+            type = "checkbox"
+            checked = {weighted}
+            onChange = {onWeightedChange}
+            className = "accent-brand-500 w-3.5 h-3.5"
+          />
+          <span className = "text-xs text-slate-400">Weighted edges</span>
+        </label>
+
+        <label className = "flex items-center gap-2 cursor-pointer">
+          <input
+            type = "checkbox"
+            checked = {directed}
+            onChange = {onDirectedChange}
+            className = "accent-brand-500 w-3.5 h-3.5"
+          />
+          <span className = "text-xs text-slate-400">Directed graph</span>
+        </label>
+      </ConfigSection>
+
+      <ConfigSection title = "Explanation">
+        <Select options = {EXPLANATION_LEVELS} value = {explanationLevel} onChange = {onExplanationLevelChange} />
+      </ConfigSection>
+
+      <ConfigSection title = "Input Summary">
         <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
-          <p className = "text-xs font-medium text-slate-300">BFS Demo Graph</p>
-          <p className = "font-mono text-[10px] text-slate-500">6 nodes · 6 edges</p>
+          <p className = "text-xs font-medium text-slate-300">
+            {GRAPH_PRESETS.find((p) => p.value === preset)?.label ?? 'Custom'}
+          </p>
+
           <p className = "font-mono text-[10px] text-slate-500">
-            Source: <span className = "text-state-source">A</span>
-            {'  '}Target: <span className = "text-state-target">F</span>
+            {nodeOptions.length} nodes · {GRAPH_PRESETS.find((p) => p.value === preset)?.edges.length ?? 0} edges
+            {weighted ? ' · weighted' : ''}
+            {directed ? ' · directed' : ''}
+          </p>
+          
+          <p className = "font-mono text-[10px] text-slate-500">
+            Source: <span className = "text-state-source">{source}</span>
+            {'  '}Target: <span className = "text-state-target">{target}</span>
           </p>
         </div>
       </ConfigSection>
@@ -74,6 +178,17 @@ function GraphConfig({ onRun, onReset, isRunning, error }) {
         <Button
           variant = "ghost"
           size = "md"
+          icon = {Save}
+          className = "w-full text-slate-500"
+          onClick = {onSave}
+          disabled = {isRunning}
+        >
+          Save Scenario
+        </Button>
+
+        <Button
+          variant = "ghost"
+          size = "md"
           icon = {RotateCcw}
           className = "w-full text-slate-500"
           onClick = {onReset}
@@ -88,13 +203,29 @@ function GraphConfig({ onRun, onReset, isRunning, error }) {
 }
 
 
-const NODE_POS = {
-  A: {cx: 170, cy: 30 },   // level 0 — source
-  B: {cx: 80,  cy: 100},   // level 1
-  C: {cx: 260, cy: 100},   // level 1
-  D: {cx: 80,  cy: 175},   // level 2
-  E: {cx: 260, cy: 175},   // level 2
-  F: {cx: 170, cy: 245},   // level 3 — target
+
+function computeNodePositions(nodes) {
+  const cx = 170
+  const cy = 140
+  const r = 110
+
+  const positions = {}
+  const count = nodes.length
+
+  if (count === 1) {
+    positions[String(nodes[0].id)] = { cx, cy }
+    return positions
+  }
+
+  nodes.forEach((n, i) => {
+    const angle = (2 * Math.PI * i) / count - Math.PI / 2
+    positions[String(n.id)] = {
+      cx: Math.round(cx + r * Math.cos(angle)),
+      cy: Math.round(cy + r * Math.sin(angle)),
+    }
+  })
+
+  return positions
 }
 
 
@@ -115,12 +246,13 @@ function stateColor(s) {
 
 function edgeColor(s) {
   if (s === 'frontier') return STATE_COLOR.frontier
-  if (s === 'visited')  return STATE_COLOR.visited
-  if (s === 'success')  return STATE_COLOR.success
+  if (s === 'visited') return STATE_COLOR.visited
+  if (s === 'success') return STATE_COLOR.success
+
   return 'rgba(100,116,139,0.20)'
 }
 
-function GraphCanvas() {
+function GraphCanvas({nodes, edges, weighted}) {
   const currentStep = usePlaybackStore((s) => s.currentStep)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
   const isLoading = usePlaybackStore((s) => s.isLoading)
@@ -128,6 +260,8 @@ function GraphCanvas() {
 
   const nodeStates = currentStep?.state_payload?.node_states ?? {}
   const edgeStates = currentStep?.state_payload?.edge_states ?? {}
+
+  const nodePos = useMemo(() => computeNodePositions(nodes), [nodes])
 
   if (isLoading) {
     return (
@@ -153,8 +287,9 @@ function GraphCanvas() {
     return (
       <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
         <p className = "text-sm font-medium text-slate-500">Graph canvas</p>
+
         <p className = "text-xs text-slate-600 max-w-[200px] leading-relaxed">
-          Click <span className = "text-slate-400 font-medium">Run Simulation</span> to generate a BFS timeline and begin playback.
+          Click <span className = "text-slate-400 font-medium">Run Simulation</span> to begin playback.
         </p>
       </div>
     )
@@ -165,55 +300,76 @@ function GraphCanvas() {
   return (
     <div className = "flex-1 flex items-center justify-center p-6">
       <svg
-        viewBox  = "0 0 340 275"
+        viewBox   = "0 0 340 280"
         className = "w-full"
-        style = {{ maxWidth: '340px', maxHeight: '340px' }}
+        style = {{ maxWidth: '400px', maxHeight: '400px' }}
       >
         {/* edges */}
-        {DEMO_EDGES.map((e) => {
-          const from = NODE_POS[e.source]
-          const to = NODE_POS[e.target]
-          const key = `${e.source}-${e.target}`
-          const keyRev = `${e.target}-${e.source}`
+        {edges.map((e) => {
+          const src = String(e.source)
+          const tgt = String(e.target)
+
+          const from = nodePos[src]
+          const to = nodePos[tgt]
+
+          if (!from || !to) return null
+
+          const key = `${src}-${tgt}`
+          const keyRev = `${tgt}-${src}`
           const state = edgeStates[key] ?? edgeStates[keyRev] ?? 'default'
 
+          // midpoint for weight label
+          const mx = (from.cx + to.cx) / 2
+          const my = (from.cy + to.cy) / 2
+
           return (
-            <line
-              key = {key}
-              x1 = {from.cx}
-              y1 = {from.cy}
-              x2 = {to.cx}
-              y2 = {to.cy}
-              stroke = {edgeColor(state)}
-              strokeWidth = {state === 'default' ? 1.5 : 2.5}
-              strokeLinecap = "round"
-              style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
-            />
+            <g key = {key}>
+              <line
+                x1 = {from.cx}
+                y1 = {from.cy}
+                x2 = {to.cx}
+                y2 = {to.cy}
+                stroke = {edgeColor(state)}
+                strokeWidth = {state === 'default' ? 1.5 : 2.5}
+                strokeLinecap = "round"
+                style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
+              />
+              {weighted && e.weight != null && (
+                <text
+                  x = {mx}
+                  y = {my - 6}
+                  textAnchor = "middle"
+                  fill = "var(--color-state-frontier)"
+                  fontSize = {9}
+                  fontFamily = "'IBM Plex Mono', monospace"
+                  fontWeight = "500"
+                  opacity = {0.8}
+                >
+                  {e.weight}
+                </text>
+              )}
+            </g>
           )
         })}
 
         {/* Nodes */}
-        {DEMO_NODES.map(({ id }) => {
-          const { cx, cy } = NODE_POS[id]
-          const state = nodeStates[id] ?? 'default'
+        {nodes.map(({ id }) => {
+          const nid = String(id)
+          const pos = nodePos[nid]
+          if (!pos) return null
+
+          const {cx, cy} = pos
+          const state = nodeStates[nid] ?? 'default'
           const color = stateColor(state)
           const active = HIGHLIGHTED.has(state)
 
           return (
-            <g key = {id} style = {{ transition: 'all 0.2s ease' }}>
-              
-              {/* Glow for highlighted states */}
+            <g key = {nid} style = {{ transition: 'all 0.2s ease' }}>
+
               {active && (
-                <circle
-                  cx = {cx}
-                  cy = {cy}
-                  r = {20}
-                  fill = {color}
-                  opacity = {0.12}
-                />
+                <circle cx = {cx} cy = {cy} r = {20} fill = {color} opacity = {0.12} />
               )}
 
-              {/* node background */}
               <circle
                 cx = {cx}
                 cy = {cy}
@@ -223,7 +379,7 @@ function GraphCanvas() {
                 strokeWidth = {active ? 2.5 : 1.5}
                 style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
               />
-              {/* Node label */}
+
               <text
                 x = {cx}
                 y = {cy}
@@ -235,7 +391,7 @@ function GraphCanvas() {
                 fontWeight = "600"
                 style = {{ transition: 'fill 0.2s ease' }}
               >
-                {id}
+                {nid}
               </text>
             </g>
           )
@@ -250,48 +406,119 @@ export default function GraphLabPage() {
   const {run, isRunning} = useRunSimulation()
   const {clearTimeline, error: timelineError} = usePlaybackStore()
   const {clearRun} = useRunStore()
+  const {saveScenario} = useGuestStore()
+
+  // ── Config state ───────────────────────────────────────────────────────────
+  const [algorithm, setAlgorithm]             = useState('bfs')
+  const [presetKey, setPresetKey]             = useState('bfs-demo')
+  const [source, setSource]                   = useState(GRAPH_PRESETS[0].source)
+  const [target, setTarget]                   = useState(GRAPH_PRESETS[0].target)
+  const [weighted, setWeighted]               = useState(false)
+  const [directed, setDirected]               = useState(false)
+  const [explanationLevel, setExplanationLevel] = useState('standard')
+  const [mode, setMode]                       = useState('graph')
+
+  const currentPreset = GRAPH_PRESETS.find((p) => p.value === presetKey) ?? GRAPH_PRESETS[0]
+
+  const nodeOptions = useMemo(
+    () => currentPreset.nodes.map((n) => ({ value: String(n.id), label: String(n.id) })),
+    [currentPreset],
+  )
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  const handlePresetChange = useCallback((e) => {
+    const key = e.target.value
+    setPresetKey(key)
+    const p = GRAPH_PRESETS.find((pr) => pr.value === key)
+    if (p) {
+      setSource(String(p.source))
+      setTarget(String(p.target))
+      setWeighted(p.weighted)
+    }
+  }, [])
 
   const handleRun = useCallback(() => {
     run({
-      module_type: 'graph',
-      algorithm_key: 'bfs',
-      input_payload: {
-        nodes: DEMO_NODES,
-        edges: DEMO_EDGES,
-        source: DEMO_SOURCE,
-        target: DEMO_TARGET,
+      module_type:       'graph',
+      algorithm_key:     algorithm,
+      input_payload:     {
+        nodes:    currentPreset.nodes,
+        edges:    currentPreset.edges,
+        source,
+        target,
+        weighted,
+        directed,
+        mode,
       },
-      execution_mode: 'simulate',
-      explanation_level: 'standard',
+      execution_mode:    'simulate',
+      explanation_level: explanationLevel,
     })
-  }, [run])
+  }, [run, algorithm, currentPreset, source, target, weighted, directed, mode, explanationLevel])
 
   const handleReset = useCallback(() => {
     clearTimeline()
     clearRun()
   }, [clearTimeline, clearRun])
 
+  const handleSave = useCallback(() => {
+    const id = `graph-${Date.now()}`
+    saveScenario({
+      id,
+      name:          `${currentPreset.label} — ${algorithm.toUpperCase()}`,
+      module_type:   'graph',
+      algorithm_key: algorithm,
+      input_payload: {
+        nodes:    currentPreset.nodes,
+        edges:    currentPreset.edges,
+        source,
+        target,
+        weighted,
+        directed,
+        mode,
+      },
+      created_at: new Date().toISOString(),
+    })
+  }, [saveScenario, currentPreset, algorithm, source, target, weighted, directed, mode])
+
   return (
     <>
       <PageHeader
-        icon = {Network}
-        title = "Graph Lab"
-        description = "BFS demo"
-        accent = "brand"
-        badge = "Phase 4 Demo"
+        icon        = {Network}
+        title       = "Graph Lab"
+        description = "Interactive graph traversal and pathfinding simulations."
+        accent      = "brand"
+        badge       = "Phase 5"
       />
 
       <SimulationLayout
         configPanel = {
           <GraphConfig
-            onRun = {handleRun}
-            onReset = {handleReset}
-            isRunning = {isRunning}
-            error = {timelineError}
+            algorithm        = {algorithm}
+            onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
+            preset           = {presetKey}
+            onPresetChange   = {handlePresetChange}
+            source           = {source}
+            onSourceChange   = {(e) => setSource(e.target.value)}
+            target           = {target}
+            onTargetChange   = {(e) => setTarget(e.target.value)}
+            weighted         = {weighted}
+            onWeightedChange = {(e) => setWeighted(e.target.checked)}
+            directed         = {directed}
+            onDirectedChange = {(e) => setDirected(e.target.checked)}
+            explanationLevel = {explanationLevel}
+            onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
+            mode             = {mode}
+            onModeChange     = {(e) => setMode(e.target.value)}
+            nodeOptions      = {nodeOptions}
+            onRun            = {handleRun}
+            onReset          = {handleReset}
+            onSave           = {handleSave}
+            isRunning        = {isRunning}
+            error            = {timelineError}
           />
         }
       >
-        <GraphCanvas />
+        <GraphCanvas nodes = {currentPreset.nodes} edges = {currentPreset.edges} weighted = {weighted} />
       </SimulationLayout>
     </>
   )
