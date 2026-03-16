@@ -696,6 +696,7 @@ function nextNodeId(existingNodes) {
 
 export default function GraphLabPage() {
   const { run, isRunning } = useRunSimulation()
+  const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const { clearTimeline, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
@@ -894,7 +895,7 @@ export default function GraphLabPage() {
             onRun = {handleRun}
             onReset = {handleReset}
             onSave = {handleSave}
-            isRunning = {isRunning}
+            isRunning = {isRunning || isPlaying}
             error = {timelineError}
           />
         }
