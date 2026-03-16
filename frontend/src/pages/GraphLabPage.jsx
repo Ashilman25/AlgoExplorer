@@ -1,5 +1,5 @@
-import { useCallback, useState, useMemo } from 'react'
-import { Network, Play, RotateCcw, Save } from 'lucide-react'
+import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
+import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
@@ -204,24 +204,20 @@ function GraphConfig({
 
 
 
-function computeNodePositions(nodes) {
-  const cx = 170
-  const cy = 140
-  const r = 110
-
+function computeNodePositions(nodes, centerX = 300, centerY = 250, radius = 140) {
   const positions = {}
   const count = nodes.length
 
   if (count === 1) {
-    positions[String(nodes[0].id)] = { cx, cy }
+    positions[String(nodes[0].id)] = { cx: centerX, cy: centerY }
     return positions
   }
 
   nodes.forEach((n, i) => {
     const angle = (2 * Math.PI * i) / count - Math.PI / 2
     positions[String(n.id)] = {
-      cx: Math.round(cx + r * Math.cos(angle)),
-      cy: Math.round(cy + r * Math.sin(angle)),
+      cx: Math.round(centerX + radius * Math.cos(angle)),
+      cy: Math.round(centerY + radius * Math.sin(angle)),
     }
   })
 
@@ -263,11 +259,18 @@ function shortenLine(x1, y1, x2, y2, pad = 15) {
   return { x1: x1 + ux * pad, y1: y1 + uy * pad, x2: x2 - ux * pad, y2: y2 - uy * pad }
 }
 
-function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, target }) {
+function GraphCanvas({
+  nodes, edges, nodePositions, weighted, directed, algorithm, source, target,
+  builderMode, connectSource, canvasSize, containerRef,
+  onAddNode, onDragNode, onConnectClick, onDeleteNode, onDeleteEdge, onEdgeWeightEdit,
+}) {
   const currentStep = usePlaybackStore((s) => s.currentStep)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
   const isLoading = usePlaybackStore((s) => s.isLoading)
   const error = usePlaybackStore((s) => s.error)
+
+  const svgRef = useRef(null)
+  const [dragTarget, setDragTarget] = useState(null)
 
   // When no simulation is running, build a "step 0" baseline from the config:
   // source node → source color, target node → target color, everything else → default.
@@ -289,7 +292,86 @@ function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, targ
   const distances = currentStep?.state_payload?.distances ?? null
   const pathData = currentStep?.state_payload?.path ?? null
 
-  const nodePos = useMemo(() => computeNodePositions(nodes), [nodes])
+  const nodePos = nodePositions ?? computeNodePositions(nodes)
+
+  // Convert DOM mouse coords → SVG viewBox coords
+  const toSVG = useCallback((clientX, clientY) => {
+    const svg = svgRef.current
+    if (!svg) return { x: 0, y: 0 }
+
+    const pt = svg.createSVGPoint()
+    pt.x = clientX
+    pt.y = clientY
+    const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse())
+
+    return { x: svgPt.x, y: svgPt.y }
+  }, [])
+
+  // Find which node (if any) is under the pointer
+  const hitNode = useCallback((clientX, clientY) => {
+    const { x, y } = toSVG(clientX, clientY)
+    for (const n of nodes) {
+      const nid = String(n.id)
+      const p = nodePos[nid]
+      if (!p) continue
+      
+      const dx = x - p.cx, dy = y - p.cy
+      if (dx * dx + dy * dy <= 18 * 18) return nid
+
+    }
+
+    return null
+  }, [toSVG, nodes, nodePos])
+
+  // ── Pointer handlers ────────────────────────────────────────────────────
+  const handlePointerDown = useCallback((e) => {
+    if (builderMode !== 'drag') return
+    const nid = hitNode(e.clientX, e.clientY)
+
+    if (nid) {
+      setDragTarget(nid)
+      e.currentTarget.setPointerCapture(e.pointerId)
+    }
+  }, [builderMode, hitNode])
+
+  const handlePointerMove = useCallback((e) => {
+    if (!dragTarget) return
+    const { x, y } = toSVG(e.clientX, e.clientY)
+    onDragNode(dragTarget, Math.round(x), Math.round(y))
+
+  }, [dragTarget, toSVG, onDragNode])
+
+  const handlePointerUp = useCallback(() => {
+    setDragTarget(null)
+  }, [])
+
+  const handleCanvasClick = useCallback((e) => {
+    if (builderMode === 'add') {
+      const { x, y } = toSVG(e.clientX, e.clientY)
+      onAddNode(Math.round(x), Math.round(y))
+    }
+
+  }, [builderMode, toSVG, onAddNode])
+
+  const handleNodeClick = useCallback((e, nid) => {
+    e.stopPropagation()
+    if (builderMode === 'connect') onConnectClick(nid)
+    else if (builderMode === 'delete') onDeleteNode(nid)
+
+  }, [builderMode, onConnectClick, onDeleteNode])
+
+  const handleEdgeClick = useCallback((e, src, tgt) => {
+    e.stopPropagation()
+    if (builderMode === 'delete') onDeleteEdge(src, tgt)
+    else if (builderMode === 'drag') onEdgeWeightEdit(src, tgt)
+
+  }, [builderMode, onDeleteEdge, onEdgeWeightEdit])
+
+  // cursor style per mode
+  const cursorClass = builderMode === 'add' ? 'cursor-crosshair'
+    : builderMode === 'connect' ? 'cursor-pointer'
+    : builderMode === 'delete' ? 'cursor-pointer'
+    : dragTarget ? 'cursor-grabbing' : 'cursor-grab'
 
   if (isLoading) {
     return (
@@ -316,11 +398,15 @@ function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, targ
   return (
     <div className = "flex-1 flex flex-col min-h-0">
       {/* ── SVG graph ─────────────────────────────────────────────────────── */}
-      <div className = "flex-1 flex items-center justify-center p-6">
+      <div ref = {containerRef} className = "flex-1 min-h-0 overflow-hidden">
         <svg
-          viewBox = "0 0 340 280"
-          className = "w-full"
-          style = {{ maxWidth: '400px', maxHeight: '400px' }}
+          ref = {svgRef}
+          viewBox = {`0 0 ${canvasSize.w} ${canvasSize.h}`}
+          className = {`w-full h-full ${cursorClass}`}
+          onPointerDown = {handlePointerDown}
+          onPointerMove = {handlePointerMove}
+          onPointerUp = {handlePointerUp}
+          onClick = {handleCanvasClick}
         >
           {/* arrow marker for directed edges */}
           {directed && (
@@ -368,7 +454,12 @@ function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, targ
             const my = (from.cy + to.cy) / 2
 
             return (
-              <g key = {key}>
+              <g key = {key} onClick = {(ev) => handleEdgeClick(ev, src, tgt)}>
+                {/* invisible wider hit area for clicking edges */}
+                <line
+                  x1 = {from.cx} y1 = {from.cy} x2 = {to.cx} y2 = {to.cy}
+                  stroke = "transparent" strokeWidth = {12}
+                />
                 <line
                   x1 = {line.x1}
                   y1 = {line.y1}
@@ -378,7 +469,7 @@ function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, targ
                   strokeWidth = {state === 'default' ? 1.5 : 2.5}
                   strokeLinecap = "round"
                   markerEnd = {directed ? `url(#arrow-${arrowState})` : undefined}
-                  style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
+                  style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease', pointerEvents: 'none' }}
                 />
                 {weighted && e.weight != null && (
                   <text
@@ -390,6 +481,7 @@ function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, targ
                     fontFamily = "'IBM Plex Mono', monospace"
                     fontWeight = "500"
                     opacity = {0.8}
+                    style = {{ pointerEvents: 'none' }}
                   >
                     {e.weight}
                   </text>
@@ -398,6 +490,21 @@ function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, targ
             )
           })}
 
+          {/* connect-in-progress line */}
+          {builderMode === 'connect' && connectSource && nodePos[connectSource] && (
+            <line
+              x1 = {nodePos[connectSource].cx}
+              y1 = {nodePos[connectSource].cy}
+              x2 = {nodePos[connectSource].cx}
+              y2 = {nodePos[connectSource].cy}
+              stroke = "var(--color-state-source)"
+              strokeWidth = {1.5}
+              strokeDasharray = "4 3"
+              opacity = {0.5}
+              style = {{ pointerEvents: 'none' }}
+            />
+          )}
+
           {/* Nodes */}
           {nodes.map(({ id }) => {
             const nid = String(id)
@@ -405,15 +512,20 @@ function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, targ
             if (!pos) return null
 
             const { cx, cy } = pos
-            const state  = nodeStates[nid] ?? 'default'
+            const state = nodeStates[nid] ?? 'default'
             const color = stateColor(state)
             const active = HIGHLIGHTED.has(state)
+            const isConnectSrc = builderMode === 'connect' && connectSource === nid
 
             return (
-              <g key = {nid} style = {{ transition: 'all 0.2s ease' }}>
+              <g
+                key = {nid}
+                style = {{ transition: dragTarget === nid ? 'none' : 'all 0.2s ease' }}
+                onClick = {(ev) => handleNodeClick(ev, nid)}
+              >
 
-                {active && (
-                  <circle cx = {cx} cy = {cy} r = {20} fill = {color} opacity = {0.12} />
+                {(active || isConnectSrc) && (
+                  <circle cx = {cx} cy = {cy} r = {20} fill = {isConnectSrc ? 'var(--color-state-source)' : color} opacity = {0.12} />
                 )}
 
                 <circle
@@ -421,8 +533,8 @@ function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, targ
                   cy = {cy}
                   r = {15}
                   fill = "rgba(15, 23, 42, 0.92)"
-                  stroke = {color}
-                  strokeWidth = {active ? 2.5 : 1.5}
+                  stroke = {isConnectSrc ? 'var(--color-state-source)' : color}
+                  strokeWidth = {active || isConnectSrc ? 2.5 : 1.5}
                   style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
                 />
 
@@ -435,7 +547,7 @@ function GraphCanvas({ nodes, edges, weighted, directed, algorithm, source, targ
                   fontSize = {12}
                   fontFamily = "'IBM Plex Mono', monospace"
                   fontWeight = "600"
-                  style = {{ transition: 'fill 0.2s ease' }}
+                  style = {{ transition: 'fill 0.2s ease', pointerEvents: 'none' }}
                 >
                   {nid}
                 </text>
@@ -528,13 +640,67 @@ function DataStructurePanel({ algorithm, frontier, distances, path }) {
 }
 
 
-export default function GraphLabPage() {
-  const {run, isRunning} = useRunSimulation()
-  const {clearTimeline, error: timelineError} = usePlaybackStore()
-  const {clearRun} = useRunStore()
-  const {saveScenario} = useGuestStore()
+// builder tools
 
-  // ── Config state ───────────────────────────────────────────────────────────
+const BUILDER_MODES = [
+  {value: 'drag', icon: MousePointer, label: 'Drag'},
+  {value: 'add', icon: Plus, label: 'Add Node'},
+  {value: 'connect', icon: Link, label: 'Connect'},
+  {value: 'delete', icon: Trash2, label: 'Delete'},
+]
+
+function BuilderToolbar({ builderMode, onModeChange, connectSource }) {
+  return (
+    <div className = "shrink-0 flex items-center gap-1 px-4 py-2 border-b border-white/[0.06]">
+      {BUILDER_MODES.map(({ value, icon: Icon, label }) => (
+        <button
+          key = {value}
+          title = {label}
+          onClick = {() => onModeChange(value)}
+          className = {`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors ${
+            builderMode === value
+              ? 'bg-brand-500/15 text-brand-400 border border-brand-500/30'
+              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent'
+          }`}
+        >
+          <Icon size = {12} strokeWidth = {1.5} />
+          {label}
+        </button>
+      ))}
+
+      {builderMode === 'connect' && connectSource && (
+        <span className = "ml-2 font-mono text-[10px] text-state-source">
+          from {connectSource} → …
+        </span>
+      )}
+    </div>
+  )
+}
+
+
+// next node id
+
+let _nodeCounter = 0
+function nextNodeId(existingNodes) {
+  const ids = new Set(existingNodes.map((n) => String(n.id)))
+  // try letters first, then numbers
+  for (let c = 65; c <= 90; c++) {
+    const ch = String.fromCharCode(c)
+    if (!ids.has(ch)) return ch
+  }
+
+  while (ids.has(String(++_nodeCounter))) { /* skip */ }
+  return String(_nodeCounter)
+}
+
+
+export default function GraphLabPage() {
+  const { run, isRunning } = useRunSimulation()
+  const { clearTimeline, error: timelineError } = usePlaybackStore()
+  const { clearRun } = useRunStore()
+  const { saveScenario } = useGuestStore()
+
+
   const [algorithm, setAlgorithm] = useState('bfs')
   const [presetKey, setPresetKey] = useState('bfs-demo')
   const [source, setSource] = useState(GRAPH_PRESETS[0].source)
@@ -544,42 +710,140 @@ export default function GraphLabPage() {
   const [explanationLevel, setExplanationLevel] = useState('standard')
   const [mode, setMode] = useState('graph')
 
-  const currentPreset = GRAPH_PRESETS.find((p) => p.value === presetKey) ?? GRAPH_PRESETS[0]
+  const canvasContainerRef = useRef(null)
+  const [canvasSize, setCanvasSize] = useState({ w: 600, h: 500 })
+
+  useEffect(() => {
+    const el = canvasContainerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      if (width > 0 && height > 0) setCanvasSize({ w: Math.round(width), h: Math.round(height) })
+    })
+    ro.observe(el)
+
+    return () => ro.disconnect()
+  }, [])
+
+
+  const initPreset = GRAPH_PRESETS[0]
+  const [graphNodes, setGraphNodes] = useState(initPreset.nodes)
+  const [graphEdges, setGraphEdges] = useState(initPreset.edges)
+  const [nodePositions, setNodePositions] = useState(() => computeNodePositions(initPreset.nodes))
+  const hasInitialized = useRef(false)
+
+  // Re-center nodes once the real container size is known (first mount only)
+  useEffect(() => {
+    if (hasInitialized.current) return
+    hasInitialized.current = true
+    setNodePositions(computeNodePositions(graphNodes, canvasSize.w / 2, canvasSize.h / 2, Math.min(canvasSize.w, canvasSize.h) * 0.3))
+
+  }, [canvasSize]) 
+
+  // builder mode: drag | add | connect | delete
+  const [builderMode, setBuilderMode]     = useState('drag')
+  const [connectSource, setConnectSource] = useState(null)
 
   const nodeOptions = useMemo(
-    () => currentPreset.nodes.map((n) => ({ value: String(n.id), label: String(n.id) })),
-    [currentPreset],
+    () => graphNodes.map((n) => ({ value: String(n.id), label: String(n.id) })),
+    [graphNodes],
   )
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // presets
   const handlePresetChange = useCallback((e) => {
     const key = e.target.value
     setPresetKey(key)
     const p = GRAPH_PRESETS.find((pr) => pr.value === key)
     if (p) {
+      setGraphNodes(p.nodes)
+      setGraphEdges(p.edges)
+      setNodePositions(computeNodePositions(p.nodes, canvasSize.w / 2, canvasSize.h / 2, Math.min(canvasSize.w, canvasSize.h) * 0.3))
       setSource(String(p.source))
       setTarget(String(p.target))
       setWeighted(p.weighted)
+      setConnectSource(null)
     }
+  }, [canvasSize])
+
+  //build actions
+  const handleAddNode = useCallback((cx, cy) => {
+    const id = nextNodeId(graphNodes)
+    setGraphNodes((prev) => [...prev, { id }])
+    setNodePositions((prev) => ({ ...prev, [id]: { cx, cy } }))
+
+  }, [graphNodes])
+
+  const handleDeleteNode = useCallback((nid) => {
+    setGraphNodes((prev) => prev.filter((n) => String(n.id) !== nid))
+    setGraphEdges((prev) => prev.filter((e) => String(e.source) !== nid && String(e.target) !== nid))
+    setNodePositions((prev) => {
+      const next = { ...prev }
+      delete next[nid]
+      return next
+    })
+    if (source === nid) setSource('')
+    if (target === nid) setTarget('')
+    setConnectSource(null)
+  }, [source, target])
+
+  const handleDeleteEdge = useCallback((src, tgt) => {
+    setGraphEdges((prev) => prev.filter((e) =>
+      !(String(e.source) === src && String(e.target) === tgt) &&
+      !(String(e.source) === tgt && String(e.target) === src)
+    ))
   }, [])
 
+  const handleConnectClick = useCallback((nid) => {
+    if (!connectSource) {
+      setConnectSource(nid)
+    } else if (connectSource !== nid) {
+      // check duplicate
+      const exists = graphEdges.some((e) => {
+        const s = String(e.source), t = String(e.target)
+        return (s === connectSource && t === nid) || (s === nid && t === connectSource)
+      })
+      if (!exists) {
+        const newEdge = { source: connectSource, target: nid }
+        if (weighted) newEdge.weight = 1
+        setGraphEdges((prev) => [...prev, newEdge])
+      }
+      setConnectSource(null)
+
+    } else {
+      setConnectSource(null)
+    }
+
+  }, [connectSource, graphEdges, weighted])
+
+  const handleDragNode = useCallback((nid, cx, cy) => {
+    setNodePositions((prev) => ({ ...prev, [nid]: { cx, cy } }))
+  }, [])
+
+  const handleEdgeWeightEdit = useCallback((src, tgt) => {
+    const input = prompt('Edge weight:', '1')
+    if (input === null) return
+    const w = parseFloat(input)
+    if (isNaN(w) || w < 0) return
+    setGraphEdges((prev) => prev.map((e) => {
+      const es = String(e.source), et = String(e.target)
+      if ((es === src && et === tgt) || (es === tgt && et === src)) {
+        return { ...e, weight: w }
+      }
+      return e
+    }))
+  }, [])
+
+  // ── Run / Reset / Save ─────────────────────────────────────────────────────
   const handleRun = useCallback(() => {
     run({
       module_type: 'graph',
       algorithm_key: algorithm,
-      input_payload: {
-        nodes: currentPreset.nodes,
-        edges: currentPreset.edges,
-        source,
-        target,
-        weighted,
-        directed,
-        mode,
-      },
+      input_payload: { nodes: graphNodes, edges: graphEdges, source, target, weighted, directed, mode },
       execution_mode: 'simulate',
       explanation_level: explanationLevel,
     })
-  }, [run, algorithm, currentPreset, source, target, weighted, directed, mode, explanationLevel])
+
+  }, [run, algorithm, graphNodes, graphEdges, source, target, weighted, directed, mode, explanationLevel])
 
   const handleReset = useCallback(() => {
     clearTimeline()
@@ -587,24 +851,15 @@ export default function GraphLabPage() {
   }, [clearTimeline, clearRun])
 
   const handleSave = useCallback(() => {
-    const id = `graph-${Date.now()}`
     saveScenario({
-      id,
-      name: `${currentPreset.label} — ${algorithm.toUpperCase()}`,
+      id: `graph-${Date.now()}`,
+      name: `Custom Graph — ${algorithm.toUpperCase()}`,
       module_type: 'graph',
       algorithm_key: algorithm,
-      input_payload: {
-        nodes: currentPreset.nodes,
-        edges: currentPreset.edges,
-        source,
-        target,
-        weighted,
-        directed,
-        mode,
-      },
+      input_payload: { nodes: graphNodes, edges: graphEdges, source, target, weighted, directed, mode },
       created_at: new Date().toISOString(),
     })
-  }, [saveScenario, currentPreset, algorithm, source, target, weighted, directed, mode])
+  }, [saveScenario, graphNodes, graphEdges, algorithm, source, target, weighted, directed, mode])
 
   return (
     <>
@@ -644,7 +899,29 @@ export default function GraphLabPage() {
           />
         }
       >
-        <GraphCanvas nodes = {currentPreset.nodes} edges = {currentPreset.edges} weighted = {weighted} directed = {directed} algorithm = {algorithm} source = {source} target = {target} />
+        <div className = "flex flex-col flex-1 min-h-0">
+          <BuilderToolbar builderMode = {builderMode} onModeChange = {setBuilderMode} connectSource = {connectSource} />
+          <GraphCanvas
+            nodes = {graphNodes}
+            edges = {graphEdges}
+            nodePositions = {nodePositions}
+            weighted = {weighted}
+            directed = {directed}
+            algorithm = {algorithm}
+            source = {source}
+            target = {target}
+            builderMode = {builderMode}
+            connectSource = {connectSource}
+            canvasSize = {canvasSize}
+            containerRef = {canvasContainerRef}
+            onAddNode = {handleAddNode}
+            onDragNode = {handleDragNode}
+            onConnectClick = {handleConnectClick}
+            onDeleteNode = {handleDeleteNode}
+            onDeleteEdge = {handleDeleteEdge}
+            onEdgeWeightEdit = {handleEdgeWeightEdit}
+          />
+        </div>
       </SimulationLayout>
     </>
   )
