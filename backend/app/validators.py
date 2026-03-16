@@ -1,6 +1,8 @@
 import math
+from pydantic import ValidationError
 from app.exceptions import DomainError
 from app.data.registry import REGISTRY
+from app.schemas.payloads import SortingInputPayload
 
 #check module_type in registry, and alg_key in that module in registry
 def validate_module_algorithm(module_key: str, algorithm_key: str):
@@ -76,26 +78,47 @@ def validate_graph_payload(input_payload: dict):
         
         
         
-#checks array key exists and is a list
-#all elements are ints or float
-#length is within 1 to 10,000
-# no NaN or inf 
+ANIMATION_SIZE_LIMIT = 200
+
+
+# validates sorting input payload
 def validate_array_payload(input_payload: dict):
-    if "array" not in input_payload:
-        raise DomainError("Input payload does not contain 'array' key")
-    
-    if not isinstance(input_payload["array"], list):
-        raise DomainError("Input payload must be a list")
-    
-    for each in input_payload["array"]:
-        if not (isinstance(each, int) or isinstance(each, float)):
-            raise DomainError("Input payload must only contain numbers")
+
+    try:
+        parsed = SortingInputPayload.model_validate(input_payload)
         
+    except ValidationError as e:
+        first_error = e.errors()[0]
+        
+        loc_list = first_error["loc"]
+        string_locations = []
+        
+        for loc in loc_list:
+            string_locations.append(str(loc))
+            
+        field = " -> ".join(string_locations)
+        
+        raise DomainError(f"Invalid sorting input ({field}): {first_error['msg']}")
+
+    arr = parsed.array
+
+    if len(arr) < 2:
+        raise DomainError("Array must contain at least 2 elements")
+
+    if len(arr) > 10000:
+        raise DomainError("Array must contain at most 10,000 elements")
+
+    # check each element for NaN / infinity
+    for each in arr:
         if math.isnan(each) or math.isinf(each):
-            raise DomainError("Input payload must not contain NaN or infinity values")
-        
-    if len(input_payload["array"]) < 1 or len(input_payload["array"]) > 10000:
-        raise DomainError("Input payload length not within bounds")
+            raise DomainError("Array must not contain NaN or infinity values")
+
+    # animation size limit enforcement
+    if len(arr) > parsed.animation_max_size:
+        raise DomainError(
+            f"Array size ({len(arr)}) exceeds animation limit ({parsed.animation_max_size}). "
+            "Reduce size or increase animation_max_size."
+        )
 
 
 

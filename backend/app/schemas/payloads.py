@@ -65,6 +65,16 @@ class GraphStatePayload(BaseModel):
 
 
 
+class SortingInputPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    array: list[int | float]
+    preset: Literal["random", "reversed", "nearly_sorted", "duplicates", "custom"] = "random"
+    duplicate_density: Literal["none", "low", "medium", "high"] = "none"
+
+    animation_max_size: int = Field(default = 200, ge = 1, le = 10000)
+
+
 class SortingEvents:
     INITIALIZE = "initialize"   
     COMPARE = "compare"         
