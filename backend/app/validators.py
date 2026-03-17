@@ -2,7 +2,13 @@ import math
 from pydantic import ValidationError
 from app.exceptions import DomainError
 from app.data.registry import REGISTRY
-from app.schemas.payloads import SortingInputPayload
+from app.schemas.payloads import (
+    SortingInputPayload,
+    DPStringInputPayload,
+    KnapsackInputPayload,
+    CoinChangeInputPayload,
+    FibonacciInputPayload,
+)
 
 #check module_type in registry, and alg_key in that module in registry
 def validate_module_algorithm(module_key: str, algorithm_key: str):
@@ -122,46 +128,35 @@ def validate_array_payload(input_payload: dict):
 
 
 
-#validates dp input payload based on algorithm_key
+DP_PAYLOAD_MODELS = {
+    "lcs": DPStringInputPayload,
+    "edit_distance": DPStringInputPayload,
+    "knapsack_01": KnapsackInputPayload,
+    "coin_change": CoinChangeInputPayload,
+    "fibonacci": FibonacciInputPayload,
+}
+
+
 def validate_dp_payload(algorithm_key: str, input_payload: dict):
 
-    if algorithm_key in ("lcs", "edit_distance"):
-        if "string1" not in input_payload or "string2" not in input_payload:
-            raise DomainError(f"'{algorithm_key}' requires 'string1' and 'string2'")
-        
-        if not isinstance(input_payload["string1"], str) or not isinstance(input_payload["string2"], str):
-            raise DomainError("'string1' and 'string2' must be strings")
-        
-        if len(input_payload["string1"]) > 50 or len(input_payload["string2"]) > 50:
-            raise DomainError("Strings must be 50 characters or fewer")
+    model_class = DP_PAYLOAD_MODELS.get(algorithm_key)
 
-    elif algorithm_key == "knapsack_01":
-        if "capacity" not in input_payload or "items" not in input_payload:
-            raise DomainError("'knapsack_01' requires 'capacity' and 'items'")
-        
-        if not isinstance(input_payload["capacity"], int) or input_payload["capacity"] < 1 or input_payload["capacity"] > 1000:
-            raise DomainError("'capacity' must be an integer between 1 and 1000")
-        
-        if not isinstance(input_payload["items"], list) or len(input_payload["items"]) < 1 or len(input_payload["items"]) > 100:
-            raise DomainError("'items' must be a list of 1 to 100 items")
-
-    elif algorithm_key == "coin_change":
-        if "coins" not in input_payload or "target" not in input_payload:
-            raise DomainError("'coin_change' requires 'coins' and 'target'")
-        
-        if not isinstance(input_payload["coins"], list) or len(input_payload["coins"]) < 1 or len(input_payload["coins"]) > 50:
-            raise DomainError("'coins' must be a list of 1 to 50 values")
-        
-        if not isinstance(input_payload["target"], int) or input_payload["target"] < 1 or input_payload["target"] > 10000:
-            raise DomainError("'target' must be an integer between 1 and 10000")
-
-    elif algorithm_key == "fibonacci":
-        if "n" not in input_payload:
-            raise DomainError("'fibonacci' requires 'n'")
-        
-        if not isinstance(input_payload["n"], int) or input_payload["n"] < 1 or input_payload["n"] > 50:
-            raise DomainError("'n' must be an integer between 1 and 50")
-
-    else:
+    if model_class is None:
         raise DomainError(f"Unknown DP algorithm '{algorithm_key}'")
+
+    try:
+        model_class.model_validate(input_payload)
+
+    except ValidationError as e:
+        first_error = e.errors()[0]
+
+        loc_list = first_error["loc"]
+        string_locations = []
+
+        for loc in loc_list:
+            string_locations.append(str(loc))
+
+        field = " -> ".join(string_locations)
+
+        raise DomainError(f"Invalid {algorithm_key} input ({field}): {first_error['msg']}")
 
