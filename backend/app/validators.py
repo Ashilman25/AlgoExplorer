@@ -2,7 +2,13 @@ import math
 from pydantic import ValidationError
 from app.exceptions import DomainError
 from app.data.registry import REGISTRY
-from app.schemas.payloads import SortingInputPayload
+from app.schemas.payloads import (
+    SortingInputPayload,
+    DPStringInputPayload,
+    KnapsackInputPayload,
+    CoinChangeInputPayload,
+    FibonacciInputPayload,
+)
 
 #check module_type in registry, and alg_key in that module in registry
 def validate_module_algorithm(module_key: str, algorithm_key: str):
@@ -122,46 +128,112 @@ def validate_array_payload(input_payload: dict):
 
 
 
+# max cells a DP table can have for visualization (rows * cols)
+DP_TABLE_MAX_CELLS = 2500
+
+
+DP_PAYLOAD_MODELS = {
+    "lcs": DPStringInputPayload,
+    "edit_distance": DPStringInputPayload,
+    "knapsack_01": KnapsackInputPayload,
+    "coin_change": CoinChangeInputPayload,
+    "fibonacci": FibonacciInputPayload,
+}
+
+
 #validates dp input payload based on algorithm_key
 def validate_dp_payload(algorithm_key: str, input_payload: dict):
 
+    model_class = DP_PAYLOAD_MODELS.get(algorithm_key)
+
+    if model_class is None:
+        raise DomainError(f"Unknown DP algorithm '{algorithm_key}'")
+
+    try:
+        parsed = model_class.model_validate(input_payload)
+
+    except ValidationError as e:
+        first_error = e.errors()[0]
+
+        loc_list = first_error["loc"]
+        string_locations = []
+
+        for loc in loc_list:
+            string_locations.append(str(loc))
+
+        field = " -> ".join(string_locations)
+
+        raise DomainError(f"Invalid {algorithm_key} input ({field}): {first_error['msg']}")
+
+    # domain checks after schema validation passes
     if algorithm_key in ("lcs", "edit_distance"):
-        if "string1" not in input_payload or "string2" not in input_payload:
-            raise DomainError(f"'{algorithm_key}' requires 'string1' and 'string2'")
-        
-        if not isinstance(input_payload["string1"], str) or not isinstance(input_payload["string2"], str):
-            raise DomainError("'string1' and 'string2' must be strings")
-        
-        if len(input_payload["string1"]) > 50 or len(input_payload["string2"]) > 50:
-            raise DomainError("Strings must be 50 characters or fewer")
+        _validate_dp_strings(parsed)
 
     elif algorithm_key == "knapsack_01":
-        if "capacity" not in input_payload or "items" not in input_payload:
-            raise DomainError("'knapsack_01' requires 'capacity' and 'items'")
-        
-        if not isinstance(input_payload["capacity"], int) or input_payload["capacity"] < 1 or input_payload["capacity"] > 1000:
-            raise DomainError("'capacity' must be an integer between 1 and 1000")
-        
-        if not isinstance(input_payload["items"], list) or len(input_payload["items"]) < 1 or len(input_payload["items"]) > 100:
-            raise DomainError("'items' must be a list of 1 to 100 items")
+        _validate_knapsack(parsed)
 
     elif algorithm_key == "coin_change":
-        if "coins" not in input_payload or "target" not in input_payload:
-            raise DomainError("'coin_change' requires 'coins' and 'target'")
-        
-        if not isinstance(input_payload["coins"], list) or len(input_payload["coins"]) < 1 or len(input_payload["coins"]) > 50:
-            raise DomainError("'coins' must be a list of 1 to 50 values")
-        
-        if not isinstance(input_payload["target"], int) or input_payload["target"] < 1 or input_payload["target"] > 10000:
-            raise DomainError("'target' must be an integer between 1 and 10000")
+        _validate_coin_change(parsed)
 
-    elif algorithm_key == "fibonacci":
-        if "n" not in input_payload:
-            raise DomainError("'fibonacci' requires 'n'")
-        
-        if not isinstance(input_payload["n"], int) or input_payload["n"] < 1 or input_payload["n"] > 50:
-            raise DomainError("'n' must be an integer between 1 and 50")
 
-    else:
-        raise DomainError(f"Unknown DP algorithm '{algorithm_key}'")
+def _validate_dp_strings(parsed: DPStringInputPayload):
+    s1, s2 = parsed.string1, parsed.string2
+
+    # both strings empty is meaningless
+    if len(s1) == 0 and len(s2) == 0:
+        raise DomainError("At least one string must be non-empty")
+
+    # reject whitespace-only strings
+    if len(s1) > 0 and s1.isspace():
+        raise DomainError("'string1' must not be whitespace-only")
+
+    if len(s2) > 0 and s2.isspace():
+        raise DomainError("'string2' must not be whitespace-only")
+
+    # table size: (len+1) * (len+1) for LCS / Edit Distance
+    table_cells = (len(s1) + 1) * (len(s2) + 1)
+
+    if table_cells > DP_TABLE_MAX_CELLS:
+        raise DomainError(
+            f"DP table size ({len(s1)+1} x {len(s2)+1} = {table_cells} cells) "
+            f"exceeds visualization limit of {DP_TABLE_MAX_CELLS} cells. "
+            "Use shorter strings."
+        )
+
+
+def _validate_knapsack(parsed: KnapsackInputPayload):
+    # table size: (items+1) * (capacity+1)
+    rows = len(parsed.items) + 1
+    cols = parsed.capacity + 1
+    table_cells = rows * cols
+
+    if table_cells > DP_TABLE_MAX_CELLS:
+        raise DomainError(
+            f"DP table size ({rows} x {cols} = {table_cells} cells) "
+            f"exceeds visualization limit of {DP_TABLE_MAX_CELLS} cells. "
+            "Reduce item count or capacity."
+        )
+
+
+def _validate_coin_change(parsed: CoinChangeInputPayload):
+    # each coin must be positive
+    for coin in parsed.coins:
+        if coin < 1:
+            raise DomainError(f"Coin value {coin} must be at least 1")
+
+    # no duplicate coins
+    if len(set(parsed.coins)) != len(parsed.coins):
+        raise DomainError("Coin values must be unique")
+
+    # table size: (coins+1) * (target+1)
+    rows = len(parsed.coins) + 1
+    cols = parsed.target + 1
+    table_cells = rows * cols
+
+    if table_cells > DP_TABLE_MAX_CELLS:
+        raise DomainError(
+            f"DP table size ({rows} x {cols} = {table_cells} cells) "
+            f"exceeds visualization limit of {DP_TABLE_MAX_CELLS} cells. "
+            "Reduce coin count or target amount."
+        )
 

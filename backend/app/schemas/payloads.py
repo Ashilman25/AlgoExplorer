@@ -99,6 +99,38 @@ class SortingStatePayload(BaseModel):
 
 
 
+class DPStringInputPayload(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    string1: str = Field(min_length = 0, max_length = 50)
+    string2: str = Field(min_length = 0, max_length = 50)
+
+
+class KnapsackItem(BaseModel):
+    weight: int = Field(ge = 1)
+    value: int = Field(ge = 1)
+
+
+class KnapsackInputPayload(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    capacity: int = Field(ge = 1, le = 1000)
+    items: list[KnapsackItem] = Field(min_length = 1, max_length = 100)
+
+
+class CoinChangeInputPayload(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    coins: list[int] = Field(min_length=1, max_length=50)
+    target: int = Field(ge = 1, le = 10000)
+
+
+class FibonacciInputPayload(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    n: int = Field(ge = 1, le = 50)
+
+
 class DPEvents:
     INITIALIZE = "initialize"      
     COMPUTE_CELL = "compute_cell"    
