@@ -267,7 +267,6 @@ function GraphCanvas({
   const currentStep = usePlaybackStore((s) => s.currentStep)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
   const isLoading = usePlaybackStore((s) => s.isLoading)
-  const error = usePlaybackStore((s) => s.error)
 
   const svgRef = useRef(null)
   const [dragTarget, setDragTarget] = useState(null)
@@ -373,30 +372,21 @@ function GraphCanvas({
     : builderMode === 'delete' ? 'cursor-pointer'
     : dragTarget ? 'cursor-grabbing' : 'cursor-grab'
 
-  if (isLoading) {
-    return (
-      <div className = "flex-1 flex items-center justify-center">
-        <div className = "flex flex-col items-center gap-3">
-          <div className = "w-6 h-6 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-          <p className = "text-xs text-slate-500 font-mono">Running simulation…</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className = "flex-1 flex flex-col items-center justify-center p-8 text-center gap-3">
-        <p className = "text-sm font-medium text-state-target">Simulation error</p>
-        <p className = "text-xs text-slate-500 max-w-xs leading-relaxed">{error}</p>
-      </div>
-    )
-  }
-
   const HIGHLIGHTED = new Set(['active', 'frontier', 'success', 'source', 'target'])
 
   return (
-    <div className = "flex-1 flex flex-col min-h-0">
+    <div className = "flex-1 flex flex-col min-h-0 relative">
+
+      {/* loading overlay — sits on top of the graph, does not replace it */}
+      {isLoading && (
+        <div className = "absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
+          <div className = "flex flex-col items-center gap-3">
+            <div className = "w-6 h-6 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+            <p className = "text-xs text-slate-500 font-mono">Running simulation…</p>
+          </div>
+        </div>
+      )}
+
       {/* ── SVG graph ─────────────────────────────────────────────────────── */}
       <div ref = {containerRef} className = "flex-1 min-h-0 overflow-hidden">
         <svg
@@ -752,6 +742,8 @@ export default function GraphLabPage() {
   const handlePresetChange = useCallback((e) => {
     const key = e.target.value
     setPresetKey(key)
+    clearTimeline()
+    clearRun()
     const p = GRAPH_PRESETS.find((pr) => pr.value === key)
     if (p) {
       setGraphNodes(p.nodes)
@@ -762,7 +754,7 @@ export default function GraphLabPage() {
       setWeighted(p.weighted)
       setConnectSource(null)
     }
-  }, [canvasSize])
+  }, [canvasSize, clearTimeline, clearRun])
 
   //build actions
   const handleAddNode = useCallback((cx, cy) => {

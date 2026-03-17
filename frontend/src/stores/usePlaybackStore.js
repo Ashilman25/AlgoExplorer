@@ -39,6 +39,8 @@ export const usePlaybackStore = create((set, get) => ({
       currentStep: null,
       isPlaying: false,
       isScrubbing: false,
+      isLoading: false,
+      error: null,
     }),
 
   setLoading: (isLoading) => set({isLoading}),
