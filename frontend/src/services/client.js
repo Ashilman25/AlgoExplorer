@@ -25,8 +25,8 @@ async function request(path, options = {}) {
     }
     throw new ApiError(
       res.status,
-      body?.message ?? `HTTP ${res.status}`,
-      body?.details ?? null,
+      body?.error?.message ?? body?.message ?? `HTTP ${res.status}`,
+      body?.error?.details ?? body?.details ?? null,
     )
   }
 
