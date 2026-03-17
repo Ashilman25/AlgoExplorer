@@ -128,6 +128,10 @@ def validate_array_payload(input_payload: dict):
 
 
 
+# max cells a DP table can have for visualization (rows * cols)
+DP_TABLE_MAX_CELLS = 2500
+
+
 DP_PAYLOAD_MODELS = {
     "lcs": DPStringInputPayload,
     "edit_distance": DPStringInputPayload,
@@ -137,6 +141,7 @@ DP_PAYLOAD_MODELS = {
 }
 
 
+#validates dp input payload based on algorithm_key
 def validate_dp_payload(algorithm_key: str, input_payload: dict):
 
     model_class = DP_PAYLOAD_MODELS.get(algorithm_key)
@@ -145,7 +150,7 @@ def validate_dp_payload(algorithm_key: str, input_payload: dict):
         raise DomainError(f"Unknown DP algorithm '{algorithm_key}'")
 
     try:
-        model_class.model_validate(input_payload)
+        parsed = model_class.model_validate(input_payload)
 
     except ValidationError as e:
         first_error = e.errors()[0]
@@ -159,4 +164,76 @@ def validate_dp_payload(algorithm_key: str, input_payload: dict):
         field = " -> ".join(string_locations)
 
         raise DomainError(f"Invalid {algorithm_key} input ({field}): {first_error['msg']}")
+
+    # domain checks after schema validation passes
+    if algorithm_key in ("lcs", "edit_distance"):
+        _validate_dp_strings(parsed)
+
+    elif algorithm_key == "knapsack_01":
+        _validate_knapsack(parsed)
+
+    elif algorithm_key == "coin_change":
+        _validate_coin_change(parsed)
+
+
+def _validate_dp_strings(parsed: DPStringInputPayload):
+    s1, s2 = parsed.string1, parsed.string2
+
+    # both strings empty is meaningless
+    if len(s1) == 0 and len(s2) == 0:
+        raise DomainError("At least one string must be non-empty")
+
+    # reject whitespace-only strings
+    if len(s1) > 0 and s1.isspace():
+        raise DomainError("'string1' must not be whitespace-only")
+
+    if len(s2) > 0 and s2.isspace():
+        raise DomainError("'string2' must not be whitespace-only")
+
+    # table size: (len+1) * (len+1) for LCS / Edit Distance
+    table_cells = (len(s1) + 1) * (len(s2) + 1)
+
+    if table_cells > DP_TABLE_MAX_CELLS:
+        raise DomainError(
+            f"DP table size ({len(s1)+1} x {len(s2)+1} = {table_cells} cells) "
+            f"exceeds visualization limit of {DP_TABLE_MAX_CELLS} cells. "
+            "Use shorter strings."
+        )
+
+
+def _validate_knapsack(parsed: KnapsackInputPayload):
+    # table size: (items+1) * (capacity+1)
+    rows = len(parsed.items) + 1
+    cols = parsed.capacity + 1
+    table_cells = rows * cols
+
+    if table_cells > DP_TABLE_MAX_CELLS:
+        raise DomainError(
+            f"DP table size ({rows} x {cols} = {table_cells} cells) "
+            f"exceeds visualization limit of {DP_TABLE_MAX_CELLS} cells. "
+            "Reduce item count or capacity."
+        )
+
+
+def _validate_coin_change(parsed: CoinChangeInputPayload):
+    # each coin must be positive
+    for coin in parsed.coins:
+        if coin < 1:
+            raise DomainError(f"Coin value {coin} must be at least 1")
+
+    # no duplicate coins
+    if len(set(parsed.coins)) != len(parsed.coins):
+        raise DomainError("Coin values must be unique")
+
+    # table size: (coins+1) * (target+1)
+    rows = len(parsed.coins) + 1
+    cols = parsed.target + 1
+    table_cells = rows * cols
+
+    if table_cells > DP_TABLE_MAX_CELLS:
+        raise DomainError(
+            f"DP table size ({rows} x {cols} = {table_cells} cells) "
+            f"exceeds visualization limit of {DP_TABLE_MAX_CELLS} cells. "
+            "Reduce coin count or target amount."
+        )
 

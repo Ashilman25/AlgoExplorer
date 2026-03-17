@@ -102,8 +102,8 @@ class SortingStatePayload(BaseModel):
 class DPStringInputPayload(BaseModel):
     model_config = ConfigDict(extra = "forbid")
 
-    string1: str = Field(min_length = 1, max_length = 50)
-    string2: str = Field(min_length = 1, max_length = 50)
+    string1: str = Field(min_length = 0, max_length = 50)
+    string2: str = Field(min_length = 0, max_length = 50)
 
 
 class KnapsackItem(BaseModel):
