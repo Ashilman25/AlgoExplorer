@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from 'react'
+import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Grid3x3, Play, RotateCcw, Save } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select } from '../components/ui'
@@ -8,6 +8,8 @@ import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 
+
+// ─── Constants ──────────────────────────────────────────
 
 const DP_ALGOS = [
   {value: 'lcs', label: 'LCS — Longest Common Subsequence'},
@@ -21,28 +23,40 @@ const EXPLANATION_LEVELS = [
 ]
 
 const DP_PRESETS = [
-  {value: 'custom', label: 'Custom'},
-  {value: 'short_match', label: 'Short — obvious match'},
-  {value: 'no_match', label: 'No common characters'},
-  {value: 'identical', label: 'Identical strings'},
-  {value: 'single_char', label: 'Single character each'},
-  {value: 'substitutions', label: 'Substitution-heavy'},
-  {value: 'insert_delete', label: 'Insert / delete mix'},
-  {value: 'medium', label: 'Medium strings'},
+  { value: 'custom',          label: 'Custom' },
+  { value: 'short_match',     label: 'Short — obvious match' },
+  { value: 'no_match',        label: 'No common characters' },
+  { value: 'identical',       label: 'Identical strings' },
+  { value: 'single_char',     label: 'Single character each' },
+  { value: 'substitutions',   label: 'Substitution-heavy' },
+  { value: 'insert_delete',   label: 'Insert / delete mix' },
+  { value: 'medium',          label: 'Medium strings' },
 ]
 
 const PRESET_DATA = {
-  short_match: {string1: 'ABCDEF', string2: 'ACBDFE'},
-  no_match: {string1: 'ABC', string2: 'XYZ'},
-  identical: {string1: 'MATCH', string2: 'MATCH'},
-  single_char: {string1: 'A', string2: 'B'},
-  substitutions: {string1: 'kitten', string2: 'sitting'},
-  insert_delete: {string1: 'abcde', string2: 'aebdc'},
-  medium: {string1: 'ALGORITHM', string2: 'ALTRUISTIC'},
+  short_match:   { string1: 'ABCDEF',    string2: 'ACBDFE' },
+  no_match:      { string1: 'ABC',       string2: 'XYZ' },
+  identical:     { string1: 'MATCH',     string2: 'MATCH' },
+  single_char:   { string1: 'A',         string2: 'B' },
+  substitutions: { string1: 'kitten',    string2: 'sitting' },
+  insert_delete: { string1: 'abcde',     string2: 'aebdc' },
+  medium:        { string1: 'ALGORITHM', string2: 'ALTRUISTIC' },
 }
 
 const MAX_STRING_LENGTH = 50
 const DP_TABLE_MAX_CELLS = 2500
+const CELL_SIZE = 36
+
+const STATE_COLOR = {
+  default:  'var(--color-state-default)',
+  active:   'var(--color-state-active)',
+  frontier: 'var(--color-state-frontier)',
+  visited:  'var(--color-state-visited)',
+  swap:     'var(--color-state-swap)',
+  success:  'var(--color-state-success)',
+  source:   'var(--color-state-source)',
+  target:   'var(--color-state-target)',
+}
 
 
 function validateDpStrings(s1, s2) {
@@ -75,6 +89,7 @@ function validateDpStrings(s1, s2) {
 }
 
 
+// ─── Config Panel ───────────────────────────────────────
 
 function DpConfig({
   algorithm, onAlgorithmChange,
@@ -224,6 +239,255 @@ function DpConfig({
 
 
 
+const CELL_BASE = 'flex items-center justify-center font-mono text-xs tabular-nums transition-all duration-150'
+
+const CELL_STATE_CLASSES = {
+  default:  `${CELL_BASE} border border-white/[0.04] text-slate-600`,
+  active:   `${CELL_BASE} border-2 border-state-active   bg-state-active/20   text-state-active`,
+  frontier: `${CELL_BASE} border-2 border-state-frontier bg-state-frontier/15 text-state-frontier`,
+  visited:  `${CELL_BASE} border border-state-visited/20  bg-state-visited/10  text-state-visited`,
+  swap:     `${CELL_BASE} border border-state-swap/30     bg-state-swap/15     text-state-swap`,
+  success:  `${CELL_BASE} border border-state-success/30  bg-state-success/15  text-state-success`,
+  source:   `${CELL_BASE} border border-state-source/30   bg-state-source/15   text-state-source`,
+  target:   `${CELL_BASE} border border-state-target/30   bg-state-target/15   text-state-target`,
+}
+
+const GLOW = {
+  active:   '0 0 8px rgba(34,211,238,0.35), inset 0 0 6px rgba(34,211,238,0.12)',
+  frontier: '0 0 6px rgba(251,191,36,0.3)',
+}
+
+const HEADER_CELL = 'flex items-center justify-center bg-slate-800/80 border border-white/[0.06] font-mono text-xs font-semibold text-slate-400 select-none'
+
+
+function DpTableCanvas({ string1, string2 }) {
+  const currentStep = usePlaybackStore((s) => s.currentStep)
+  const isLoading  = usePlaybackStore((s) => s.isLoading)
+  const totalSteps = usePlaybackStore((s) => s.totalSteps)
+
+  const activeCellRef = useRef(null)
+
+  const table         = currentStep?.state_payload?.table ?? null
+  const cellStates    = currentStep?.state_payload?.cell_states ?? null
+  const currentCell   = currentStep?.state_payload?.current_cell ?? null
+  const tracebackPath = currentStep?.state_payload?.traceback_path ?? []
+  const explanation   = currentStep?.explanation ?? null
+  const eventType     = currentStep?.event_type ?? currentStep?.eventType ?? null
+
+  const hasTimeline = totalSteps > 0
+
+  const activeRow = currentCell?.[0] ?? null
+  const activeCol = currentCell?.[1] ?? null
+
+  // auto-scroll the active cell into view on each step
+  useEffect(() => {
+    activeCellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+  }, [activeRow, activeCol])
+
+
+  // ── empty state ──
+  if (!hasTimeline) {
+    return (
+      <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
+        <p className = "text-sm font-medium text-slate-500">
+          DP table — cells fill in as the algorithm progresses
+        </p>
+
+        <p className = "text-xs text-slate-600 max-w-xs leading-relaxed">
+          Enter your input strings, then step through the recurrence relation.
+        </p>
+
+        <div className = "flex gap-2 mt-1">
+          {['LCS', 'Edit Distance'].map((alg) => (
+            <span
+              key = {alg}
+              className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-500 border border-white/[0.06]"
+            >
+              {alg}
+            </span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (!table || table.length === 0) {
+    return (
+      <div className = "flex-1 flex items-center justify-center">
+        <p className = "text-sm text-slate-500">No table data.</p>
+      </div>
+    )
+  }
+
+
+  // ── derive grid dimensions ──
+  const rows = table.length
+  const cols = table[0]?.length ?? 0
+
+  const rowHeaders = ['\u03b5', ...string1.split('')]   // ε + chars of string1
+  const colHeaders = ['\u03b5', ...string2.split('')]   // ε + chars of string2
+
+  const gridWidth  = CELL_SIZE * (cols + 1)
+  const gridHeight = CELL_SIZE * (rows + 1)
+
+
+  return (
+    <div className = "flex-1 flex flex-col min-h-0 relative">
+
+      {/* loading overlay */}
+      {isLoading && (
+        <div className = "absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
+          <div className = "flex flex-col items-center gap-3">
+            <div className = "w-6 h-6 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+            <p className = "text-xs text-slate-500 font-mono">Running simulation…</p>
+          </div>
+        </div>
+      )}
+
+      {/* scrollable table area */}
+      <div className = "flex-1 overflow-auto min-h-0 p-4">
+        <div className = "relative inline-block" style = {{ minWidth: gridWidth, minHeight: gridHeight }}>
+
+          {/* CSS grid table */}
+          <div
+            style = {{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${cols + 1}, ${CELL_SIZE}px)`,
+              gridTemplateRows:    `repeat(${rows + 1}, ${CELL_SIZE}px)`,
+            }}
+          >
+            {/* corner cell */}
+            <div className = {HEADER_CELL} style = {{ fontSize: 9, color: 'var(--color-slate-600, #475569)' }}>
+              A↓ B→
+            </div>
+
+            {/* column headers — string2 characters */}
+            {colHeaders.map((ch, j) => (
+              <div key = {`ch-${j}`} className = {HEADER_CELL}>
+                {ch}
+              </div>
+            ))}
+
+            {/* rows: header + data cells */}
+            {table.map((row, i) => [
+              /* row header — string1 character */
+              <div key = {`rh-${i}`} className = {HEADER_CELL}>
+                {rowHeaders[i]}
+              </div>,
+
+              /* data cells */
+              ...row.map((val, j) => {
+                const state    = cellStates?.[i]?.[j] ?? 'default'
+                const isActive = state === 'active'
+                const isDep    = state === 'frontier'
+                const cls      = CELL_STATE_CLASSES[state] ?? CELL_STATE_CLASSES.default
+                const glow     = isActive ? GLOW.active : isDep ? GLOW.frontier : undefined
+
+                return (
+                  <div
+                    key = {`c-${i}-${j}`}
+                    ref = {isActive ? activeCellRef : undefined}
+                    className = {cls}
+                    style = {glow ? { boxShadow: glow } : undefined}
+                  >
+                    {val != null ? val : ''}
+                  </div>
+                )
+              }),
+            ])}
+          </div>
+
+          {/* SVG traceback overlay */}
+          {tracebackPath.length > 1 && (
+            <svg
+              className = "absolute top-0 left-0 pointer-events-none"
+              width = {gridWidth}
+              height = {gridHeight}
+              style = {{ zIndex: 5 }}
+            >
+              {/* connecting lines */}
+              {tracebackPath.map(([ci, cj], idx) => {
+                if (idx === 0) return null
+                const [pi, pj] = tracebackPath[idx - 1]
+                return (
+                  <line
+                    key = {`tl-${idx}`}
+                    x1 = {(pj + 1) * CELL_SIZE + CELL_SIZE / 2}
+                    y1 = {(pi + 1) * CELL_SIZE + CELL_SIZE / 2}
+                    x2 = {(cj + 1) * CELL_SIZE + CELL_SIZE / 2}
+                    y2 = {(ci + 1) * CELL_SIZE + CELL_SIZE / 2}
+                    stroke = {STATE_COLOR.success}
+                    strokeWidth = {2}
+                    strokeOpacity = {0.55}
+                    strokeLinecap = "round"
+                  />
+                )
+              })}
+
+              {/* dots at each traceback cell */}
+              {tracebackPath.map(([ci, cj], idx) => (
+                <circle
+                  key = {`td-${idx}`}
+                  cx = {(cj + 1) * CELL_SIZE + CELL_SIZE / 2}
+                  cy = {(ci + 1) * CELL_SIZE + CELL_SIZE / 2}
+                  r = {3}
+                  fill = {STATE_COLOR.success}
+                  fillOpacity = {0.8}
+                />
+              ))}
+            </svg>
+          )}
+
+        </div>
+      </div>
+
+      {/* recurrence explanation panel */}
+      <DpDataPanel
+        explanation = {explanation}
+        currentCell = {currentCell}
+        eventType = {eventType}
+      />
+
+    </div>
+  )
+}
+
+
+function DpDataPanel({ explanation, currentCell, eventType }) {
+  if (!explanation && !currentCell) {
+    return <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 min-h-[40px]" />
+  }
+
+  return (
+    <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
+
+      {currentCell && (
+        <div className = "flex items-center gap-2">
+          <span className = "mono-label shrink-0">Cell</span>
+
+          <span className = "font-mono text-[10px] px-1.5 py-0.5 rounded border text-state-active bg-state-active/10 border-state-active/30">
+            ({currentCell[0]}, {currentCell[1]})
+          </span>
+
+          {eventType && (
+            <span className = "font-mono text-[10px] px-1.5 py-0.5 rounded border text-state-source bg-state-source/10 border-state-source/30">
+              {eventType}
+            </span>
+          )}
+        </div>
+      )}
+
+      {explanation && (
+        <p className = "text-xs text-slate-400 leading-relaxed">{explanation}</p>
+      )}
+
+    </div>
+  )
+}
+
+
+// ─── Page ───────────────────────────────────────────────
+
 export default function DpLabPage() {
   const { run, isRunning } = useRunSimulation()
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
@@ -252,20 +516,20 @@ export default function DpLabPage() {
     const snapshot = currentStep?.metrics_snapshot
     if (!snapshot) {
       return [
-        {label: 'Cells computed', value: '—'},
-        {label: 'Table size', value: '—'},
-        {label: 'Traceback length', value: '—'},
-        {label: 'Subproblems reused', value: '—'},
-        {label: 'Runtime', value: '—'},
+        { label: 'Cells computed',     value: '—' },
+        { label: 'Table size',         value: '—' },
+        { label: 'Traceback length',   value: '—' },
+        { label: 'Subproblems reused', value: '—' },
+        { label: 'Runtime',            value: '—' },
       ]
     }
 
     return [
-      {label: 'Cells computed', value: String(snapshot.cells_computed ?? 0)},
-      {label: 'Table size', value: `${snapshot.table_rows ?? 0} × ${snapshot.table_cols ?? 0}`},
-      {label: 'Traceback length', value: String(snapshot.traceback_length ?? 0)},
-      {label: 'Subproblems reused', value: String(snapshot.subproblems_reused ?? 0)},
-      {label: 'Runtime', value: snapshot.runtime_ms != null ? `${snapshot.runtime_ms} ms` : '—'},
+      { label: 'Cells computed',     value: String(snapshot.cells_computed ?? 0) },
+      { label: 'Table size',         value: `${snapshot.table_rows ?? 0} × ${snapshot.table_cols ?? 0}` },
+      { label: 'Traceback length',   value: String(snapshot.traceback_length ?? 0) },
+      { label: 'Subproblems reused', value: String(snapshot.subproblems_reused ?? 0) },
+      { label: 'Runtime',            value: snapshot.runtime_ms != null ? `${snapshot.runtime_ms} ms` : '—' },
     ]
   }, [currentStep])
 
@@ -365,26 +629,7 @@ export default function DpLabPage() {
         metrics = {dpMetrics}
       >
 
-        <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-          <p className = "text-sm font-medium text-slate-500">
-            DP table — cells fill in as the algorithm progresses
-          </p>
-
-          <p className = "text-xs text-slate-600 max-w-xs leading-relaxed">
-            Enter your input strings, then step through the recurrence relation.
-          </p>
-
-          <div className = "flex gap-2 mt-1">
-            {['LCS', 'Edit Distance'].map((alg) => (
-              <span
-                key = {alg}
-                className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-500 border border-white/[0.06]"
-              >
-                {alg}
-              </span>
-            ))}
-          </div>
-        </div>
+        <DpTableCanvas string1 = {string1} string2 = {string2} />
 
       </SimulationLayout>
     </>
