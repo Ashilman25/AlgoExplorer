@@ -132,12 +132,13 @@ class FibonacciInputPayload(BaseModel):
 
 
 class DPEvents:
-    INITIALIZE = "initialize"      
-    COMPUTE_CELL = "compute_cell"    
+    INITIALIZE = "initialize"
+    COMPUTE_CELL = "compute_cell"
     READ_DEPENDENCY = "read_dependency"
-    FILL_CELL = "fill_cell"       
-    TRACEBACK_START = "traceback_start"  
-    TRACEBACK_STEP = "traceback_step"   
+    FILL_CELL = "fill_cell"
+    ROW_COMPLETE = "row_complete"
+    TRACEBACK_START = "traceback_start"
+    TRACEBACK_STEP = "traceback_step"
     COMPLETE = "complete"        
 
 
