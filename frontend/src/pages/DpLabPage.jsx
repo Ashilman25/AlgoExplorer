@@ -1,7 +1,7 @@
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Grid3x3, Play, RotateCcw, Save } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
-import { Button, Select } from '../components/ui'
+import { Button, Select, useToast } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
@@ -495,6 +495,7 @@ export default function DpLabPage() {
   const { clearTimeline, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
+  const toast = useToast()
 
 
   const [algorithm, setAlgorithm] = useState('lcs')
@@ -581,9 +582,10 @@ export default function DpLabPage() {
 
 
   const handleSave = useCallback(() => {
+    const name = `${DP_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — "${string1}" vs "${string2}"`
     saveScenario({
       id: `dp-${Date.now()}`,
-      name: `${DP_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — "${string1}" vs "${string2}"`,
+      name,
       module_type: 'dp',
       algorithm_key: algorithm,
       input_payload: {
@@ -592,7 +594,8 @@ export default function DpLabPage() {
       },
       created_at: new Date().toISOString(),
     })
-  }, [saveScenario, algorithm, string1, string2])
+    toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
+  }, [saveScenario, toast, algorithm, string1, string2])
 
 
   return (

@@ -1,7 +1,7 @@
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
-import { Button, Select } from '../components/ui'
+import { Button, Select, useToast } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
@@ -688,6 +688,7 @@ export default function GraphLabPage() {
   const { clearTimeline, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
+  const toast = useToast()
 
 
   const [algorithm, setAlgorithm] = useState('bfs')
@@ -842,15 +843,17 @@ export default function GraphLabPage() {
   }, [clearTimeline, clearRun])
 
   const handleSave = useCallback(() => {
+    const name = `Custom Graph — ${algorithm.toUpperCase()}`
     saveScenario({
       id: `graph-${Date.now()}`,
-      name: `Custom Graph — ${algorithm.toUpperCase()}`,
+      name,
       module_type: 'graph',
       algorithm_key: algorithm,
       input_payload: { nodes: graphNodes, edges: graphEdges, source, target, weighted, directed, mode },
       created_at: new Date().toISOString(),
     })
-  }, [saveScenario, graphNodes, graphEdges, algorithm, source, target, weighted, directed, mode])
+    toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
+  }, [saveScenario, toast, graphNodes, graphEdges, algorithm, source, target, weighted, directed, mode])
 
   return (
     <>

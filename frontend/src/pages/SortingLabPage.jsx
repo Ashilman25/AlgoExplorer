@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect, useMemo, useRef } from 'react'
 import { BarChart3, Play, RotateCcw, Save, Shuffle, Sparkles } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
-import { Button, Select, Slider } from '../components/ui'
+import { Button, Select, Slider, useToast } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
@@ -460,6 +460,7 @@ export default function SortingLabPage() {
   const { clearTimeline, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
+  const toast = useToast()
 
 
   const [algorithm, setAlgorithm] = useState('quicksort')
@@ -562,9 +563,10 @@ export default function SortingLabPage() {
 
 
   const handleSave = useCallback(() => {
+    const name = `${SORT_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — ${array.length} elements`
     saveScenario({
       id: `sorting-${Date.now()}`,
-      name: `${SORT_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — ${array.length} elements`,
+      name,
       module_type: 'sorting',
       algorithm_key: algorithm,
       input_payload: {
@@ -574,7 +576,8 @@ export default function SortingLabPage() {
       },
       created_at: new Date().toISOString(),
     })
-  }, [saveScenario, algorithm, array, preset, duplicateDensity])
+    toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
+  }, [saveScenario, toast, algorithm, array, preset, duplicateDensity])
 
 
   return (
