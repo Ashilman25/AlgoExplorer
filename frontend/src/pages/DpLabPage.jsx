@@ -1,12 +1,13 @@
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Grid3x3, Play, RotateCcw, Save } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
-import { Button, Select } from '../components/ui'
+import { Button, Select, useToast } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
+import { useScenarioStore } from '../stores/useScenarioStore'
 
 
 // ─── Constants ──────────────────────────────────────────
@@ -495,13 +496,24 @@ export default function DpLabPage() {
   const { clearTimeline, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
+  const toast = useToast()
 
 
-  const [algorithm, setAlgorithm] = useState('lcs')
-  const [preset, setPreset] = useState('short_match')
-  const [string1, setString1] = useState(PRESET_DATA.short_match.string1)
-  const [string2, setString2] = useState(PRESET_DATA.short_match.string2)
+  // --- load scenario from library (if navigated from Scenario Library) ---
+  const [loadedScenario] = useState(() => {
+    const s = useScenarioStore.getState().scenario
+    return s?.module_type === 'dp' ? s : null
+  })
+
+  const [algorithm, setAlgorithm] = useState(loadedScenario?.algorithm_key ?? 'lcs')
+  const [preset, setPreset] = useState(loadedScenario ? 'custom' : 'short_match')
+  const [string1, setString1] = useState(loadedScenario?.input_payload?.string1 ?? PRESET_DATA.short_match.string1)
+  const [string2, setString2] = useState(loadedScenario?.input_payload?.string2 ?? PRESET_DATA.short_match.string2)
   const [explanationLevel, setExplanationLevel] = useState('standard')
+
+  useEffect(() => {
+    if (loadedScenario) useScenarioStore.getState().clearScenario()
+  }, [loadedScenario])
 
 
   // --- validation ---
@@ -581,9 +593,10 @@ export default function DpLabPage() {
 
 
   const handleSave = useCallback(() => {
+    const name = `${DP_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — "${string1}" vs "${string2}"`
     saveScenario({
       id: `dp-${Date.now()}`,
-      name: `${DP_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — "${string1}" vs "${string2}"`,
+      name,
       module_type: 'dp',
       algorithm_key: algorithm,
       input_payload: {
@@ -592,7 +605,8 @@ export default function DpLabPage() {
       },
       created_at: new Date().toISOString(),
     })
-  }, [saveScenario, algorithm, string1, string2])
+    toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
+  }, [saveScenario, toast, algorithm, string1, string2])
 
 
   return (

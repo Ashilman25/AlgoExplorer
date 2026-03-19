@@ -1,12 +1,13 @@
 import { useCallback, useState, useEffect, useMemo, useRef } from 'react'
 import { BarChart3, Play, RotateCcw, Save, Shuffle, Sparkles } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
-import { Button, Select, Slider } from '../components/ui'
+import { Button, Select, Slider, useToast } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
+import { useScenarioStore } from '../stores/useScenarioStore'
 import {
   generateFromPreset,
   parseManualInput,
@@ -460,17 +461,28 @@ export default function SortingLabPage() {
   const { clearTimeline, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
+  const toast = useToast()
 
 
-  const [algorithm, setAlgorithm] = useState('quicksort')
-  const [preset, setPreset] = useState('random')
-  const [size, setSize] = useState(20)
-  const [duplicateDensity, setDuplicateDensity] = useState('none')
+  // --- load scenario from library (if navigated from Scenario Library) ---
+  const [loadedScenario] = useState(() => {
+    const s = useScenarioStore.getState().scenario
+    return s?.module_type === 'sorting' ? s : null
+  })
+  const lp = loadedScenario?.input_payload
+
+  const [algorithm, setAlgorithm] = useState(loadedScenario?.algorithm_key ?? 'quicksort')
+  const [preset, setPreset] = useState(lp?.preset ?? (loadedScenario ? 'custom' : 'random'))
+  const [size, setSize] = useState(lp?.array?.length ?? 20)
+  const [duplicateDensity, setDuplicateDensity] = useState(lp?.duplicate_density ?? 'none')
   const [explanationLevel, setExplanationLevel] = useState('standard')
-  const [manualInput, setManualInput] = useState('')
+  const [manualInput, setManualInput] = useState(lp?.array ? lp.array.join(', ') : '')
   const [inputError, setInputError] = useState(null)
-  const [array, setArray] = useState(() => generateFromPreset('random', 20, 'none'))
+  const [array, setArray] = useState(() => lp?.array ?? generateFromPreset('random', 20, 'none'))
 
+  useEffect(() => {
+    if (loadedScenario) useScenarioStore.getState().clearScenario()
+  }, [loadedScenario])
 
 
   useEffect(() => {
@@ -562,9 +574,10 @@ export default function SortingLabPage() {
 
 
   const handleSave = useCallback(() => {
+    const name = `${SORT_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — ${array.length} elements`
     saveScenario({
       id: `sorting-${Date.now()}`,
-      name: `${SORT_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — ${array.length} elements`,
+      name,
       module_type: 'sorting',
       algorithm_key: algorithm,
       input_payload: {
@@ -574,7 +587,8 @@ export default function SortingLabPage() {
       },
       created_at: new Date().toISOString(),
     })
-  }, [saveScenario, algorithm, array, preset, duplicateDensity])
+    toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
+  }, [saveScenario, toast, algorithm, array, preset, duplicateDensity])
 
 
   return (
