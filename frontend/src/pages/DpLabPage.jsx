@@ -1,17 +1,13 @@
+import { useMemo } from 'react'
 import { Grid3x3, Play } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
+import { usePlaybackStore } from '../stores/usePlaybackStore'
 
 const DP_ALGOS = [
   {value: 'lcs', label: 'LCS — Longest Common Subsequence'},
   {value: 'edit_distance', label: 'Edit Distance (Levenshtein)'},
-]
-
-const DP_METRICS = [
-  { label: 'Cells computed', value: '—' },
-  { label: 'Table size',     value: '—' },
-  { label: 'Result',         value: '—' },
 ]
 
 function DpConfig() {
@@ -65,6 +61,29 @@ function DpConfig() {
 }
 
 export default function DpLabPage() {
+  const currentStep = usePlaybackStore((s) => s.currentStep)
+
+  const dpMetrics = useMemo(() => {
+    const snapshot = currentStep?.metrics_snapshot
+    if (!snapshot) {
+      return [
+        {label: 'Cells computed', value: '—'},
+        {label: 'Table size', value: '—'},
+        {label: 'Traceback length', value: '—'},
+        {label: 'Subproblems reused', value: '—'},
+        {label: 'Runtime', value: '—'},
+      ]
+    }
+
+    return [
+      {label: 'Cells computed', value: String(snapshot.cells_computed ?? 0)},
+      {label: 'Table size', value: `${snapshot.table_rows ?? 0} × ${snapshot.table_cols ?? 0}`},
+      {label: 'Traceback length', value: String(snapshot.traceback_length ?? 0)},
+      {label: 'Subproblems reused', value: String(snapshot.subproblems_reused ?? 0)},
+      {label: 'Runtime', value: snapshot.runtime_ms != null ? `${snapshot.runtime_ms} ms` : '—'},
+    ]
+  }, [currentStep])
+
   return (
     <>
       <PageHeader
@@ -75,7 +94,7 @@ export default function DpLabPage() {
         badge = "Phase 7"
       />
 
-      <SimulationLayout configPanel={<DpConfig />} metrics={DP_METRICS}>
+      <SimulationLayout configPanel={<DpConfig />} metrics = {dpMetrics}>
 
         <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
           <p className = "text-sm font-medium text-slate-500">

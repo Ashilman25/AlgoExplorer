@@ -55,6 +55,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
             "deletions": 0,
             "traceback_length": 0,
             "edit_distance": 0,
+            "subproblems_reused": 0,
         }
 
 
@@ -121,6 +122,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                 diag_val = table[i - 1][j - 1]
                 up_val = table[i - 1][j]
                 left_val = table[i][j - 1]
+                metrics["subproblems_reused"] += 3
 
                 cell_states[i - 1][j - 1] = "frontier"
                 cell_states[i - 1][j] = "frontier"
@@ -317,10 +319,21 @@ class EditDistanceAlgorithm(BaseAlgorithm):
 
 
         # return
+        total_cells = m * n
+        naive_calls = 3 ** max(m, n) if max(m, n) <= 25 else None
+        avoidance = (
+            f"Tabulation computed {total_cells} cells, each solved exactly once. "
+            f"Naive recursion branches into 3 choices (insert, delete, replace) at each step"
+            f" (~3^max(m,n)" + (f" = {naive_calls:,}" if naive_calls else "") + " calls). "
+            f"Each dependency lookup ({metrics['subproblems_reused']} total) "
+            f"reuses a previously computed result instead of recomputing it."
+        )
+
         final_result = {
             "edit_distance": table[m][n],
             "operations": list(reversed(operations)),
             "table_dimensions": [rows, cols],
+            "subproblem_avoidance": avoidance,
         }
 
         alg_metadata = self.build_metadata(algo_input) | {

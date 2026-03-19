@@ -51,6 +51,7 @@ class LCSAlgorithm(BaseAlgorithm):
             "string2_length": n,
             "traceback_length": 0,
             "lcs_length": 0,
+            "subproblems_reused": 0,
         }
 
 
@@ -117,6 +118,7 @@ class LCSAlgorithm(BaseAlgorithm):
                 if char_a == char_b:
                     diag_val = table[i - 1][j - 1]
                     new_val = diag_val + 1
+                    metrics["subproblems_reused"] += 1
 
                     cell_states[i - 1][j - 1] = "frontier"
 
@@ -150,6 +152,7 @@ class LCSAlgorithm(BaseAlgorithm):
                     up_val = table[i - 1][j]
                     left_val = table[i][j - 1]
                     new_val = max(up_val, left_val)
+                    metrics["subproblems_reused"] += 2
 
                     cell_states[i - 1][j] = "frontier"
                     cell_states[i][j - 1] = "frontier"
@@ -287,10 +290,21 @@ class LCSAlgorithm(BaseAlgorithm):
 
 
         # return
+        total_cells = m * n
+        naive_calls = 2 ** (m + n) if (m + n) <= 40 else None
+        avoidance = (
+            f"Tabulation computed {total_cells} cells, each solved exactly once. "
+            f"Naive recursion would revisit overlapping subproblems exponentially"
+            f" (~2^(m+n)" + (f" = {naive_calls:,}" if naive_calls else "") + " calls). "
+            f"Each dependency lookup ({metrics['subproblems_reused']} total) "
+            f"reuses a previously computed result instead of recomputing it."
+        )
+
         final_result = {
             "lcs": lcs_string,
             "lcs_length": len(lcs_string),
             "table_dimensions": [rows, cols],
+            "subproblem_avoidance": avoidance,
         }
 
         alg_metadata = self.build_metadata(algo_input) | {
