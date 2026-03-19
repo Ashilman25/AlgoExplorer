@@ -7,6 +7,7 @@ import { useRunSimulation } from '../hooks/useRunSimulation'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
+import { useScenarioStore } from '../stores/useScenarioStore'
 
 
 const GRAPH_PRESETS = [
@@ -54,6 +55,11 @@ const GRAPH_PRESETS = [
   },
 ]
 
+const GRAPH_PRESET_OPTIONS = [
+  { value: 'custom', label: 'Custom (loaded scenario)' },
+  ...GRAPH_PRESETS.map((p) => ({ value: p.value, label: p.label })),
+]
+
 const GRAPH_ALGOS = [
   { value: 'bfs',      label: 'BFS — Breadth-First Search' },
   { value: 'dijkstra',  label: 'Dijkstra — Shortest Path' },
@@ -97,7 +103,7 @@ function GraphConfig({
 
       <ConfigSection title = "Preset">
         <Select
-          options = {GRAPH_PRESETS.map((p) => ({ value: p.value, label: p.label }))}
+          options = {GRAPH_PRESET_OPTIONS}
           value = {preset}
           onChange = {onPresetChange}
         />
@@ -691,14 +697,22 @@ export default function GraphLabPage() {
   const toast = useToast()
 
 
-  const [algorithm, setAlgorithm] = useState('bfs')
-  const [presetKey, setPresetKey] = useState('bfs-demo')
-  const [source, setSource] = useState(GRAPH_PRESETS[0].source)
-  const [target, setTarget] = useState(GRAPH_PRESETS[0].target)
-  const [weighted, setWeighted] = useState(false)
-  const [directed, setDirected] = useState(false)
+  // --- load scenario from library (if navigated from Scenario Library) ---
+  const [loadedScenario] = useState(() => {
+    const s = useScenarioStore.getState().scenario
+    return s?.module_type === 'graph' ? s : null
+  })
+  const gp = loadedScenario?.input_payload
+  const initPreset = GRAPH_PRESETS[0]
+
+  const [algorithm, setAlgorithm] = useState(loadedScenario?.algorithm_key ?? 'bfs')
+  const [presetKey, setPresetKey] = useState(loadedScenario ? 'custom' : 'bfs-demo')
+  const [source, setSource] = useState(gp?.source != null ? String(gp.source) : GRAPH_PRESETS[0].source)
+  const [target, setTarget] = useState(gp?.target != null ? String(gp.target) : GRAPH_PRESETS[0].target)
+  const [weighted, setWeighted] = useState(gp?.weighted ?? false)
+  const [directed, setDirected] = useState(gp?.directed ?? false)
   const [explanationLevel, setExplanationLevel] = useState('standard')
-  const [mode, setMode] = useState('graph')
+  const [mode, setMode] = useState(gp?.mode ?? 'graph')
 
   const canvasContainerRef = useRef(null)
   const [canvasSize, setCanvasSize] = useState({ w: 600, h: 500 })
@@ -715,20 +729,26 @@ export default function GraphLabPage() {
     return () => ro.disconnect()
   }, [])
 
-
-  const initPreset = GRAPH_PRESETS[0]
-  const [graphNodes, setGraphNodes] = useState(initPreset.nodes)
-  const [graphEdges, setGraphEdges] = useState(initPreset.edges)
-  const [nodePositions, setNodePositions] = useState(() => computeNodePositions(initPreset.nodes))
-  const hasInitialized = useRef(false)
+  const [graphNodes, setGraphNodes] = useState(gp?.nodes ?? initPreset.nodes)
+  const [graphEdges, setGraphEdges] = useState(gp?.edges ?? initPreset.edges)
+  const [nodePositions, setNodePositions] = useState(() =>
+    gp?.nodePositions ?? computeNodePositions(gp?.nodes ?? initPreset.nodes),
+  )
+  const hasInitialized = useRef(!!gp?.nodePositions)
 
   // Re-center nodes once the real container size is known (first mount only)
+  // Skipped when positions were restored from a saved scenario.
   useEffect(() => {
     if (hasInitialized.current) return
     hasInitialized.current = true
     setNodePositions(computeNodePositions(graphNodes, canvasSize.w / 2, canvasSize.h / 2, Math.min(canvasSize.w, canvasSize.h) * 0.3))
 
-  }, [canvasSize]) 
+  }, [canvasSize])
+
+  // Clear scenario store after hydration
+  useEffect(() => {
+    if (loadedScenario) useScenarioStore.getState().clearScenario()
+  }, [loadedScenario])
 
   // builder mode: drag | add | connect | delete
   const [builderMode, setBuilderMode]     = useState('drag')
@@ -849,11 +869,11 @@ export default function GraphLabPage() {
       name,
       module_type: 'graph',
       algorithm_key: algorithm,
-      input_payload: { nodes: graphNodes, edges: graphEdges, source, target, weighted, directed, mode },
+      input_payload: { nodes: graphNodes, edges: graphEdges, source, target, weighted, directed, mode, nodePositions },
       created_at: new Date().toISOString(),
     })
     toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
-  }, [saveScenario, toast, graphNodes, graphEdges, algorithm, source, target, weighted, directed, mode])
+  }, [saveScenario, toast, graphNodes, graphEdges, algorithm, source, target, weighted, directed, mode, nodePositions])
 
   return (
     <>

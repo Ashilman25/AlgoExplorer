@@ -7,6 +7,7 @@ import { useRunSimulation } from '../hooks/useRunSimulation'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
+import { useScenarioStore } from '../stores/useScenarioStore'
 import {
   generateFromPreset,
   parseManualInput,
@@ -463,15 +464,25 @@ export default function SortingLabPage() {
   const toast = useToast()
 
 
-  const [algorithm, setAlgorithm] = useState('quicksort')
-  const [preset, setPreset] = useState('random')
-  const [size, setSize] = useState(20)
-  const [duplicateDensity, setDuplicateDensity] = useState('none')
-  const [explanationLevel, setExplanationLevel] = useState('standard')
-  const [manualInput, setManualInput] = useState('')
-  const [inputError, setInputError] = useState(null)
-  const [array, setArray] = useState(() => generateFromPreset('random', 20, 'none'))
+  // --- load scenario from library (if navigated from Scenario Library) ---
+  const [loadedScenario] = useState(() => {
+    const s = useScenarioStore.getState().scenario
+    return s?.module_type === 'sorting' ? s : null
+  })
+  const lp = loadedScenario?.input_payload
 
+  const [algorithm, setAlgorithm] = useState(loadedScenario?.algorithm_key ?? 'quicksort')
+  const [preset, setPreset] = useState(lp?.preset ?? (loadedScenario ? 'custom' : 'random'))
+  const [size, setSize] = useState(lp?.array?.length ?? 20)
+  const [duplicateDensity, setDuplicateDensity] = useState(lp?.duplicate_density ?? 'none')
+  const [explanationLevel, setExplanationLevel] = useState('standard')
+  const [manualInput, setManualInput] = useState(lp?.array ? lp.array.join(', ') : '')
+  const [inputError, setInputError] = useState(null)
+  const [array, setArray] = useState(() => lp?.array ?? generateFromPreset('random', 20, 'none'))
+
+  useEffect(() => {
+    if (loadedScenario) useScenarioStore.getState().clearScenario()
+  }, [loadedScenario])
 
 
   useEffect(() => {

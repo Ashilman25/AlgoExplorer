@@ -11,6 +11,7 @@ import Modal from '../components/ui/Modal'
 import EmptyState from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import { useGuestStore } from '../stores/useGuestStore'
+import { useScenarioStore } from '../stores/useScenarioStore'
 
 
 /* ── constants ──────────────────────────────────────────────── */
@@ -456,11 +457,15 @@ export default function ScenariosPage() {
   }, [filtered, moduleFilter])
 
 
+  const setScenario = useScenarioStore((s) => s.setScenario)
+
   // handlers
   const handleLoad = useCallback((scenario) => {
     const meta = MODULE_META[scenario.module_type]
-    if (meta) navigate(meta.route)
-  }, [navigate])
+    if (!meta) return
+    setScenario(scenario)
+    navigate(meta.route)
+  }, [navigate, setScenario])
 
   const handleEditSave = useCallback((updated) => {
     saveScenario(updated)

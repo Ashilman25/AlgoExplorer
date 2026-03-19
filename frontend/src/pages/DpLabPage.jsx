@@ -7,6 +7,7 @@ import { useRunSimulation } from '../hooks/useRunSimulation'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
+import { useScenarioStore } from '../stores/useScenarioStore'
 
 
 // ─── Constants ──────────────────────────────────────────
@@ -498,11 +499,21 @@ export default function DpLabPage() {
   const toast = useToast()
 
 
-  const [algorithm, setAlgorithm] = useState('lcs')
-  const [preset, setPreset] = useState('short_match')
-  const [string1, setString1] = useState(PRESET_DATA.short_match.string1)
-  const [string2, setString2] = useState(PRESET_DATA.short_match.string2)
+  // --- load scenario from library (if navigated from Scenario Library) ---
+  const [loadedScenario] = useState(() => {
+    const s = useScenarioStore.getState().scenario
+    return s?.module_type === 'dp' ? s : null
+  })
+
+  const [algorithm, setAlgorithm] = useState(loadedScenario?.algorithm_key ?? 'lcs')
+  const [preset, setPreset] = useState(loadedScenario ? 'custom' : 'short_match')
+  const [string1, setString1] = useState(loadedScenario?.input_payload?.string1 ?? PRESET_DATA.short_match.string1)
+  const [string2, setString2] = useState(loadedScenario?.input_payload?.string2 ?? PRESET_DATA.short_match.string2)
   const [explanationLevel, setExplanationLevel] = useState('standard')
+
+  useEffect(() => {
+    if (loadedScenario) useScenarioStore.getState().clearScenario()
+  }, [loadedScenario])
 
 
   // --- validation ---
