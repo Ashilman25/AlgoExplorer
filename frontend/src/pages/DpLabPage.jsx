@@ -4,11 +4,11 @@ import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
+import { useReopenRun } from '../hooks/useReopenRun'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
-import { runsService } from '../services/runsService'
 
 
 // ─── Constants ──────────────────────────────────────────
@@ -494,8 +494,8 @@ export default function DpLabPage() {
   const { run, isRunning } = useRunSimulation()
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const currentStep = usePlaybackStore((s) => s.currentStep)
-  const { clearTimeline, setTimeline, setLoading: setTimelineLoading, play, error: timelineError } = usePlaybackStore()
-  const { clearRun, setRun } = useRunStore()
+  const { clearTimeline, error: timelineError } = usePlaybackStore()
+  const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
   const toast = useToast()
 
@@ -516,34 +516,8 @@ export default function DpLabPage() {
     if (loadedScenario) useScenarioStore.getState().clearScenario()
   }, [loadedScenario])
 
-  // Reopen run: auto-fetch timeline if navigated from Run History
-  useEffect(() => {
-    const reopenId = loadedScenario?._reopenRunId
-    if (!reopenId) return
-
-    let cancelled = false
-    setTimelineLoading(true)
-
-    ;(async () => {
-      try {
-        const [runSummary, timeline] = await Promise.all([
-          runsService.getRun(reopenId),
-          runsService.getTimeline(reopenId),
-        ])
-        if (cancelled) return
-        setRun(reopenId, runSummary)
-        setTimeline(timeline.steps)
-        play()
-      } catch {
-        // timeline may no longer exist on backend — silently skip
-      } finally {
-        if (!cancelled) setTimelineLoading(false)
-      }
-    })()
-
-    return () => { cancelled = true }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
+  // Reopen run: fetch stored timeline if navigated from Run History
+  useReopenRun(loadedScenario?._reopenRunId)
 
   // --- validation ---
   const inputError = useMemo(
