@@ -14,12 +14,13 @@ export const guestService = {
     created_at: new Date().toISOString(),
   }),
 
-  createRunItem: ({ runId, moduleType, algorithmKey, summary }) => ({
+  createRunItem: ({ runId, moduleType, algorithmKey, summary, config }) => ({
     id: generateId(),
     run_id: runId,
     module_type: moduleType,
     algorithm_key: algorithmKey,
     summary,
+    config,
     created_at: new Date().toISOString(),
   }),
 

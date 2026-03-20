@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react'
 import { useRunStore } from '../stores/useRunStore'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
+import { useGuestStore } from '../stores/useGuestStore'
 import { runsService } from '../services/runsService'
+import { guestService } from '../services/guestService'
 
 // usage:
 // const {run, isRunning} = useRunSimulation()
@@ -13,6 +15,7 @@ export function useRunSimulation() {
 
   const {setRun, clearRun, setLoading: setRunLoading, setError: setRunError} = useRunStore()
   const {setTimeline, clearTimeline, setLoading: setTimelineLoading, setError: setTimelineError, play} = usePlaybackStore()
+  const saveRun = useGuestStore((s) => s.saveRun)
 
   const run = useCallback(async (request) => {
     setIsRunning(true)
@@ -33,6 +36,19 @@ export function useRunSimulation() {
       setTimelineLoading(false)
       play()
 
+      // persist to guest run history
+      saveRun(guestService.createRunItem({
+        runId: runResponse.id,
+        moduleType: request.module_type,
+        algorithmKey: request.algorithm_key,
+        summary: runResponse.summary,
+        config: {
+          input_payload: request.input_payload,
+          algorithm_config: request.algorithm_config,
+          explanation_level: request.explanation_level,
+        },
+      }))
+
     } catch (err) {
       const message = err?.message ?? 'Simulation failed.'
 
@@ -43,7 +59,7 @@ export function useRunSimulation() {
       setIsRunning(false)
     }
 
-  }, [clearRun, clearTimeline, setRun, setRunError, setRunLoading, setTimeline, setTimelineError, setTimelineLoading, play])
+  }, [clearRun, clearTimeline, setRun, setRunError, setRunLoading, setTimeline, setTimelineError, setTimelineLoading, play, saveRun])
 
   return {run, isRunning}
 }
