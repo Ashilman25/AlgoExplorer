@@ -8,6 +8,7 @@ import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
+import { runsService } from '../services/runsService'
 import {
   generateFromPreset,
   parseManualInput,
@@ -458,8 +459,8 @@ export default function SortingLabPage() {
   const { run, isRunning } = useRunSimulation()
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const currentStep = usePlaybackStore((s) => s.currentStep)
-  const { clearTimeline, error: timelineError } = usePlaybackStore()
-  const { clearRun } = useRunStore()
+  const { clearTimeline, setTimeline, setLoading: setTimelineLoading, play, error: timelineError } = usePlaybackStore()
+  const { clearRun, setRun } = useRunStore()
   const { saveScenario } = useGuestStore()
   const toast = useToast()
 
@@ -483,6 +484,34 @@ export default function SortingLabPage() {
   useEffect(() => {
     if (loadedScenario) useScenarioStore.getState().clearScenario()
   }, [loadedScenario])
+
+  // Reopen run: auto-fetch timeline if navigated from Run History
+  useEffect(() => {
+    const reopenId = loadedScenario?._reopenRunId
+    if (!reopenId) return
+
+    let cancelled = false
+    setTimelineLoading(true)
+
+    ;(async () => {
+      try {
+        const [runSummary, timeline] = await Promise.all([
+          runsService.getRun(reopenId),
+          runsService.getTimeline(reopenId),
+        ])
+        if (cancelled) return
+        setRun(reopenId, runSummary)
+        setTimeline(timeline.steps)
+        play()
+      } catch {
+        // timeline may no longer exist on backend — silently skip
+      } finally {
+        if (!cancelled) setTimelineLoading(false)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
 
   useEffect(() => {
