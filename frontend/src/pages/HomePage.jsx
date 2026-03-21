@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
-  Network,
-  BarChart3,
-  Grid3x3,
-  BookMarked,
-  Gauge,
-  ArrowRight,
-  Activity,
-  Columns2,
+  Network, BarChart3, Grid3x3, BookMarked, Gauge, ArrowRight,
+  Activity, Columns2, History, ExternalLink, Zap,
 } from 'lucide-react'
-import { api } from '../services/api'
+import { client } from '../services/client'
+import Badge from '../components/ui/Badge'
+import { useToast } from '../components/ui/Toast'
+import { useGuestStore } from '../stores/useGuestStore'
+import { useScenarioStore } from '../stores/useScenarioStore'
 
+
+/* ── constants ──────────────────────────────────────────────── */
 
 const LABS = [
   {
@@ -82,25 +82,338 @@ const TOOLS = [
   },
 ]
 
+const MODULE_META = {
+  graph:   { icon: Network,   badge: 'info',    route: '/graph',   label: 'Graph' },
+  sorting: { icon: BarChart3, badge: 'warning',  route: '/sorting', label: 'Sorting' },
+  dp:      { icon: Grid3x3,   badge: 'violet',   route: '/dp',      label: 'DP' },
+}
+
+const ALGO_LABELS = {
+  bfs: 'BFS',
+  dijkstra: 'Dijkstra',
+  quicksort: 'Quick Sort',
+  mergesort: 'Merge Sort',
+  lcs: 'LCS',
+  edit_distance: 'Edit Distance',
+}
+
+const FEATURED_PRESETS = [
+  {
+    label: 'BFS Traversal',
+    description: 'Breadth-first search on a 6-node graph from A to F.',
+    module_type: 'graph',
+    algorithm_key: 'bfs',
+    icon: Network,
+    iconColor: 'text-brand-400',
+    iconBg: 'bg-brand-500/10',
+    borderHover: 'hover:border-brand-500/25',
+    input_payload: {
+      nodes: [{id:'A'},{id:'B'},{id:'C'},{id:'D'},{id:'E'},{id:'F'}],
+      edges: [
+        {source:'A',target:'B'},{source:'A',target:'C'},
+        {source:'B',target:'D'},{source:'C',target:'E'},
+        {source:'D',target:'F'},{source:'E',target:'F'},
+      ],
+      source: 'A', target: 'F', weighted: false, directed: false,
+    },
+  },
+  {
+    label: 'Dijkstra Shortest Path',
+    description: 'Weighted shortest path through a diamond graph.',
+    module_type: 'graph',
+    algorithm_key: 'dijkstra',
+    icon: Network,
+    iconColor: 'text-brand-400',
+    iconBg: 'bg-brand-500/10',
+    borderHover: 'hover:border-brand-500/25',
+    input_payload: {
+      nodes: [{id:'S'},{id:'A'},{id:'B'},{id:'C'},{id:'T'}],
+      edges: [
+        {source:'S',target:'A',weight:1},{source:'S',target:'B',weight:4},
+        {source:'A',target:'C',weight:2},{source:'B',target:'C',weight:1},
+        {source:'C',target:'T',weight:3},{source:'A',target:'B',weight:2},
+      ],
+      source: 'S', target: 'T', weighted: true, directed: false,
+    },
+  },
+  {
+    label: 'Quick Sort',
+    description: 'Sort a reversed 20-element array with pivot partitioning.',
+    module_type: 'sorting',
+    algorithm_key: 'quicksort',
+    icon: BarChart3,
+    iconColor: 'text-amber-400',
+    iconBg: 'bg-amber-500/10',
+    borderHover: 'hover:border-amber-500/25',
+    input_payload: {
+      array: Array.from({ length: 20 }, (_, i) => 20 - i),
+      preset: 'custom',
+    },
+  },
+  {
+    label: 'Merge Sort',
+    description: 'Divide-and-conquer a shuffled 15-element array.',
+    module_type: 'sorting',
+    algorithm_key: 'mergesort',
+    icon: BarChart3,
+    iconColor: 'text-amber-400',
+    iconBg: 'bg-amber-500/10',
+    borderHover: 'hover:border-amber-500/25',
+    input_payload: {
+      array: [8, 3, 14, 1, 11, 6, 15, 4, 12, 7, 2, 13, 9, 5, 10],
+      preset: 'custom',
+    },
+  },
+  {
+    label: 'LCS',
+    description: 'Longest common subsequence of "ABCDEF" and "ACBDFE".',
+    module_type: 'dp',
+    algorithm_key: 'lcs',
+    icon: Grid3x3,
+    iconColor: 'text-violet-400',
+    iconBg: 'bg-violet-500/10',
+    borderHover: 'hover:border-violet-500/25',
+    input_payload: { string1: 'ABCDEF', string2: 'ACBDFE' },
+  },
+  {
+    label: 'Edit Distance',
+    description: 'Minimum edits to transform "kitten" into "sitting".',
+    module_type: 'dp',
+    algorithm_key: 'edit_distance',
+    icon: Grid3x3,
+    iconColor: 'text-violet-400',
+    iconBg: 'bg-violet-500/10',
+    borderHover: 'hover:border-violet-500/25',
+    input_payload: { string1: 'kitten', string2: 'sitting' },
+  },
+]
+
 const STATUS_COLOR = {
   connected: 'text-emerald-400',
   unreachable: 'text-rose-400',
   checking: 'text-amber-400',
 }
 
+const MAX_RECENT = 5
+
+
+/* ── helpers ────────────────────────────────────────────────── */
+
+function formatRelative(iso) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (isNaN(date.getTime())) return ''
+  const diff = Date.now() - date.getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function truncate(str, max) {
+  if (!str) return ''
+  return str.length > max ? str.slice(0, max) + '…' : str
+}
+
+function runInputSummary(run) {
+  const p = run.config?.input_payload
+  if (!p) return ''
+  switch (run.module_type) {
+    case 'graph':   return `${p.nodes?.length ?? 0} nodes`
+    case 'sorting': return `${p.array?.length ?? 0} elements`
+    case 'dp':      return `"${truncate(p.string1, 8)}" vs "${truncate(p.string2, 8)}"`
+    default:        return ''
+  }
+}
+
+function scenarioInputSummary(s) {
+  const p = s.input_payload
+  if (!p) return ''
+  switch (s.module_type) {
+    case 'graph':   return `${p.nodes?.length ?? 0} nodes, ${p.edges?.length ?? 0} edges`
+    case 'sorting': return `${p.array?.length ?? 0} elements`
+    case 'dp':      return `"${truncate(p.string1, 8)}" vs "${truncate(p.string2, 8)}"`
+    default:        return ''
+  }
+}
+
+
+/* ── RecentRunRow ──────────────────────────────────────────── */
+
+function RecentRunRow({ run, onClick }) {
+  const meta = MODULE_META[run.module_type] ?? MODULE_META.graph
+  const Icon = meta.icon
+
+  return (
+    <button
+      onClick = {onClick}
+      className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/30 border border-white/[0.05] hover:border-white/[0.12] hover:bg-slate-800/60 transition-colors duration-fast group text-left"
+    >
+      <div className = "p-1 rounded-md bg-slate-800/70 border border-white/[0.06] shrink-0">
+        <Icon size = {11} strokeWidth = {1.5} className = "text-slate-500" />
+      </div>
+
+      <div className = "min-w-0 flex-1">
+        <p className = "text-xs font-medium text-slate-300 truncate">
+          {ALGO_LABELS[run.algorithm_key] ?? run.algorithm_key}
+        </p>
+        <p className = "text-[10px] text-slate-600 truncate">
+          {runInputSummary(run)}
+        </p>
+      </div>
+
+      <Badge variant = {meta.badge} className = "shrink-0 hidden sm:inline-flex">{meta.label}</Badge>
+      <span className = "text-[10px] text-slate-600 shrink-0">{formatRelative(run.created_at)}</span>
+
+      <ExternalLink
+        size = {11}
+        strokeWidth = {1.5}
+        className = "text-slate-700 group-hover:text-brand-400 shrink-0 transition-colors duration-fast"
+      />
+    </button>
+  )
+}
+
+
+/* ── RecentScenarioRow ─────────────────────────────────────── */
+
+function RecentScenarioRow({ scenario, onClick }) {
+  const meta = MODULE_META[scenario.module_type] ?? MODULE_META.graph
+  const Icon = meta.icon
+
+  return (
+    <button
+      onClick = {onClick}
+      className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/30 border border-white/[0.05] hover:border-white/[0.12] hover:bg-slate-800/60 transition-colors duration-fast group text-left"
+    >
+      <div className = "p-1 rounded-md bg-slate-800/70 border border-white/[0.06] shrink-0">
+        <Icon size = {11} strokeWidth = {1.5} className = "text-slate-500" />
+      </div>
+
+      <div className = "min-w-0 flex-1">
+        <p className = "text-xs font-medium text-slate-300 truncate">{scenario.name}</p>
+        <p className = "text-[10px] text-slate-600 truncate">
+          {ALGO_LABELS[scenario.algorithm_key] ?? scenario.algorithm_key}
+          {' · '}
+          {scenarioInputSummary(scenario)}
+        </p>
+      </div>
+
+      <Badge variant = {meta.badge} className = "shrink-0 hidden sm:inline-flex">{meta.label}</Badge>
+      <span className = "text-[10px] text-slate-600 shrink-0">{formatRelative(scenario.created_at)}</span>
+
+      <ExternalLink
+        size = {11}
+        strokeWidth = {1.5}
+        className = "text-slate-700 group-hover:text-brand-400 shrink-0 transition-colors duration-fast"
+      />
+    </button>
+  )
+}
+
+
+/* ── PresetCard ────────────────────────────────────────────── */
+
+function PresetCard({ preset, onClick }) {
+  const Icon = preset.icon
+
+  return (
+    <button
+      onClick = {onClick}
+      className = {[
+        'group flex flex-col gap-2.5 rounded-xl p-4 text-left',
+        'bg-slate-800/40 border border-white/[0.06]',
+        'transition-all duration-fast',
+        preset.borderHover,
+        'hover:bg-slate-800/70',
+      ].join(' ')}
+    >
+      <div className = "flex items-center gap-2.5">
+        <div className = {`p-1.5 rounded-lg ${preset.iconBg}`}>
+          <Icon size = {13} strokeWidth = {1.5} className = {preset.iconColor} />
+        </div>
+
+        <span className = "text-xs font-semibold text-slate-200">{preset.label}</span>
+      </div>
+
+      <p className = "text-[11px] text-slate-500 leading-relaxed">{preset.description}</p>
+
+      <div className = "flex items-center gap-1 mt-auto">
+        <span className = "text-[10px] font-medium text-slate-600 group-hover:text-brand-400 transition-colors duration-fast">
+          Try it
+        </span>
+        <ArrowRight
+          size = {10}
+          strokeWidth = {1.5}
+          className = "text-slate-700 group-hover:text-brand-400 group-hover:translate-x-0.5 transition-all duration-fast"
+        />
+      </div>
+    </button>
+  )
+}
+
+
+/* ── HomePage ──────────────────────────────────────────────── */
 
 export default function HomePage() {
+  const navigate = useNavigate()
+  const toast = useToast()
   const [backendStatus, setBackendStatus] = useState('checking')
+  const { runs, scenarios } = useGuestStore()
+  const setScenario = useScenarioStore((s) => s.setScenario)
 
   useEffect(() => {
-    api.health()
+    client.health()
       .then(() => setBackendStatus('connected'))
       .catch(() => setBackendStatus('unreachable'))
   }, [])
 
+  const recentRuns = runs.slice(0, MAX_RECENT)
+  const recentScenarios = scenarios.slice(0, MAX_RECENT)
+  const hasActivity = recentRuns.length > 0 || recentScenarios.length > 0
+
+  const handleReopenRun = useCallback((run) => {
+    const meta = MODULE_META[run.module_type]
+    if (!meta || !run.config) {
+      toast({ type: 'error', title: 'Cannot reopen', message: 'Run configuration is no longer available.' })
+      return
+    }
+    setScenario({
+      module_type: run.module_type,
+      algorithm_key: run.algorithm_key,
+      input_payload: run.config.input_payload,
+      _reopenRunId: run.run_id,
+    })
+    navigate(meta.route)
+  }, [navigate, setScenario, toast])
+
+  const handleLoadScenario = useCallback((scenario) => {
+    const meta = MODULE_META[scenario.module_type]
+    if (!meta) return
+    setScenario(scenario)
+    navigate(meta.route)
+  }, [navigate, setScenario])
+
+  const handleLoadPreset = useCallback((preset) => {
+    const meta = MODULE_META[preset.module_type]
+    if (!meta) return
+    setScenario({
+      module_type: preset.module_type,
+      algorithm_key: preset.algorithm_key,
+      input_payload: preset.input_payload,
+    })
+    navigate(meta.route)
+  }, [navigate, setScenario])
+
+
   return (
     <div className = "max-w-5xl">
 
+      {/* ── Header ─────────────────────────────────────── */}
       <div className = "mb-10 animate-enter">
         <p className = "text-[11px] font-semibold tracking-[0.12em] uppercase text-brand-400 mb-2">
           Algorithm Explorer
@@ -115,7 +428,6 @@ export default function HomePage() {
           Pick a lab below to begin exploring.
         </p>
 
-        {/* backend connection indicator */}
         <div className = "mt-4 inline-flex items-center gap-1.5">
           <Activity size = {12} strokeWidth = {1.5} className = {STATUS_COLOR[backendStatus]} />
           <span className = "text-xs text-slate-600">
@@ -125,6 +437,7 @@ export default function HomePage() {
       </div>
 
 
+      {/* ── Algorithm Labs ─────────────────────────────── */}
       <section className = "mb-9 animate-enter stagger-1">
         <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600 mb-4">
           Algorithm Labs
@@ -143,24 +456,20 @@ export default function HomePage() {
                 'hover:bg-slate-800/80',
               ].join(' ')}
             >
-              {/* Icon + phase badge */}
               <div className = "flex items-start justify-between">
                 <div className = {`p-2.5 rounded-xl ${lab.iconBg}`}>
                   <lab.icon size = {17} strokeWidth = {1.5} className = {lab.iconColor} />
                 </div>
-
                 <span className = "text-[10px] font-mono font-medium text-slate-600 uppercase tracking-wide">
                   {lab.phase}
                 </span>
               </div>
 
-              {/* Title + description */}
               <div className = "flex-1 space-y-1.5">
                 <h3 className = "text-sm font-semibold text-slate-100">{lab.label}</h3>
                 <p className = "text-xs text-slate-400 leading-relaxed">{lab.description}</p>
               </div>
 
-              {/* Algorithms + arrow */}
               <div className = "flex items-center justify-between gap-2">
                 <div className = "flex gap-1.5 flex-wrap">
                   {lab.algorithms.map(alg => (
@@ -172,7 +481,6 @@ export default function HomePage() {
                     </span>
                   ))}
                 </div>
-
                 <ArrowRight
                   size = {13}
                   strokeWidth = {1.5}
@@ -184,8 +492,93 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Tools */}
-      <section className = "animate-enter stagger-2">
+
+      {/* ── Recent Activity ────────────────────────────── */}
+      {hasActivity && (
+        <section className = "mb-9 animate-enter stagger-2">
+          <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600 mb-4">
+            Recent Activity
+          </h2>
+
+          <div className = "grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+            {/* Recent Runs */}
+            {recentRuns.length > 0 && (
+              <div>
+                <div className = "flex items-center justify-between mb-2.5">
+                  <div className = "flex items-center gap-2">
+                    <History size = {12} strokeWidth = {1.5} className = "text-slate-600" />
+                    <h3 className = "text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Recent Runs</h3>
+                    <span className = "text-[10px] text-slate-700 font-mono">{runs.length}</span>
+                  </div>
+
+                  <Link
+                    to = "/runs"
+                    className = "text-[10px] font-medium text-slate-600 hover:text-brand-400 transition-colors duration-fast flex items-center gap-1"
+                  >
+                    View all
+                    <ArrowRight size = {9} strokeWidth = {1.5} />
+                  </Link>
+                </div>
+
+                <div className = "flex flex-col gap-1">
+                  {recentRuns.map((r) => (
+                    <RecentRunRow key = {r.id} run = {r} onClick = {() => handleReopenRun(r)} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Saved Scenarios */}
+            {recentScenarios.length > 0 && (
+              <div>
+                <div className = "flex items-center justify-between mb-2.5">
+                  <div className = "flex items-center gap-2">
+                    <BookMarked size = {12} strokeWidth = {1.5} className = "text-slate-600" />
+                    <h3 className = "text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Saved Scenarios</h3>
+                    <span className = "text-[10px] text-slate-700 font-mono">{scenarios.length}</span>
+                  </div>
+
+                  <Link
+                    to = "/scenarios"
+                    className = "text-[10px] font-medium text-slate-600 hover:text-brand-400 transition-colors duration-fast flex items-center gap-1"
+                  >
+                    View all
+                    <ArrowRight size = {9} strokeWidth = {1.5} />
+                  </Link>
+                </div>
+
+                <div className = "flex flex-col gap-1">
+                  {recentScenarios.map((s) => (
+                    <RecentScenarioRow key = {s.id} scenario = {s} onClick = {() => handleLoadScenario(s)} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+
+      {/* ── Featured Presets ────────────────────────────── */}
+      <section className = {`mb-9 animate-enter ${hasActivity ? 'stagger-3' : 'stagger-2'}`}>
+        <div className = "flex items-center gap-2 mb-4">
+          <Zap size = {12} strokeWidth = {1.5} className = "text-slate-600" />
+          <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600">
+            Featured Presets
+          </h2>
+        </div>
+
+        <div className = "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURED_PRESETS.map((p) => (
+            <PresetCard key = {`${p.module_type}-${p.algorithm_key}`} preset = {p} onClick = {() => handleLoadPreset(p)} />
+          ))}
+        </div>
+      </section>
+
+
+      {/* ── Tools ──────────────────────────────────────── */}
+      <section className = {`animate-enter ${hasActivity ? 'stagger-4' : 'stagger-3'}`}>
         <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600 mb-4">
           Tools
         </h2>
@@ -214,7 +607,7 @@ export default function HomePage() {
                     size = {12}
                     strokeWidth = {1.5}
                     className = "text-slate-600 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all duration-[100ms] shrink-0"
-                  /> 
+                  />
                 </div>
                 <p className = "mt-1 text-xs text-slate-500 leading-relaxed">{tool.description}</p>
               </div>

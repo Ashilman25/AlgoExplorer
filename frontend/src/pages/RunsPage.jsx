@@ -12,6 +12,7 @@ import EmptyState from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
+import { generateId } from '../services/guestService'
 
 
 /* ── constants ──────────────────────────────────────────────── */
@@ -44,12 +45,16 @@ const ALGO_LABELS = {
 /* ── helpers ────────────────────────────────────────────────── */
 
 function formatDate(iso) {
+  if (!iso) return '—'
   const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function formatTime(iso) {
+  if (!iso) return '—'
   const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
@@ -400,7 +405,10 @@ export default function RunsPage() {
 
   const handleReopen = useCallback((run) => {
     const meta = MODULE_META[run.module_type]
-    if (!meta || !run.config) return
+    if (!meta || !run.config?.input_payload) {
+      toast({ type: 'error', title: 'Cannot reopen', message: 'Run configuration is no longer available.' })
+      return
+    }
 
     setScenario({
       module_type: run.module_type,
@@ -409,11 +417,14 @@ export default function RunsPage() {
       _reopenRunId: run.run_id,
     })
     navigate(meta.route)
-  }, [navigate, setScenario])
+  }, [navigate, setScenario, toast])
 
   const handleRerun = useCallback((run) => {
     const meta = MODULE_META[run.module_type]
-    if (!meta || !run.config) return
+    if (!meta || !run.config?.input_payload) {
+      toast({ type: 'error', title: 'Cannot rerun', message: 'Run configuration is no longer available.' })
+      return
+    }
 
     setScenario({
       module_type: run.module_type,
@@ -421,7 +432,7 @@ export default function RunsPage() {
       input_payload: run.config.input_payload,
     })
     navigate(meta.route)
-  }, [navigate, setScenario])
+  }, [navigate, setScenario, toast])
 
   const handleSaveScenario = useCallback((run) => {
     if (!run.config) {
@@ -431,11 +442,12 @@ export default function RunsPage() {
 
     const name = `${algoLabel(run.algorithm_key)} — ${formatDate(run.created_at)}`
     const scenario = {
-      id: `${run.module_type}-${Date.now()}`,
+      id: generateId(),
       name,
       module_type: run.module_type,
       algorithm_key: run.algorithm_key,
       input_payload: run.config.input_payload,
+      tags: [],
       created_at: new Date().toISOString(),
     }
     saveScenario(scenario)

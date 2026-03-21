@@ -11,11 +11,11 @@ export function useReopenRun(reopenRunId) {
   useEffect(() => {
     if (!reopenRunId) return
 
-
+    const rid = String(reopenRunId)
     const { runId: currentRunId } = useRunStore.getState()
     const { totalSteps, jumpToStart } = usePlaybackStore.getState()
 
-    if (currentRunId === reopenRunId && totalSteps > 0) {
+    if (String(currentRunId) === rid && totalSteps > 0) {
       jumpToStart()
       return
     }
@@ -32,11 +32,18 @@ export function useReopenRun(reopenRunId) {
         ])
         if (cancelled) return
 
+        const steps = timeline.steps
+        if (!Array.isArray(steps) || steps.length === 0) {
+          throw new Error('Empty timeline')
+        }
+
         useRunStore.getState().setRun(reopenRunId, summary)
-        usePlaybackStore.getState().setTimeline(timeline.steps)
+        usePlaybackStore.getState().setTimeline(steps)
         usePlaybackStore.getState().play()
       } catch {
         if (!cancelled) {
+          usePlaybackStore.getState().clearTimeline()
+          useRunStore.getState().clearRun()
           toast({
             type: 'error',
             title: 'Could not load run',

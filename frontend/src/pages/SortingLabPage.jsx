@@ -9,6 +9,7 @@ import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
+import { generateId } from '../services/guestService'
 import {
   generateFromPreset,
   parseManualInput,
@@ -481,14 +482,23 @@ export default function SortingLabPage() {
   const [inputError, setInputError] = useState(null)
   const [array, setArray] = useState(() => lp?.array ?? generateFromPreset('random', 20, 'none'))
 
+  const skipInitialGenerate = useRef(!!lp)
+
   useEffect(() => {
-    if (loadedScenario) useScenarioStore.getState().clearScenario()
+    if (loadedScenario) {
+      useScenarioStore.getState().clearScenario()
+      if (!loadedScenario._reopenRunId) {
+        usePlaybackStore.getState().clearTimeline()
+        useRunStore.getState().clearRun()
+      }
+    }
   }, [loadedScenario])
 
   // Reopen run: fetch stored timeline if navigated from Run History
   useReopenRun(loadedScenario?._reopenRunId)
 
   useEffect(() => {
+    if (skipInitialGenerate.current) { skipInitialGenerate.current = false; return }
     if (preset === 'custom') return
     setArray(generateFromPreset(preset, size, preset === 'duplicates' ? 'high' : duplicateDensity))
     setInputError(null)
@@ -579,7 +589,7 @@ export default function SortingLabPage() {
   const handleSave = useCallback(() => {
     const name = `${SORT_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — ${array.length} elements`
     saveScenario({
-      id: `sorting-${Date.now()}`,
+      id: generateId(),
       name,
       module_type: 'sorting',
       algorithm_key: algorithm,
@@ -588,6 +598,7 @@ export default function SortingLabPage() {
         preset,
         duplicate_density: duplicateDensity,
       },
+      tags: [],
       created_at: new Date().toISOString(),
     })
     toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })

@@ -12,6 +12,7 @@ import EmptyState from '../components/ui/EmptyState'
 import { useToast } from '../components/ui/Toast'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
+import { generateId } from '../services/guestService'
 
 
 /* ── constants ──────────────────────────────────────────────── */
@@ -35,7 +36,9 @@ const MODULE_ORDER = ['graph', 'sorting', 'dp']
 /* ── helpers ────────────────────────────────────────────────── */
 
 function formatDate(iso) {
+  if (!iso) return '—'
   const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
@@ -436,8 +439,8 @@ export default function ScenariosPage() {
     if (q) {
       list = list.filter(
         (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.algorithm_key.toLowerCase().includes(q) ||
+          (s.name ?? '').toLowerCase().includes(q) ||
+          (s.algorithm_key ?? '').toLowerCase().includes(q) ||
           (s.tags ?? []).some((t) => t.includes(q)),
       )
     }
@@ -480,7 +483,7 @@ export default function ScenariosPage() {
   const handleDuplicate = useCallback((scenario) => {
     const clone = {
       ...scenario,
-      id: `${scenario.module_type}-${Date.now()}`,
+      id: generateId(),
       name: `${scenario.name} (copy)`,
       created_at: new Date().toISOString(),
     }
@@ -646,6 +649,7 @@ export default function ScenariosPage() {
 
       {/* ── modals ────────────────────────────────────────── */}
       <EditModal
+        key = {editTarget?.id ?? ''}
         scenario = {editTarget}
         open = {!!editTarget}
         onClose = {() => setEditTarget(null)}

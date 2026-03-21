@@ -45,6 +45,7 @@ export function useRunSimulation() {
         config: {
           input_payload: request.input_payload,
           algorithm_config: request.algorithm_config,
+          execution_mode: request.execution_mode,
           explanation_level: request.explanation_level,
         },
       }))

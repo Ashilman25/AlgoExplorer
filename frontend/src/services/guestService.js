@@ -1,16 +1,17 @@
 
-function generateId() {
+export function generateId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
 export const guestService = {
-  createScenario: ({ name, moduleType, algorithmKey, inputPayload, algorithmConfig = null }) => ({
+  createScenario: ({ name, moduleType, algorithmKey, inputPayload, algorithmConfig = null, tags = [] }) => ({
     id: generateId(),
     name,
     module_type: moduleType,
     algorithm_key: algorithmKey,
     input_payload: inputPayload,
     algorithm_config: algorithmConfig,
+    tags,
     created_at: new Date().toISOString(),
   }),
 
