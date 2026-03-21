@@ -4,10 +4,12 @@ import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
+import { useReopenRun } from '../hooks/useReopenRun'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
+import { generateId } from '../services/guestService'
 
 
 const GRAPH_PRESETS = [
@@ -86,7 +88,7 @@ function GraphConfig({
   directed, onDirectedChange,
   explanationLevel, onExplanationLevelChange,
   mode, onModeChange,
-  nodeOptions,
+  nodeOptions, edgeCount,
   onRun, onReset, onSave,
   isRunning, error,
 }) {
@@ -149,7 +151,7 @@ function GraphConfig({
           </p>
 
           <p className = "font-mono text-[10px] text-slate-500">
-            {nodeOptions.length} nodes · {GRAPH_PRESETS.find((p) => p.value === preset)?.edges.length ?? 0} edges
+            {nodeOptions.length} nodes · {edgeCount} edges
             {weighted ? ' · weighted' : ''}
             {directed ? ' · directed' : ''}
           </p>
@@ -745,10 +747,19 @@ export default function GraphLabPage() {
 
   }, [canvasSize])
 
-  // Clear scenario store after hydration
+  // Clear scenario store after hydration + clear stale timeline for fresh scenario loads
   useEffect(() => {
-    if (loadedScenario) useScenarioStore.getState().clearScenario()
+    if (loadedScenario) {
+      useScenarioStore.getState().clearScenario()
+      if (!loadedScenario._reopenRunId) {
+        usePlaybackStore.getState().clearTimeline()
+        useRunStore.getState().clearRun()
+      }
+    }
   }, [loadedScenario])
+
+  // Reopen run: fetch stored timeline if navigated from Run History
+  useReopenRun(loadedScenario?._reopenRunId)
 
   // builder mode: drag | add | connect | delete
   const [builderMode, setBuilderMode]     = useState('drag')
@@ -865,11 +876,12 @@ export default function GraphLabPage() {
   const handleSave = useCallback(() => {
     const name = `Custom Graph — ${algorithm.toUpperCase()}`
     saveScenario({
-      id: `graph-${Date.now()}`,
+      id: generateId(),
       name,
       module_type: 'graph',
       algorithm_key: algorithm,
       input_payload: { nodes: graphNodes, edges: graphEdges, source, target, weighted, directed, mode, nodePositions },
+      tags: [],
       created_at: new Date().toISOString(),
     })
     toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
@@ -905,6 +917,7 @@ export default function GraphLabPage() {
             mode = {mode}
             onModeChange = {(e) => setMode(e.target.value)}
             nodeOptions = {nodeOptions}
+            edgeCount = {graphEdges.length}
             onRun = {handleRun}
             onReset = {handleReset}
             onSave = {handleSave}

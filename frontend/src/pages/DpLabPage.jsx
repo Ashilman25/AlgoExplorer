@@ -4,10 +4,12 @@ import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
+import { useReopenRun } from '../hooks/useReopenRun'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
+import { generateId } from '../services/guestService'
 
 
 // ─── Constants ──────────────────────────────────────────
@@ -512,9 +514,17 @@ export default function DpLabPage() {
   const [explanationLevel, setExplanationLevel] = useState('standard')
 
   useEffect(() => {
-    if (loadedScenario) useScenarioStore.getState().clearScenario()
+    if (loadedScenario) {
+      useScenarioStore.getState().clearScenario()
+      if (!loadedScenario._reopenRunId) {
+        usePlaybackStore.getState().clearTimeline()
+        useRunStore.getState().clearRun()
+      }
+    }
   }, [loadedScenario])
 
+  // Reopen run: fetch stored timeline if navigated from Run History
+  useReopenRun(loadedScenario?._reopenRunId)
 
   // --- validation ---
   const inputError = useMemo(
@@ -551,13 +561,15 @@ export default function DpLabPage() {
   const handlePresetChange = useCallback((e) => {
     const key = e.target.value
     setPreset(key)
+    clearTimeline()
+    clearRun()
 
     if (key !== 'custom') {
       const data = PRESET_DATA[key]
       setString1(data.string1)
       setString2(data.string2)
     }
-  }, [])
+  }, [clearTimeline, clearRun])
 
 
   const handleString1Change = useCallback((e) => {
@@ -595,7 +607,7 @@ export default function DpLabPage() {
   const handleSave = useCallback(() => {
     const name = `${DP_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — "${string1}" vs "${string2}"`
     saveScenario({
-      id: `dp-${Date.now()}`,
+      id: generateId(),
       name,
       module_type: 'dp',
       algorithm_key: algorithm,
@@ -603,6 +615,7 @@ export default function DpLabPage() {
         string1,
         string2,
       },
+      tags: [],
       created_at: new Date().toISOString(),
     })
     toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })

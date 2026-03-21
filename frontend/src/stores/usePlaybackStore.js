@@ -21,15 +21,17 @@ export const usePlaybackStore = create((set, get) => ({
 
   currentStep: null,
 
-  setTimeline: (steps) =>
+  setTimeline: (steps) => {
+    const s = Array.isArray(steps) ? steps : []
     set({
-      steps,
-      totalSteps: steps.length,
+      steps: s,
+      totalSteps: s.length,
       stepIndex: 0,
-      currentStep: steps[0] ?? null,
+      currentStep: s[0] ?? null,
       isPlaying: false,
       error: null,
-    }),
+    })
+  },
 
   clearTimeline: () =>
     set({

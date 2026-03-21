@@ -28,6 +28,8 @@ export const useGuestStore = create(
       deleteRun: (id) =>
         set((s) => ({ runs: s.runs.filter((r) => r.id !== id) })),
 
+      clearRuns: () => set({ runs: [] }),
+
       clearAll: () => set({ scenarios: [], runs: [] }),
     }),
     {
