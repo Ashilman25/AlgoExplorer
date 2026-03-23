@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import {
   Gauge, Play, Check, X, ChevronDown, ChevronUp,
   Clock, Hash, ArrowUpDown, PenTool, Loader2,
+  Download, FileJson, FileSpreadsheet,
 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Card, MetricCard, Badge, Spinner, Select, Slider, useToast } from '../components/ui'
@@ -367,6 +368,70 @@ function ChartSection({ series, metrics }) {
 }
 
 
+// ── Export ───────────────────────────────────────────────────
+
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function exportJSON(resultData) {
+  const payload = {
+    summary: resultData.summary,
+    series: resultData.series,
+    table: resultData.table,
+    exported_at: new Date().toISOString(),
+  }
+  downloadFile(JSON.stringify(payload, null, 2), 'benchmark-results.json', 'application/json')
+}
+
+function exportCSV(resultData) {
+  const table = resultData.table
+  if (!table || table.length === 0) return
+
+  const headers = Object.keys(table[0])
+  const rows = table.map((row) =>
+    headers.map((h) => {
+      const val = row[h]
+      return val == null ? '' : String(val)
+    }).join(',')
+  )
+
+  const csv = [headers.join(','), ...rows].join('\n')
+  downloadFile(csv, 'benchmark-results.csv', 'text/csv')
+}
+
+function ExportBar({ resultData }) {
+  if (!resultData) return null
+
+  return (
+    <div className="flex items-center justify-between rounded-xl bg-slate-800/50 border border-white/[0.06] px-4 py-3">
+      <div className="flex items-center gap-2">
+        <Download size={14} strokeWidth={1.5} className="text-slate-500" />
+        <span className="text-xs text-slate-500">Export Results</span>
+      </div>
+      
+      <div className="flex items-center gap-2">
+        <Button size="sm" icon={FileJson} onClick={() => exportJSON(resultData)}>
+          JSON
+        </Button>
+
+        <Button size="sm" icon={FileSpreadsheet} onClick={() => exportCSV(resultData)}>
+          CSV
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+
 // ── Main Page ───────────────────────────────────────────────
 
 export default function BenchmarksPage() {
@@ -478,6 +543,7 @@ export default function BenchmarksPage() {
           {hasResults && (
             <>
               <BenchmarkSummary summary={resultData.summary} status={resultData.status} />
+              <ExportBar resultData={resultData} />
               <ChartSection series={resultData.series} metrics={metrics} />
               <ResultsTable table={resultData.table} metrics={metrics} />
             </>
