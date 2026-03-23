@@ -13,7 +13,7 @@ BENCHMARK_INPUT_FAMILIES = {
 }
 
 BENCHMARK_METRICS = {
-    "sorting": {"runtime_ms", "comparisons", "swaps"},
+    "sorting": {"runtime_ms", "comparisons", "swaps", "writes"},
 }
 
 SIZE_MIN = 10
@@ -91,7 +91,10 @@ class CreateBenchmarkRequest(BaseModel):
     def validate_metrics(cls, v):
         if len(v) == 0:
             raise ValueError("At least one metric required")
-        
+
+        if len(set(v)) != len(v):
+            raise ValueError("Duplicate metrics")
+
         return v
 
 
@@ -130,11 +133,14 @@ class CreateBenchmarkRequest(BaseModel):
     
     
 
+BenchmarkStatus = Literal["pending", "running", "completed", "failed"]
+
+
 class UpdateBenchmarkStatusRequest(BaseModel):
     model_config = ConfigDict(extra = "forbid")
 
-    status: str
-    progress: float
+    status: BenchmarkStatus
+    progress: float = Field(ge = 0.0, le = 1.0)
 
 
 
@@ -175,6 +181,8 @@ class BenchmarkTableRow(BaseModel):
     comparisons_median: float | None = None
     swaps_mean: float | None = None
     swaps_median: float | None = None
+    writes_mean: float | None = None
+    writes_median: float | None = None
 
 
 class BenchmarkResultsResponse(BaseModel):

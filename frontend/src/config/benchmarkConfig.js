@@ -21,6 +21,7 @@ export const BENCHMARK_METRICS = {
     { key: 'runtime_ms', label: 'Runtime (ms)', unit: 'ms' },
     { key: 'comparisons', label: 'Comparisons', unit: 'count' },
     { key: 'swaps', label: 'Swaps', unit: 'count' },
+    { key: 'writes', label: 'Writes', unit: 'count' },
   ],
 }
 
