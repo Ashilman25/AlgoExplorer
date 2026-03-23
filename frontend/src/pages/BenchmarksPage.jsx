@@ -7,6 +7,7 @@ import PageHeader from '../components/ui/PageHeader'
 import { Button, Card, MetricCard, Badge, Spinner, Select, Slider, useToast } from '../components/ui'
 import { benchmarksService } from '../services/benchmarksService'
 import { useBenchmarkStore } from '../stores/useBenchmarkStore'
+import BenchmarkChart from '../components/benchmark/BenchmarkChart'
 import {
   BENCHMARK_ALGORITHMS,
   BENCHMARK_INPUT_FAMILIES,
@@ -48,6 +49,7 @@ function CheckboxGroup({ label, options, selected, onChange, min = 0, max = Infi
           return (
             <label
               key={opt.key}
+              onClick={() => toggle(opt.key)}
               className="flex items-center gap-2.5 px-2 py-1.5 rounded-md cursor-pointer
                          hover:bg-slate-800/60 transition-colors duration-100"
             >
@@ -321,14 +323,14 @@ function ResultsTable({ table, metrics }) {
 }
 
 
-// ── Chart Placeholder ───────────────────────────────────────
+// ── Charts ──────────────────────────────────────────────────
 
 function ChartSection({ series, metrics }) {
   if (!series || Object.keys(series).length === 0) return null
 
   return (
     <Card title="Performance Charts">
-      <div className="p-6">
+      <div className="p-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {metrics.map((metricKey) => {
             const metricInfo = BENCHMARK_METRICS[MODULE_TYPE].find((m) => m.key === metricKey)
@@ -340,7 +342,7 @@ function ChartSection({ series, metrics }) {
                 key={metricKey}
                 className="rounded-xl bg-slate-800/40 border border-white/[0.06] p-4"
               >
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <Icon size={14} strokeWidth={1.5} className="text-cyan-400" />
                   <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">
                     {metricInfo?.label ?? metricKey}
@@ -350,16 +352,11 @@ function ChartSection({ series, metrics }) {
                   </span>
                 </div>
 
-                <div className="h-48 flex items-center justify-center border border-dashed border-slate-700 rounded-lg">
-                  <div className="text-center">
-                    <p className="text-xs text-slate-500 mb-1">Chart coming in Phase 9.6</p>
-                    {seriesData && (
-                      <p className="text-[10px] text-slate-600 font-mono">
-                        {seriesData.length} algorithm(s) x {seriesData[0]?.points?.length ?? 0} points
-                      </p>
-                    )}
-                  </div>
-                </div>
+                <BenchmarkChart
+                  seriesData={seriesData}
+                  label={metricInfo?.label}
+                  unit={metricInfo?.unit}
+                />
               </div>
             )
           })}
