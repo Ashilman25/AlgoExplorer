@@ -23,6 +23,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
         explain = algo_input.explanation_level
+        benchmark_mode = algo_input.execution_mode == "benchmark"
 
         # parse + validate
         try:
@@ -49,6 +50,9 @@ class MergeSortAlgorithm(BaseAlgorithm):
 
 
         def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, pivot_index = None):
+            if benchmark_mode:
+                return
+
             s_payload = {
                 "array": list(arr),
                 "element_states": list(element_states),
