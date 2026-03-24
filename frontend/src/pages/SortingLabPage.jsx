@@ -176,7 +176,7 @@ export function SortingConfig({
           icon = {Play}
           className = "w-full"
           onClick = {onRun}
-          disabled = {isRunning || array.length < 2}
+          disabled = {isRunning || array.length < 2 || !!inputError}
         >
           {isRunning ? 'Running…' : 'Run Simulation'}
         </Button>
@@ -187,7 +187,7 @@ export function SortingConfig({
           icon = {Save}
           className = "w-full text-slate-500"
           onClick = {onSave}
-          disabled = {isRunning || array.length < 2}
+          disabled = {isRunning || array.length < 2 || !!inputError}
         >
           Save Scenario
         </Button>
@@ -519,6 +519,7 @@ export default function SortingLabPage() {
       setInputError(null)
 
     } else {
+      setArray([])
       setInputError(result.error)
     }
 
