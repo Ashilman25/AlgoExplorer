@@ -52,6 +52,7 @@ export default function PlaybackBar() {
       {/* Scrubber */}
       <input
         type = "range"
+        aria-label = "Timeline scrubber"
         min = {0}
         max = {Math.max(0, totalSteps - 1)}
         value = {stepIndex}
@@ -103,6 +104,7 @@ function SpeedControl({ speed, setSpeed }) {
 
       <input
         type = "range"
+        aria-label = "Playback speed"
         min = {0}
         max = {SPEEDS.length - 1}
         step = {1}
@@ -130,6 +132,7 @@ function CtrlBtn({ icon: Icon, onClick, disabled, title, accent }) {
       onClick = {onClick}
       disabled = {disabled}
       title = {title}
+      aria-label = {title}
       className = {cn(
         'w-8 h-8 flex items-center justify-center rounded-lg border transition-colors duration-fast',
         'disabled:opacity-30 disabled:cursor-not-allowed',

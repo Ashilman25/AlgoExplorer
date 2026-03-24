@@ -3,6 +3,8 @@ import { cn } from '../../utils/cn'
 
 // options: { value, label, disabled? }[]
 export default function Select({ label, options = [], className, ...props }) {
+  const ariaLabel = props['aria-label'] ?? label
+
   return (
     <div className={cn('space-y-1.5', className)}>
       {label && (
@@ -12,6 +14,7 @@ export default function Select({ label, options = [], className, ...props }) {
       )}
       <div className="relative">
         <select
+          aria-label={ariaLabel}
           className={cn(
             'w-full appearance-none cursor-pointer',
             'bg-slate-900 border border-slate-700',

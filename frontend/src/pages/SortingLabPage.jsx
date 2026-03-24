@@ -32,7 +32,7 @@ const EXPLANATION_LEVELS = [
 
 
 
-function SortingConfig({
+export function SortingConfig({
   algorithm, onAlgorithmChange,
   preset, onPresetChange,
   size, onSizeChange,
@@ -52,11 +52,11 @@ function SortingConfig({
     <ConfigPanel title = "Sorting Lab">
 
       <ConfigSection title = "Algorithm">
-        <Select options = {SORT_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
+        <Select aria-label = "Algorithm" options = {SORT_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
       </ConfigSection>
 
       <ConfigSection title = "Array Preset">
-        <Select options = {PRESETS} value = {preset} onChange = {onPresetChange} />
+        <Select aria-label = "Array Preset" options = {PRESETS} value = {preset} onChange = {onPresetChange} />
       </ConfigSection>
 
       {showSizeControls && (
@@ -76,6 +76,7 @@ function SortingConfig({
       {showDensityControl && (
         <ConfigSection title = "Duplicate Density">
           <Select
+            aria-label = "Duplicate Density"
             options = {DUPLICATE_DENSITIES}
             value = {duplicateDensity}
             onChange = {onDuplicateDensityChange}
@@ -86,6 +87,7 @@ function SortingConfig({
       {preset === 'custom' && (
         <ConfigSection title = "Manual Input">
           <textarea
+            aria-label = "Manual Input"
             value = {manualInput}
             onChange = {onManualInputChange}
             placeholder = "Enter numbers separated by commas or spaces, e.g. 5, 3, 8, 1, 4"
@@ -100,6 +102,7 @@ function SortingConfig({
 
       <ConfigSection title = "Explanation">
         <Select
+          aria-label = "Explanation"
           options = {EXPLANATION_LEVELS}
           value = {explanationLevel}
           onChange = {onExplanationLevelChange}
@@ -395,7 +398,7 @@ function SortingCanvas({ array }) {
 }
 
 
-function SortingDataPanel({ comparing, swapping, pivotIndex, displayArray }) {
+export function SortingDataPanel({ comparing, swapping, pivotIndex, displayArray }) {
   const hasComparing = comparing.length > 0
   const hasSwapping = swapping.length > 0
   const hasPivot = pivotIndex != null

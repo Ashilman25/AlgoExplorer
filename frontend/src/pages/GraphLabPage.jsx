@@ -79,7 +79,7 @@ const MODE_OPTIONS = [
 ]
 
 
-function GraphConfig({
+export function GraphConfig({
   algorithm, onAlgorithmChange,
   preset, onPresetChange,
   source, onSourceChange,
@@ -96,15 +96,16 @@ function GraphConfig({
     <ConfigPanel title = "Graph Lab">
 
       <ConfigSection title = "Mode">
-        <Select options = {MODE_OPTIONS} value = {mode} onChange = {onModeChange} />
+        <Select aria-label = "Mode" options = {MODE_OPTIONS} value = {mode} onChange = {onModeChange} />
       </ConfigSection>
 
       <ConfigSection title = "Algorithm">
-        <Select options = {GRAPH_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
+        <Select aria-label = "Algorithm" options = {GRAPH_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
       </ConfigSection>
 
       <ConfigSection title = "Preset">
         <Select
+          aria-label = "Preset"
           options = {GRAPH_PRESET_OPTIONS}
           value = {preset}
           onChange = {onPresetChange}
@@ -141,7 +142,7 @@ function GraphConfig({
       </ConfigSection>
 
       <ConfigSection title = "Explanation">
-        <Select options = {EXPLANATION_LEVELS} value = {explanationLevel} onChange = {onExplanationLevelChange} />
+        <Select aria-label = "Explanation" options = {EXPLANATION_LEVELS} value = {explanationLevel} onChange = {onExplanationLevelChange} />
       </ConfigSection>
 
       <ConfigSection title = "Input Summary">
@@ -569,7 +570,7 @@ function GraphCanvas({
 
 // Data structure inspector (queue / distances / path) 
 
-function DataStructurePanel({ algorithm, frontier, distances, path }) {
+export function DataStructurePanel({ algorithm, frontier, distances, path }) {
   const hasQueue = algorithm === 'bfs' && frontier.length > 0
   const hasDistances = algorithm === 'dijkstra' && distances && Object.keys(distances).length > 0
   const hasPath = path && path.length > 0

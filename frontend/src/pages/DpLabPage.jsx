@@ -62,7 +62,7 @@ const STATE_COLOR = {
 }
 
 
-function validateDpStrings(s1, s2) {
+export function validateDpStrings(s1, s2) {
   if (s1.length === 0 && s2.length === 0) {
     return 'At least one string must be non-empty'
   }
@@ -94,7 +94,7 @@ function validateDpStrings(s1, s2) {
 
 // ─── Config Panel ───────────────────────────────────────
 
-function DpConfig({
+export function DpConfig({
   algorithm, onAlgorithmChange,
   preset, onPresetChange,
   string1, onString1Change,
@@ -110,11 +110,11 @@ function DpConfig({
     <ConfigPanel title = "DP Lab">
 
       <ConfigSection title = "Algorithm">
-        <Select options = {DP_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
+        <Select aria-label = "Algorithm" options = {DP_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
       </ConfigSection>
 
       <ConfigSection title = "Preset">
-        <Select options = {DP_PRESETS} value = {preset} onChange = {onPresetChange} />
+        <Select aria-label = "Preset" options = {DP_PRESETS} value = {preset} onChange = {onPresetChange} />
       </ConfigSection>
 
       <ConfigSection title = "Input Strings">
@@ -125,6 +125,7 @@ function DpConfig({
 
           <input
             type = "text"
+            aria-label = "String A"
             value = {string1}
             onChange = {onString1Change}
             placeholder = "e.g. ABCDEF"
@@ -140,6 +141,7 @@ function DpConfig({
 
           <input
             type = "text"
+            aria-label = "String B"
             value = {string2}
             onChange = {onString2Change}
             placeholder = "e.g. ACBDFE"
@@ -151,6 +153,7 @@ function DpConfig({
 
       <ConfigSection title = "Explanation">
         <Select
+          aria-label = "Explanation"
           options = {EXPLANATION_LEVELS}
           value = {explanationLevel}
           onChange = {onExplanationLevelChange}
@@ -456,7 +459,7 @@ function DpTableCanvas({ string1, string2 }) {
 }
 
 
-function DpDataPanel({ explanation, currentCell, eventType }) {
+export function DpDataPanel({ explanation, currentCell, eventType }) {
   if (!explanation && !currentCell) {
     return <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 min-h-[40px]" />
   }

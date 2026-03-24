@@ -17,7 +17,7 @@ const ALGO_COLORS = [
   '#fb7185', // rose-400
 ]
 
-function transformSeries(seriesData) {
+export function transformSeries(seriesData) {
   if (!seriesData || seriesData.length === 0) return { rows: [], algoKeys: [] }
 
   const algoKeys = seriesData.map((s) => s.algorithm_key)
@@ -34,7 +34,7 @@ function transformSeries(seriesData) {
   return { rows, algoKeys }
 }
 
-function CustomTooltip({ active, payload, label, unit }) {
+export function CustomTooltip({ active, payload, label, unit }) {
   if (!active || !payload?.length) return null
 
   return (
