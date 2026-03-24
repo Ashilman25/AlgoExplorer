@@ -331,7 +331,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
 
         final_result = {
             "edit_distance": table[m][n],
-            "operations": list(reversed(operations)),
+            "operations": list(operations),
             "table_dimensions": [rows, cols],
             "subproblem_avoidance": avoidance,
         }
