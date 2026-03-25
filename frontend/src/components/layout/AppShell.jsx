@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import TopNav from './TopNav'
 import Sidebar from './Sidebar'
+import ErrorBoundary from '../ui/ErrorBoundary'
+import ConnectionBanner from '../ui/ConnectionBanner'
 
 
 export default function AppShell() {
@@ -27,8 +29,11 @@ export default function AppShell() {
       <Sidebar />
 
       <main className = "pl-[240px] pt-[52px] min-h-screen">
+        <ConnectionBanner />
         <div className = "px-6 py-7">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
     </>

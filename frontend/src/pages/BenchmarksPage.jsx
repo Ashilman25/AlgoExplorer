@@ -5,8 +5,9 @@ import {
   Download, FileJson, FileSpreadsheet,
 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
-import { Button, Card, MetricCard, Badge, Spinner, Select, Slider, useToast } from '../components/ui'
+import { Button, Card, MetricCard, Badge, Spinner, Select, Slider, useToast, ErrorAlert } from '../components/ui'
 import { benchmarksService } from '../services/benchmarksService'
+import { parseApiError } from '../services/client'
 import { useBenchmarkStore } from '../stores/useBenchmarkStore'
 import BenchmarkChart from '../components/benchmark/BenchmarkChart'
 import {
@@ -454,11 +455,13 @@ export default function BenchmarksPage() {
   const [isRunning, setIsRunning] = useState(false)
   const [jobResult, setJobResult] = useState(null)
   const [resultData, setResultData] = useState(null)
+  const [benchmarkError, setBenchmarkError] = useState(null)
 
   const handleLaunch = useCallback(async () => {
     setIsRunning(true)
     setJobResult(null)
     setResultData(null)
+    setBenchmarkError(null)
 
     try {
       const statusResp = await benchmarksService.createJob({
@@ -483,10 +486,12 @@ export default function BenchmarksPage() {
         message: `${results.summary?.total_runs ?? 0} runs completed in ${results.summary?.elapsed_ms ?? 0} ms`,
       })
     } catch (err) {
+      const parsed = parseApiError(err)
+      setBenchmarkError(parsed)
       toast({
         type: 'error',
-        title: 'Benchmark failed',
-        message: err?.message ?? 'An unexpected error occurred',
+        title: parsed.title,
+        message: parsed.message,
       })
     } finally {
       setIsRunning(false)
@@ -540,6 +545,15 @@ export default function BenchmarksPage() {
             </Card>
           )}
 
+          {benchmarkError && !isRunning && (
+            <ErrorAlert
+              title={benchmarkError.title}
+              message={benchmarkError.message}
+              fields={benchmarkError.fields}
+              onDismiss={() => setBenchmarkError(null)}
+            />
+          )}
+
           {hasResults && (
             <>
               <BenchmarkSummary summary={resultData.summary} status={resultData.status} />
@@ -549,7 +563,7 @@ export default function BenchmarksPage() {
             </>
           )}
 
-          {!isRunning && !hasResults && (
+          {!isRunning && !hasResults && !benchmarkError && (
             <Card>
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="p-3.5 rounded-2xl bg-slate-800/70 border border-white/[0.07] mb-5">
