@@ -65,7 +65,9 @@ test.describe('Benchmark exports and error states', () => {
 
     await page.getByRole('button', { name: 'Run Simulation' }).click()
 
-    await expect(page.getByText('Injected sorting failure')).toBeVisible()
+    const alert = page.getByRole('alert')
+    await expect(alert.getByText('Simulation failed')).toBeVisible()
+    await expect(alert.getByText('Injected sorting failure')).toBeVisible()
     await expect(page.getByText('STEP — / —')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Run Simulation' })).toBeEnabled()
   })
@@ -90,8 +92,11 @@ test.describe('Benchmark exports and error states', () => {
 
     await page.getByRole('button', { name: 'Launch Benchmark' }).click()
 
-    await expect(page.getByText('Benchmark failed')).toBeVisible()
-    await expect(page.getByText('Injected benchmark result failure')).toBeVisible()
-    await expect(page.getByText('No benchmark results yet')).toBeVisible()
+    const alert = page.getByRole('alert')
+    await expect(alert.getByText('Server error')).toBeVisible()
+    await expect(
+      alert.getByText('The server encountered an unexpected problem. Please try again.'),
+    ).toBeVisible()
+    await expect(page.getByText('No benchmark results yet')).toHaveCount(0)
   })
 })

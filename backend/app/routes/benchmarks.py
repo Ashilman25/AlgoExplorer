@@ -2,12 +2,14 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends
 from app.exceptions import NotFoundException
+from app.observability import get_logger, compact_context, summarize_benchmark_config, summarize_summary_metrics
 from app.schemas.benchmarks import CreateBenchmarkRequest, BenchmarkResultsResponse, BenchmarkStatusResponse, UpdateBenchmarkStatusRequest
 from app.db import get_db
 from app.data.models import BenchmarkJob
 from app.benchmark.service import run_benchmark
 
 router = APIRouter(prefix = "/api/benchmarks")
+logger = get_logger("routes.benchmarks")
 
 
 @router.get("/", response_model = list[BenchmarkStatusResponse])
@@ -28,6 +30,14 @@ def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db)):
         "metrics": body.metrics,
     }
 
+    logger.info(
+        "benchmark.create.request %s",
+        compact_context(
+            module_type = body.module_type,
+            **summarize_benchmark_config(config),
+        ),
+    )
+
     job = BenchmarkJob(
         module_type = body.module_type,
         config = config,
@@ -41,19 +51,48 @@ def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db)):
     db.commit()
     db.refresh(job)
 
+    logger.info(
+        "benchmark.job.created %s",
+        compact_context(
+            benchmark_id = job.id,
+            module_type = job.module_type,
+            status = job.status,
+            **summarize_benchmark_config(job.config),
+        ),
+    )
+
     try:
-        result = run_benchmark(body.module_type, config)
+        result = run_benchmark(body.module_type, config, benchmark_id = job.id)
 
         job.results = {"series": result["series"], "table": result["table"]}
         job.summary = result["summary"]
         job.status = "completed"
         job.progress = 1.0
         job.completed_at = datetime.utcnow()
+
+        logger.info(
+            "benchmark.job.completed %s",
+            compact_context(
+                benchmark_id = job.id,
+                module_type = job.module_type,
+                status = job.status,
+                summary = summarize_summary_metrics(job.summary),
+            ),
+        )
         
     except Exception:
         job.status = "failed"
         job.progress = 0.0
         job.completed_at = datetime.utcnow()
+        logger.exception(
+            "benchmark.job.failed %s",
+            compact_context(
+                benchmark_id = job.id,
+                module_type = job.module_type,
+                status = job.status,
+                **summarize_benchmark_config(job.config),
+            ),
+        )
         raise
     
     finally:

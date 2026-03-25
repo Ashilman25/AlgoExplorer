@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
     env: str = "development"
     cors_origins: str = "http://localhost:5173,http://localhost:5174"
+    log_level: str = "INFO"
 
     model_config = SettingsConfigDict(
         env_file = ENV_FILE,

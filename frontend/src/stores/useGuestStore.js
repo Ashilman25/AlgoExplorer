@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 const STORAGE_KEY = 'algo-explorer-guest'
 const QUOTA_WARNING_KEY = 'ax-quota-warned'
@@ -73,7 +73,7 @@ export const useGuestStore = create(
     }),
     {
       name: STORAGE_KEY,
-      storage: safeStorage,
+      storage: createJSONStorage(() => safeStorage),
     },
   ),
 )

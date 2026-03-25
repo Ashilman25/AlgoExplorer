@@ -16,13 +16,13 @@ test.describe('Validation and guest management', () => {
     const manualInput = page.getByRole('textbox', { name: 'Manual Input' })
     await manualInput.fill('7, nope, 2')
 
-    await expect(page.getByText('"nope" is not a valid number')).toBeVisible()
+    await expect(page.getByRole('alert').getByText('"nope" is not a valid number')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Run Simulation' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
 
     await manualInput.fill('7, 5, 2, 1')
 
-    await expect(page.getByText('"nope" is not a valid number')).toHaveCount(0)
+    await expect(page.getByRole('alert')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Run Simulation' })).toBeEnabled()
     await expect(page.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
   })
@@ -33,14 +33,16 @@ test.describe('Validation and guest management', () => {
     await page.getByRole('textbox', { name: 'String A' }).fill('   ')
     await page.getByRole('textbox', { name: 'String B' }).fill('')
 
-    await expect(page.getByText('String A must not be whitespace-only')).toBeVisible()
+    await expect(
+      page.getByRole('alert').getByText('String A must not be whitespace-only'),
+    ).toBeVisible()
     await expect(page.getByRole('button', { name: 'Run Simulation' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
 
     await page.getByRole('textbox', { name: 'String A' }).fill('kitten')
     await page.getByRole('textbox', { name: 'String B' }).fill('sitting')
 
-    await expect(page.getByText('String A must not be whitespace-only')).toHaveCount(0)
+    await expect(page.getByRole('alert')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Run Simulation' })).toBeEnabled()
     await expect(page.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
   })
