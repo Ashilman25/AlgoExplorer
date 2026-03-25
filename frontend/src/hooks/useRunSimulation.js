@@ -4,6 +4,7 @@ import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { runsService } from '../services/runsService'
 import { guestService } from '../services/guestService'
+import { parseApiError } from '../services/client'
 
 // usage:
 // const {run, isRunning} = useRunSimulation()
@@ -51,7 +52,16 @@ export function useRunSimulation() {
       }))
 
     } catch (err) {
-      const message = err?.message ?? 'Simulation failed.'
+      const parsed = parseApiError(err)
+      let message = parsed.message
+
+      // If there are field-level validation errors, append them
+      if (parsed.fields) {
+        const fieldMsgs = Object.entries(parsed.fields)
+          .map(([k, msgs]) => k === '_root' ? msgs.join('; ') : `${k}: ${msgs.join('; ')}`)
+          .join(' · ')
+        message = fieldMsgs || message
+      }
 
       setRunError(message)
       setTimelineError(message)
