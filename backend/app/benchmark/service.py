@@ -2,10 +2,13 @@ import random
 import statistics
 import time
 
+from app.observability import get_logger, compact_context, summarize_benchmark_config, summarize_summary_metrics
 from app.simulation import registry
 from app.simulation.types import AlgorithmInput
 
 import app.algorithms.sorting 
+
+logger = get_logger("benchmark.service")
 
 
 _METRIC_TABLE_PREFIX = {
@@ -52,7 +55,7 @@ def _aggregate_metric(trial_metrics: list[dict], metric_key: str) -> dict:
     }
 
 
-def run_benchmark(module_type: str, config: dict) -> dict:
+def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = None) -> dict:
     algorithm_keys = config["algorithm_keys"]
     input_family = config["input_family"]
     sizes = config["sizes"]
@@ -60,6 +63,15 @@ def run_benchmark(module_type: str, config: dict) -> dict:
     metrics = config["metrics"]
 
     t_start = time.perf_counter()
+
+    logger.info(
+        "benchmark.execution.started %s",
+        compact_context(
+            benchmark_id = benchmark_id,
+            module_type = module_type,
+            **summarize_benchmark_config(config),
+        ),
+    )
 
 
     series_data: dict[str, dict[str, list]] = {}
@@ -127,6 +139,16 @@ def run_benchmark(module_type: str, config: dict) -> dict:
         "input_family": input_family,
         "elapsed_ms": elapsed_ms,
     }
+
+    logger.info(
+        "benchmark.execution.completed %s",
+        compact_context(
+            benchmark_id = benchmark_id,
+            module_type = module_type,
+            summary = summarize_summary_metrics(summary),
+            table_rows = len(table),
+        ),
+    )
 
     return {
         "series": series,
