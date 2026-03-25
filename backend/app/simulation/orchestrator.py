@@ -1,10 +1,15 @@
+import time
+
 from app.simulation.types import AlgorithmInput
 from app.simulation import registry
 from app.schemas.runs import CreateRunRequest, CreateRunResponse
 from app.data.models import SimulationRun
 from app.validators import validate_module_algorithm, validate_graph_payload, validate_array_payload, validate_dp_payload
+from app.observability import get_logger, compact_context, summarize_input_payload, summarize_algorithm_config, summarize_summary_metrics
 
 from app.exceptions import DomainError
+
+logger = get_logger("simulation.orchestrator")
 
 
 def run_simulation(request: CreateRunRequest, db) -> CreateRunResponse:
@@ -28,7 +33,33 @@ def run_simulation(request: CreateRunRequest, db) -> CreateRunResponse:
         explanation_level = request.explanation_level,
     )
 
+    logger.info(
+        "algorithm.execution.started %s",
+        compact_context(
+            module_type = request.module_type,
+            algorithm_key = request.algorithm_key,
+            execution_mode = request.execution_mode,
+            explanation_level = request.explanation_level,
+            input = summarize_input_payload(request.module_type, request.algorithm_key, request.input_payload),
+            **summarize_algorithm_config(request.algorithm_config),
+        ),
+    )
+
+    execution_started_at = time.perf_counter()
     output = algorithm.run(algo_input)
+    execution_elapsed_ms = round((time.perf_counter() - execution_started_at) * 1000, 2)
+
+    logger.info(
+        "algorithm.execution.completed %s",
+        compact_context(
+            module_type = request.module_type,
+            algorithm_key = request.algorithm_key,
+            execution_mode = request.execution_mode,
+            timeline_steps = len(output.timeline_steps),
+            wall_clock_ms = execution_elapsed_ms,
+            summary = summarize_summary_metrics(output.summary_metrics),
+        ),
+    )
 
     timeline_list = []
     
@@ -55,6 +86,18 @@ def run_simulation(request: CreateRunRequest, db) -> CreateRunResponse:
     db.add(run)
     db.commit()
     db.refresh(run)
+
+    logger.info(
+        "run.create.persisted %s",
+        compact_context(
+            run_id = run.id,
+            module_type = run.module_type,
+            algorithm_key = run.algorithm_key,
+            scenario_id = run.scenario_id,
+            timeline_steps = len(timeline_list),
+            summary = summarize_summary_metrics(output.summary_metrics),
+        ),
+    )
     
     summary_response = CreateRunResponse(
         id = run.id,
