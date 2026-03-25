@@ -70,3 +70,22 @@ class LoginRequest(BaseModel):
         
         return value
 
+
+
+class AuthUserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes = True)
+
+    id: int
+    email: str
+    username: str
+    settings: dict[str, Any]
+
+
+class AuthTokenResponse(BaseModel):
+    user: AuthUserResponse
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+
+
+class LogoutResponse(BaseModel):
+    message: str
