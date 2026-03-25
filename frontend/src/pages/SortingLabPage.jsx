@@ -1,7 +1,7 @@
 import { useCallback, useState, useEffect, useMemo, useRef } from 'react'
 import { BarChart3, Play, RotateCcw, Save, Shuffle, Sparkles } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
-import { Button, Select, Slider, useToast } from '../components/ui'
+import { Button, Select, Slider, useToast, ErrorAlert } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { useReopenRun } from '../hooks/useReopenRun'
@@ -95,7 +95,7 @@ export function SortingConfig({
             className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono placeholder:text-slate-600 outline-none resize-none"
           />
           {inputError && (
-            <p className = "text-[10px] font-mono text-state-target mt-1">{inputError}</p>
+            <ErrorAlert message={inputError} className="mt-1" />
           )}
         </ConfigSection>
       )}
@@ -137,9 +137,7 @@ export function SortingConfig({
 
       {error && (
         <ConfigSection>
-          <div className = "rounded-lg bg-state-target/10 border border-state-target/20 px-3 py-2">
-            <p className = "text-[10px] font-mono text-state-target leading-relaxed">{error}</p>
-          </div>
+          <ErrorAlert title="Simulation failed" message={error} />
         </ConfigSection>
       )}
 

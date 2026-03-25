@@ -1,7 +1,7 @@
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
-import { Button, Select, useToast } from '../components/ui'
+import { Button, Select, useToast, ErrorAlert } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { useReopenRun } from '../hooks/useReopenRun'
@@ -166,9 +166,7 @@ export function GraphConfig({
 
       {error && (
         <ConfigSection>
-          <div className = "rounded-lg bg-state-target/10 border border-state-target/20 px-3 py-2">
-            <p className = "text-[10px] font-mono text-state-target leading-relaxed">{error}</p>
-          </div>
+          <ErrorAlert title="Simulation failed" message={error} />
         </ConfigSection>
       )}
 
