@@ -62,7 +62,7 @@ class SimulationRun(Base):
     
     config: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable = False)
     summary: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable = False)
-    timeline: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, nullable = False)
+    timeline: Mapped[Any] = mapped_column(JSON, nullable = False)
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default = datetime.utcnow, nullable = False)
 
