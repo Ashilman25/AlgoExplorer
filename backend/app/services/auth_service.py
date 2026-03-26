@@ -74,3 +74,96 @@ def verify_password(password: str, stored_hash: str) -> bool:
     computed_digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, int(iterations))
     
     return hmac.compare_digest(computed_digest, expected_digest)
+
+
+def build_auth_response(user: UserAccount, access_token: str) -> AuthTokenResponse:
+    response = AuthTokenResponse(
+        user = AuthUserResponse.model_validate(user),
+        access_token = access_token,
+        token_type = "bearer"
+    )
+    
+    return response
+
+    
+# main funcs
+
+
+def register_user_account(payload: RegisterRequest, db: Session) -> AuthTokenResponse:
+    
+    existing_email = db.query(UserAccount).filter(UserAccount.email == payload.email).first()
+    if existing_email:
+        logger.warning(
+            "auth.register.conflict %s",
+            compact_context(email = payload.email, reason = "email_taken")
+        )
+        
+        raise ConflictError(
+            "An account with that email already exists",
+            details = {"field" : "email"}
+        )
+        
+    
+    existing_username = db.query(UserAccount).filter(UserAccount.username == payload.username).first()
+    if existing_username:
+        logger.warning(
+            "auth.register.conflict %s",
+            compact_context(username = payload.username, reason = "username_taken")
+        )
+        
+        raise ConflictError("That username is already in use.", details = {"field" : "username"})
+    
+    user = UserAccount(
+        email = payload.email,
+        username = payload.username,
+        password_hash = hash_password(payload.password),
+        settings = default_user_settings()
+    )
+    
+    db.add(user)
+    access_token = None
+    
+    try:
+        db.flush()
+        access_token = issue_session_token(user.id, db)
+        db.commit()
+        
+    except IntegrityError:
+        db.rollback()
+        logger.warning(
+            "auth.register.conflict %s",
+            compact_context(email = payload.email, username = payload.username, reason = "integrity_error"),
+        )
+        raise ConflictError("An account with those credentials already exists.")
+    
+    db.refresh(user)
+    logger.info(
+        "auth.register.succeeded %s",
+        compact_context(user_id = user.id, email = user.email, username = user.username),
+    )
+    
+    return build_auth_response(user, access_token)
+    
+    
+    
+    
+def login_user_account(payload: LoginRequest, db: Session) -> AuthTokenResponse:
+    user = db.query(UserAccount).filter(UserAccount.email == payload.email).first()
+    
+    if user is None or not verify_password(payload.password, user.password_hash):
+        logger.warning(
+            "auth.login.failed %s",
+            compact_context(email = payload.email, reason = "invalid_credentials")
+        )
+        raise AuthenticationError("Invalid email or password.")
+    
+    access_token = issue_session_token(user.id, db)
+    db.commit()
+    db.refresh(user)
+    
+    logger.info(
+        "auth.login.succeeded %s",
+        compact_context(user_id = user.id, email = user.email),
+    )
+    
+    return build_auth_response(user, access_token)
