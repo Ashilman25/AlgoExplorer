@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     env: str = "development"
     cors_origins: str = "http://localhost:5173,http://localhost:5174"
     log_level: str = "INFO"
+    auth_session_hours: int = 168
+    auth_password_iterations: int = 600000
 
     model_config = SettingsConfigDict(
         env_file = ENV_FILE,
