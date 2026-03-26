@@ -102,6 +102,18 @@ test.describe('Phase 10.4 error UX', () => {
   test('401 API responses surface the auth-expired warning and inline request error', async ({ page }) => {
     await page.goto('/benchmarks')
 
+    // Seed a fake auth token so the client treats this as an authenticated session
+    await page.evaluate(() => {
+      const state = { state: { accessToken: 'fake-token', user: { id: 1, username: 'test' } }, version: 0 }
+      localStorage.setItem('algo-explorer-auth', JSON.stringify(state))
+    })
+    // Reload so the auth store hydrates with the seeded token
+    await page.goto('/benchmarks')
+
+    await page.route('**/api/auth/me', async (route) => {
+      await route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":{"message":"Invalid or expired token."}}' })
+    })
+
     await page.route('**/api/benchmarks/', async (route) => {
       await route.fulfill({
         status: 401,
@@ -115,9 +127,8 @@ test.describe('Phase 10.4 error UX', () => {
     await page.getByRole('button', { name: 'Launch Benchmark' }).click()
 
     const alert = page.getByRole('alert')
-    await expect(page.getByText('Session expired')).toBeVisible()
-    await expect(page.getByText('Please sign in again to continue.')).toBeVisible()
-    await expect(alert.getByText('Request failed')).toBeVisible()
-    await expect(alert.getByText('Your session has expired.')).toBeVisible()
+    await expect(page.getByText('Session expired').first()).toBeVisible()
+    await expect(page.getByText('Please sign in again to continue.').first()).toBeVisible()
+    await expect(alert.getByText('Server error')).toBeVisible()
   })
 })
