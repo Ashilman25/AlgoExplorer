@@ -19,6 +19,16 @@ def _check_run_access(run: SimulationRun, user: UserAccount | None) -> None:
             raise PermissionError("You do not have access to this run.")
 
 
+@router.get("/", response_model = list[RunSummary])
+def list_runs(db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
+    if user:
+        rows = db.query(SimulationRun).filter(SimulationRun.user_id == user.id).order_by(SimulationRun.created_at.desc()).all()
+    else:
+        rows = db.query(SimulationRun).filter(SimulationRun.user_id.is_(None)).order_by(SimulationRun.created_at.desc()).all()
+        
+    return [RunSummary.model_validate(run) for run in rows]
+
+
 # Returns id, module_type, algorithm_key, summary metrics, created_at
 @router.get("/{run_id}", response_model = RunSummary)
 def get_run_summary(run_id: int, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
