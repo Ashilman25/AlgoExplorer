@@ -91,6 +91,32 @@ class LogoutResponse(BaseModel):
     message: str
 
 
+class ChartPreferencesUpdate(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    show_grid: bool | None = None
+    show_legend: bool | None = None
+    color_scheme: Literal["default", "monochrome", "colorblind"] | None = None
+
+
+class UpdateSettingsRequest(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    theme: Literal["dark", "light"] | None = None
+    default_playback_speed: float | None = None
+    explanation_verbosity: Literal["none", "standard", "detailed"] | None = None
+    animation_detail: Literal["minimal", "standard", "full"] | None = None
+    chart_preferences: ChartPreferencesUpdate | None = None
+
+    @field_validator("default_playback_speed")
+    @classmethod
+    def validate_speed(cls, value: float | None) -> float | None:
+        if value is not None and not (0.25 <= value <= 4.0):
+            raise ValueError("Playback speed must be between 0.25 and 4.0.")
+        
+        return value
+
+
 class ClaimGuestDataRequest(BaseModel):
     model_config = ConfigDict(extra = "forbid")
 
