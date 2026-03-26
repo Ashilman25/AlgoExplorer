@@ -2,3 +2,5 @@ _docs
 .vscode/*
 **/.env
 **/*.db
+**/__pycache__/
+**/*.py[cod]

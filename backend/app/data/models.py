@@ -49,10 +49,11 @@ class AuthSession(Base):
 
 class SimulationRun(Base):
     __tablename__ = "simulation_runs"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key = True, autoincrement = True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user_accounts.id"), nullable = True, index = True)
     scenario_id: Mapped[Optional[int]] = mapped_column(Integer, nullable = True)
-    
+
     module_type: Mapped[str] = mapped_column(String(50), nullable = False)
     algorithm_key: Mapped[str] = mapped_column(String(50), nullable = False)
     
@@ -66,8 +67,9 @@ class SimulationRun(Base):
 
 class BenchmarkJob(Base):
     __tablename__ = "benchmark_jobs"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key = True, autoincrement = True)
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user_accounts.id"), nullable = True, index = True)
     module_type: Mapped[str] = mapped_column(String(50), nullable = False)
 
     config: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable = False)

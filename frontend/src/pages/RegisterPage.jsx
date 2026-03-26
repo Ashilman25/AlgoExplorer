@@ -9,12 +9,14 @@ import { useToast } from '../components/ui/Toast'
 import { authService } from '../services/authService'
 import { parseApiError } from '../services/client'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useClaimGuestData } from '../hooks/useClaimGuestData'
 
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const setSession = useAuthStore((s) => s.setSession)
+  const claimGuestData = useClaimGuestData()
 
   const [form, setForm] = useState({
     email: '',
@@ -52,6 +54,7 @@ export default function RegisterPage() {
         title: 'Account created',
         message: `Signed in as ${response.user.username}.`,
       })
+      await claimGuestData()
       navigate('/account', { replace: true })
     } catch (err) {
       setError(parseApiError(err))

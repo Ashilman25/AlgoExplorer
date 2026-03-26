@@ -221,3 +221,19 @@ def get_current_auth_session(token: str | None = Depends(oauth2_scheme), db: Ses
 
 def get_current_user(auth_session: AuthSession = Depends(get_current_auth_session)) -> UserAccount:
     return auth_session.user
+
+
+def get_optional_user(token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> UserAccount | None:
+    """Returns the authenticated user if a valid token is present, otherwise None."""
+    if not token:
+        return None
+
+    token_hash = hash_session_token(token)
+    auth_session = db.query(AuthSession).filter(AuthSession.token_hash == token_hash).first()
+    if auth_session is None or auth_session.revoked_at is not None:
+        return None
+
+    if auth_session.expires_at <= datetime.utcnow():
+        return None
+
+    return auth_session.user

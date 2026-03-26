@@ -12,7 +12,7 @@ from app.exceptions import DomainError
 logger = get_logger("simulation.orchestrator")
 
 
-def run_simulation(request: CreateRunRequest, db) -> CreateRunResponse:
+def run_simulation(request: CreateRunRequest, db, user_id: int | None = None) -> CreateRunResponse:
     
     validate_module_algorithm(request.module_type, request.algorithm_key)
     _validate_payload(request.module_type, request.algorithm_key, request.input_payload)
@@ -75,6 +75,7 @@ def run_simulation(request: CreateRunRequest, db) -> CreateRunResponse:
     }
     
     run = SimulationRun(
+        user_id = user_id,
         scenario_id = request.scenario_id,
         module_type = request.module_type,
         algorithm_key = request.algorithm_key,
