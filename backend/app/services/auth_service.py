@@ -99,7 +99,7 @@ def register_user_account(payload: RegisterRequest, db: Session) -> AuthTokenRes
         )
         
         raise ConflictError(
-            "An account with that email already exists",
+            "An account with that email already exists.",
             details = {"field" : "email"}
         )
         
@@ -167,3 +167,57 @@ def login_user_account(payload: LoginRequest, db: Session) -> AuthTokenResponse:
     )
     
     return build_auth_response(user, access_token)
+
+
+
+def logout_auth_session(auth_session: AuthSession, db: Session) -> None:
+    auth_session.revoked_at = datetime.utcnow()
+    db.commit()
+    
+    logger.info(
+        "auth.logout.succeeded %s",
+        compact_context(user_id = auth_session.user_id, session_id = auth_session.id),
+    )
+    
+    
+    
+    
+def get_current_auth_session(token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> AuthSession:
+    if not token:
+        raise AuthenticationError("Authentication required.")
+    
+    auth_session = db.query(AuthSession).filter(AuthSession.token_hash == hash_session_token(token)).first()
+    if auth_session is None:
+        logger.warning("auth.session.invalid %s", compact_context(reason = "not_found"))
+        raise AuthenticationError("Invalid or expired token.")
+    
+    
+    if auth_session.revoked_at is not None:
+        logger.warning(
+            "auth.session.invalid %s",
+            compact_context(session_id = auth_session.id, user_id = auth_session.user_id, reason = "revoked"),
+        )
+        raise AuthenticationError("Invalid or expired token.")
+
+    if auth_session.expires_at <= datetime.utcnow():
+        auth_session.revoked_at = datetime.utcnow()
+        db.commit()
+        
+        logger.warning(
+            "auth.session.invalid %s",
+            compact_context(session_id = auth_session.id, user_id = auth_session.user_id, reason = "expired"),
+        )
+        raise AuthenticationError("Invalid or expired token.")
+
+    if auth_session.user is None:
+        logger.warning(
+            "auth.session.invalid %s",
+            compact_context(session_id = auth_session.id, reason = "missing_user"),
+        )
+        raise AuthenticationError("Invalid or expired token.")
+
+    return auth_session
+
+
+def get_current_user(auth_session: AuthSession = Depends(get_current_auth_session)) -> UserAccount:
+    return auth_session.user
