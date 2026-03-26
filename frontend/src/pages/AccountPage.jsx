@@ -1,4 +1,5 @@
-import { ShieldCheck, LogOut, UserRound, Mail, SlidersHorizontal } from 'lucide-react'
+import { ShieldCheck, LogOut, UserRound, Mail, SlidersHorizontal, Settings } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import PageHeader from '../components/ui/PageHeader'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -57,15 +58,15 @@ export default function AccountPage() {
 
           <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 px-4 py-3">
             <p className="text-xs text-slate-400 leading-relaxed">
-              Guest mode remains available. Protected ownership rules, guest-to-account migration, and synced resource CRUD land in the next Phase 12 tasks.
+              Your runs and benchmarks are owned by your account. Guest data is automatically imported when you sign in.
             </p>
           </div>
         </Card>
 
-        <Card title="Current Settings Snapshot" bodyClassName="p-5 space-y-3">
+        <Card title="Preferences" bodyClassName="p-5 space-y-3">
           <div className="flex items-center gap-2 text-slate-300">
             <SlidersHorizontal size={14} strokeWidth={1.75} className="text-brand-400" />
-            <span className="text-sm font-medium">Defaults from account state</span>
+            <span className="text-sm font-medium">Current defaults</span>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -75,9 +76,13 @@ export default function AccountPage() {
             <Badge variant="warning">animation: {settings.animation_detail ?? 'standard'}</Badge>
           </div>
 
-          <p className="text-xs text-slate-500 leading-relaxed">
-            This is read-only in 12.1. Editable account preferences arrive with the settings page in 12.3.
-          </p>
+          <Link
+            to="/settings"
+            className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 transition-colors"
+          >
+            <Settings size={12} strokeWidth={1.5} />
+            Edit preferences
+          </Link>
         </Card>
       </div>
     </div>

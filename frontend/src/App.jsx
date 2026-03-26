@@ -14,6 +14,7 @@ import RunsPage from './pages/RunsPage'
 import BenchmarksPage from './pages/BenchmarksPage'
 import ComparePage from './pages/ComparePage'
 import AccountPage from './pages/AccountPage'
+import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -93,6 +94,14 @@ export default function App() {
               element = {
                 <RequireAuth>
                   <AccountPage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path = "settings"
+              element = {
+                <RequireAuth>
+                  <SettingsPage />
                 </RequireAuth>
               }
             />
