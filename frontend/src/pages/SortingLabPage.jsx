@@ -10,6 +10,7 @@ import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
 import { generateId } from '../services/guestService'
+import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 import {
   generateFromPreset,
   parseManualInput,
@@ -616,6 +617,8 @@ export default function SortingLabPage() {
         accent = "amber"
         badge = "Phase 6"
       />
+
+      <GuestPromptBanner />
 
       <SimulationLayout
         configPanel = {

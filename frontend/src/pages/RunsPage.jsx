@@ -13,6 +13,7 @@ import { useToast } from '../components/ui/Toast'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
 import { generateId } from '../services/guestService'
+import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 
 
 /* ── constants ──────────────────────────────────────────────── */
@@ -533,6 +534,8 @@ export default function RunsPage() {
           </button>
         </div>
       </PageHeader>
+
+      <GuestPromptBanner />
 
       {/* count + clear all */}
       {runs.length > 0 && (

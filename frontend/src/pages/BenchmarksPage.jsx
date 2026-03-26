@@ -17,6 +17,7 @@ import {
   BENCHMARK_LIMITS,
   BENCHMARK_SIZE_PRESETS,
 } from '../config/benchmarkConfig'
+import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 
 const MODULE_TYPE = 'sorting'
 
@@ -514,6 +515,8 @@ export default function BenchmarksPage() {
           </Badge>
         )}
       </PageHeader>
+
+      <GuestPromptBanner />
 
       <div className="flex gap-6 items-start">
         <BenchmarkConfig

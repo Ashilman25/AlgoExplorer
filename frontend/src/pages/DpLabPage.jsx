@@ -10,6 +10,7 @@ import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
 import { generateId } from '../services/guestService'
+import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 
 
 // ─── Constants ──────────────────────────────────────────
@@ -630,6 +631,8 @@ export default function DpLabPage() {
         accent = "violet"
         badge = "Phase 7"
       />
+
+      <GuestPromptBanner />
 
       <SimulationLayout
         configPanel = {
