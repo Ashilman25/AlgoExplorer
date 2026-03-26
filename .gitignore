@@ -4,3 +4,4 @@ _docs
 **/*.db
 **/__pycache__/
 **/*.py[cod]
+CLAUDE.md
