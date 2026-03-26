@@ -6,4 +6,5 @@ export const authService = {
   login: (body) => client.post('/api/auth/login', body),
   logout: () => client.post('/api/auth/logout', {}),
   me: () => client.get('/api/auth/me'),
+  claimGuestData: (body) => client.post('/api/auth/claim', body),
 }

@@ -9,6 +9,7 @@ import { useToast } from '../components/ui/Toast'
 import { authService } from '../services/authService'
 import { parseApiError } from '../services/client'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useClaimGuestData } from '../hooks/useClaimGuestData'
 
 
 export default function LoginPage() {
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const location = useLocation()
   const toast = useToast()
   const setSession = useAuthStore((s) => s.setSession)
+  const claimGuestData = useClaimGuestData()
 
   const [form, setForm] = useState({
     email: '',
@@ -39,6 +41,7 @@ export default function LoginPage() {
         title: 'Signed in',
         message: `Welcome back, ${response.user.username}.`,
       })
+      await claimGuestData()
       navigate(redirectTo, { replace: true })
     } catch (err) {
       setError(parseApiError(err))
