@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from app.exceptions import NotFoundException, PermissionError
 from app.observability import get_logger, compact_context, summarize_input_payload, summarize_algorithm_config
+from app.persistence import decode_timeline_payload
 from app.schemas.runs import CreateRunRequest, CreateRunResponse, RunSummary
 from app.schemas.timeline import TimelineResponse
 from app.db import get_db
@@ -57,12 +58,13 @@ def get_timeline(run_id: int, offset: int = Query(default = 0, ge = 0), limit: i
 
     _check_run_access(run, user)
 
-    total = len(run.timeline)
+    timeline_steps = decode_timeline_payload(run.timeline)
+    total = len(timeline_steps)
 
     if limit is not None:
-        window = run.timeline[offset : offset + limit]
+        window = timeline_steps[offset : offset + limit]
     else:
-        window = run.timeline[offset:]
+        window = timeline_steps[offset:]
 
     timeline = TimelineResponse(
         run_id = run_id,

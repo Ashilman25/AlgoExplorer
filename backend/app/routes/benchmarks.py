@@ -3,6 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from app.exceptions import NotFoundException, PermissionError
 from app.observability import get_logger, compact_context, summarize_benchmark_config, summarize_summary_metrics
+from app.persistence import safe_json_value
 from app.schemas.benchmarks import CreateBenchmarkRequest, BenchmarkResultsResponse, BenchmarkStatusResponse, UpdateBenchmarkStatusRequest
 from app.db import get_db
 from app.data.models import BenchmarkJob, UserAccount
@@ -33,13 +34,13 @@ def list_benchmark_jobs(db = Depends(get_db), user: UserAccount | None = Depends
 
 @router.post("/", response_model = BenchmarkStatusResponse)
 def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
-    config = {
+    config = safe_json_value({
         "algorithm_keys": body.algorithm_keys,
         "input_family": body.input_family,
         "sizes": body.sizes,
         "trials_per_size": body.trials_per_size,
         "metrics": body.metrics,
-    }
+    }, label = "benchmark config")
 
     logger.info(
         "benchmark.create.request %s",
@@ -76,8 +77,8 @@ def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db), use
     try:
         result = run_benchmark(body.module_type, config, benchmark_id = job.id)
 
-        job.results = {"series": result["series"], "table": result["table"]}
-        job.summary = result["summary"]
+        job.results = safe_json_value({"series": result["series"], "table": result["table"]}, label = "benchmark results")
+        job.summary = safe_json_value(result["summary"], label = "benchmark summary")
         job.status = "completed"
         job.progress = 1.0
         job.completed_at = datetime.utcnow()

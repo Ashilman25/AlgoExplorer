@@ -4,6 +4,7 @@ from app.simulation.types import AlgorithmInput
 from app.simulation import registry
 from app.schemas.runs import CreateRunRequest, CreateRunResponse
 from app.data.models import SimulationRun
+from app.persistence import encode_timeline_payload, safe_json_value
 from app.validators import validate_module_algorithm, validate_graph_payload, validate_array_payload, validate_dp_payload
 from app.observability import get_logger, compact_context, summarize_input_payload, summarize_algorithm_config, summarize_summary_metrics
 
@@ -62,17 +63,22 @@ def run_simulation(request: CreateRunRequest, db, user_id: int | None = None) ->
     )
 
     timeline_list = []
-    
+
     for step in output.timeline_steps:
         step_dict = step.model_dump()
         timeline_list.append(step_dict)
-        
-    config_data = {
-        "input_payload" : request.input_payload,
-        "algorithm_config" : request.algorithm_config or {},
-        "execution_mode" : request.execution_mode,
-        "explanation_level" : request.explanation_level
-    }
+
+    timeline_payload = encode_timeline_payload(timeline_list)
+    config_data = safe_json_value(
+        {
+            "input_payload" : request.input_payload,
+            "algorithm_config" : request.algorithm_config or {},
+            "execution_mode" : request.execution_mode,
+            "explanation_level" : request.explanation_level
+        },
+        label = "run config",
+    )
+    summary_data = safe_json_value(output.summary_metrics, label = "run summary")
     
     run = SimulationRun(
         user_id = user_id,
@@ -80,8 +86,8 @@ def run_simulation(request: CreateRunRequest, db, user_id: int | None = None) ->
         module_type = request.module_type,
         algorithm_key = request.algorithm_key,
         config = config_data,
-        summary = output.summary_metrics,
-        timeline = timeline_list
+        summary = summary_data,
+        timeline = timeline_payload
     )
 
     db.add(run)
@@ -96,6 +102,7 @@ def run_simulation(request: CreateRunRequest, db, user_id: int | None = None) ->
             algorithm_key = run.algorithm_key,
             scenario_id = run.scenario_id,
             timeline_steps = len(timeline_list),
+            timeline_encoding = timeline_payload.get("encoding"),
             summary = summarize_summary_metrics(output.summary_metrics),
         ),
     )

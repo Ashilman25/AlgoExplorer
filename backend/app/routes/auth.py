@@ -8,6 +8,7 @@ from app.data.models import SimulationRun, BenchmarkJob, UserAccount
 from app.schemas.auth import AuthTokenResponse, AuthUserResponse, LoginRequest, LogoutResponse, RegisterRequest, ClaimGuestDataRequest, ClaimGuestDataResponse, UpdateSettingsRequest
 from app.services.auth_service import get_current_auth_session, get_current_user, login_user_account, logout_auth_session, register_user_account
 from app.observability import get_logger, compact_context
+from app.persistence import safe_json_value
 
 logger = get_logger("routes.auth")
 
@@ -48,7 +49,7 @@ def update_settings(body: UpdateSettingsRequest, current_user: UserAccount = Dep
         current["chart_preferences"] = current_chart
 
     current.update(updates)
-    current_user.settings = current
+    current_user.settings = safe_json_value(current, label = "user settings")
     db.commit()
     db.refresh(current_user)
 

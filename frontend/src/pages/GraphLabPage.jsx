@@ -10,6 +10,7 @@ import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
 import { generateId } from '../services/guestService'
+import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 
 
 const GRAPH_PRESETS = [
@@ -895,6 +896,8 @@ export default function GraphLabPage() {
         accent = "brand"
         badge = "Phase 5"
       />
+
+      <GuestPromptBanner />
 
       <SimulationLayout
         configPanel = {

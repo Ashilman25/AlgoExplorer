@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./app/app.db"
     redis_url: str = "redis://localhost:6379"
     env: str = "development"
-    cors_origins: str = "http://localhost:5173,http://localhost:5174"
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:4175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:4175"
     log_level: str = "INFO"
     auth_session_hours: int = 168
     auth_password_iterations: int = 600000

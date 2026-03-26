@@ -142,6 +142,22 @@ def test_guest_can_access_guest_run(client):
     assert resp.status_code == 200
 
 
+def test_guest_can_fetch_guest_run_timeline(client):
+    run = client.post("/api/runs/", json = SORTING_RUN_PAYLOAD).json()
+
+    resp = client.get(f"/api/runs/{run['id']}/timeline")
+    assert resp.status_code == 200
+    assert resp.json()["total_steps"] > 0
+
+
+def test_guest_can_access_guest_benchmark_results(client):
+    job = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD).json()
+
+    resp = client.get(f"/api/benchmarks/{job['id']}/results")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "completed"
+
+
 def test_guest_cannot_access_owned_run(client):
     owner = register_user(client, "owner@test.com", "owner")
     run = client.post("/api/runs/", json = SORTING_RUN_PAYLOAD, headers = auth_header(owner["access_token"])).json()
