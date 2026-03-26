@@ -89,3 +89,15 @@ class AuthTokenResponse(BaseModel):
 
 class LogoutResponse(BaseModel):
     message: str
+
+
+class ClaimGuestDataRequest(BaseModel):
+    model_config = ConfigDict(extra = "forbid")
+
+    run_ids: list[int] = []
+    benchmark_ids: list[int] = []
+
+
+class ClaimGuestDataResponse(BaseModel):
+    runs_claimed: int
+    benchmarks_claimed: int
