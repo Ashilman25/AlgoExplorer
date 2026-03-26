@@ -1,5 +1,6 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const DEFAULT_TIMEOUT = 30_000
+let authTokenResolver = () => null
 
 // Structured error thrown for any non-2xx response
 export class ApiError extends Error {
@@ -16,6 +17,7 @@ export class ApiError extends Error {
   get isForbidden() { return this.status === 403 }
   get isServerError() { return this.status >= 500 }
   get isUnauthorized() { return this.status === 401 }
+  get isConflict() { return this.status === 409 }
 }
 
 // Thrown when the network is unreachable or the request times out
@@ -72,6 +74,22 @@ export function parseApiError(err) {
     }
   }
 
+  if (err.isUnauthorized) {
+    return {
+      title: 'Authentication failed',
+      message: err.message,
+      fields: null,
+    }
+  }
+
+  if (err.isConflict) {
+    return {
+      title: 'Already in use',
+      message: err.message,
+      fields: null,
+    }
+  }
+
   if (err.isServerError) {
     return {
       title: 'Server error',
@@ -90,6 +108,7 @@ export function parseApiError(err) {
 
 async function request(path, options = {}) {
   const { timeout = DEFAULT_TIMEOUT, ...fetchOptions } = options
+  const authToken = authTokenResolver?.()
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeout)
@@ -97,7 +116,11 @@ async function request(path, options = {}) {
   let res
   try {
     res = await fetch(`${BASE_URL}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...fetchOptions.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...fetchOptions.headers,
+      },
       signal: controller.signal,
       ...fetchOptions,
     })
@@ -122,14 +145,14 @@ async function request(path, options = {}) {
       // response body not JSON — ignore
     }
 
-    // Future auth: detect 401 and dispatch event for global handling
-    if (res.status === 401) {
+    // Active auth: detect expired protected sessions and notify the app shell.
+    if (res.status === 401 && authToken) {
       window.dispatchEvent(new CustomEvent('auth:expired'))
     }
 
     throw new ApiError(
       res.status,
-      body?.error?.message ?? body?.message ?? `HTTP ${res.status}`,
+      body?.error?.message ?? body?.message ?? body?.detail ?? `HTTP ${res.status}`,
       body?.error?.details ?? body?.details ?? null,
       body?.error?.error_code ?? null,
     )
@@ -137,6 +160,10 @@ async function request(path, options = {}) {
 
   if (res.status === 204) return null
   return res.json()
+}
+
+export function setAuthTokenResolver(resolver) {
+  authTokenResolver = resolver
 }
 
 export const client = {

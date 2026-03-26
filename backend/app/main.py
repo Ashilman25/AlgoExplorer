@@ -6,10 +6,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.exceptions import DomainError, NotFoundException, PermissionError
+from app.exceptions import AuthenticationError, ConflictError, DomainError, NotFoundException, PermissionError
 from app.observability import configure_logging, get_logger, compact_context, request_context
 from app.schemas.errors import ErrorDetail, ErrorResponse
-from app.routes import metadata, runs, benchmarks
+from app.routes import auth, metadata, runs, benchmarks
 from app.db import init_db
 
 
@@ -44,6 +44,7 @@ app.add_middleware(
 )
 
 app.include_router(metadata.router)
+app.include_router(auth.router)
 app.include_router(runs.router)
 app.include_router(benchmarks.router)
 
@@ -51,21 +52,27 @@ app.include_router(benchmarks.router)
 
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
+    safe_errors = [
+        {"loc": e.get("loc", []), "msg": e.get("msg", ""), "type": e.get("type", "")}
+        for e in exc.errors()
+    ]
+    
     logger.warning(
         "request.validation_failed %s",
         compact_context(
             **request_context(request),
-            error_count = len(exc.errors()),
-            errors = exc.errors()[:5],
+            error_count = len(safe_errors),
+            errors = safe_errors[:5],
         ),
     )
+    
     return JSONResponse(
         status_code = 422,
         content = ErrorResponse(
-            error =ErrorDetail(
+            error = ErrorDetail(
                 error_code = "VALIDATION_ERROR",
                 message = "Invalid request data.",
-                details = {"errors": exc.errors()},
+                details = {"errors": safe_errors},
             )
         ).model_dump(),
     )
@@ -93,6 +100,28 @@ async def domain_error_handler(request: Request, exc: DomainError):
     )
 
 
+@app.exception_handler(AuthenticationError)
+async def authentication_error_handler(request: Request, exc: AuthenticationError):
+    logger.warning(
+        "request.unauthorized %s",
+        compact_context(
+            **request_context(request),
+            message = exc.message,
+            details = exc.details,
+        ),
+    )
+    return JSONResponse(
+        status_code = 401,
+        content = ErrorResponse(
+            error = ErrorDetail(
+                error_code = "UNAUTHORIZED",
+                message = exc.message,
+                details = exc.details,
+            )
+        ).model_dump(),
+    )
+
+
 @app.exception_handler(NotFoundException)
 async def not_found_handler(request: Request, exc: NotFoundException):
     logger.warning(
@@ -108,6 +137,28 @@ async def not_found_handler(request: Request, exc: NotFoundException):
             error = ErrorDetail(
                 error_code = "NOT_FOUND",
                 message = exc.message,
+            )
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(ConflictError)
+async def conflict_error_handler(request: Request, exc: ConflictError):
+    logger.warning(
+        "request.conflict %s",
+        compact_context(
+            **request_context(request),
+            message = exc.message,
+            details = exc.details,
+        ),
+    )
+    return JSONResponse(
+        status_code = 409,
+        content = ErrorResponse(
+            error = ErrorDetail(
+                error_code = "CONFLICT",
+                message = exc.message,
+                details = exc.details,
             )
         ).model_dump(),
     )

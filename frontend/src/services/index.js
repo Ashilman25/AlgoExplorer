@@ -1,4 +1,5 @@
 export { client, ApiError } from './client'
+export { authService } from './authService'
 export { metadataService } from './metadataService'
 export { runsService } from './runsService'
 export { benchmarksService } from './benchmarksService'
