@@ -129,6 +129,7 @@ test.describe('Phase 10.4 error UX', () => {
     const alert = page.getByRole('alert')
     await expect(page.getByText('Session expired').first()).toBeVisible()
     await expect(page.getByText('Please sign in again to continue.').first()).toBeVisible()
-    await expect(alert.getByText('Server error')).toBeVisible()
+    await expect(alert.getByText('Authentication failed')).toBeVisible()
+    await expect(alert.getByText('Your session has expired.')).toBeVisible()
   })
 })
