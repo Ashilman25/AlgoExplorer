@@ -1,5 +1,11 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
+import {
+  GUEST_PERSISTENCE_VERSION,
+  migrateGuestState,
+  safeJsonParse,
+  safeJsonStringify,
+} from '../services/persistenceService'
 
 const STORAGE_KEY = 'algo-explorer-guest'
 const QUOTA_WARNING_KEY = 'ax-quota-warned'
@@ -8,14 +14,16 @@ const QUOTA_WARNING_KEY = 'ax-quota-warned'
 const safeStorage = {
   getItem: (name) => {
     try {
-      return localStorage.getItem(name)
+      const raw = localStorage.getItem(name)
+      if (!raw) return null
+      return safeJsonParse(raw, null)
     } catch {
       return null
     }
   },
   setItem: (name, value) => {
     try {
-      localStorage.setItem(name, value)
+      localStorage.setItem(name, safeJsonStringify(value, 'guest storage'))
     } catch (err) {
       // QuotaExceededError or SecurityError (private browsing)
       window.dispatchEvent(
@@ -73,7 +81,9 @@ export const useGuestStore = create(
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() => safeStorage),
+      version: GUEST_PERSISTENCE_VERSION,
+      storage: safeStorage,
+      migrate: (persistedState, version) => migrateGuestState(persistedState, version),
     },
   ),
 )
