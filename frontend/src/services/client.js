@@ -1,4 +1,32 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+function resolveBaseUrl() {
+  const configured = import.meta.env.VITE_API_BASE_URL
+
+  // During Vite dev and Playwright e2e, route API traffic through the dev server
+  // proxy so the browser stays same-origin and avoids CORS/preflight issues.
+  if (import.meta.env.DEV) {
+    return ''
+  }
+
+  if (configured) return configured
+
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname, port } = window.location
+
+    // Playwright runs the frontend on :4175 and the backend on :8015.
+    if (port === '4175') {
+      return `${protocol}//${hostname}:8015`
+    }
+
+    // Default local development backend port.
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `${protocol}//${hostname}:8000`
+    }
+  }
+
+  return 'http://localhost:8000'
+}
+
+const BASE_URL = resolveBaseUrl()
 const DEFAULT_TIMEOUT = 30_000
 let authTokenResolver = () => null
 
