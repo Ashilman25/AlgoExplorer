@@ -8,7 +8,9 @@ import {
   Gauge,
   BookMarked,
   History,
+  Settings,
 } from 'lucide-react'
+import { useAuthStore } from '../../stores/useAuthStore'
 import { cn } from '../../utils/cn'
 
 const NAV_SECTIONS = [
@@ -59,6 +61,8 @@ function NavItem({to, icon: Icon, label, end = false}) {
 }
 
 export default function Sidebar() {
+  const user = useAuthStore((s) => s.user)
+
   return (
     <aside className="fixed left-0 top-[52px] z-40 w-[240px] h-[calc(100vh-52px)] flex flex-col bg-slate-900 border-r border-white/[0.07] overflow-y-auto">
 
@@ -83,8 +87,12 @@ export default function Sidebar() {
       ))}
 
       <div className = "flex-1" />
-      <div className = "h-4" />
 
+      {user && (
+        <div className = "pb-3">
+          <NavItem to = "/settings" icon = {Settings} label = "Settings" />
+        </div>
+      )}
 
     </aside>
   )

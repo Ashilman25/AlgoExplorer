@@ -8,14 +8,17 @@ class Base(DeclarativeBase):
 
 
 def default_user_settings() -> Dict[str, Any]:
-    user_settings = {
-        "theme" : "dark",
-        "default_playback_speed" : 1.0,
-        "explanation_verbosity" : "standard",
-        "animation_detail" : "standard"
+    return {
+        "theme": "dark",
+        "default_playback_speed": 1.0,
+        "explanation_verbosity": "standard",
+        "animation_detail": "standard",
+        "chart_preferences": {
+            "show_grid": True,
+            "show_legend": True,
+            "color_scheme": "default",
+        },
     }
-    
-    return user_settings
 
 
 class UserAccount(Base):
