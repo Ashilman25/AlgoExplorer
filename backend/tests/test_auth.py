@@ -84,6 +84,11 @@ def test_register_creates_account_session_and_logs_success(client, session_facto
             "default_playback_speed": 1.0,
             "explanation_verbosity": "standard",
             "animation_detail": "standard",
+            "chart_preferences": {
+                "show_grid": True,
+                "show_legend": True,
+                "color_scheme": "default",
+            },
         },
     }
     assert body["access_token"]

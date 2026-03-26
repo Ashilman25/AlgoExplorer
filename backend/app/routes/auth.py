@@ -1,9 +1,11 @@
+import copy
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.data.models import SimulationRun, BenchmarkJob, UserAccount
-from app.schemas.auth import AuthTokenResponse, AuthUserResponse, LoginRequest, LogoutResponse, RegisterRequest, ClaimGuestDataRequest, ClaimGuestDataResponse
+from app.schemas.auth import AuthTokenResponse, AuthUserResponse, LoginRequest, LogoutResponse, RegisterRequest, ClaimGuestDataRequest, ClaimGuestDataResponse, UpdateSettingsRequest
 from app.services.auth_service import get_current_auth_session, get_current_user, login_user_account, logout_auth_session, register_user_account
 from app.observability import get_logger, compact_context
 
@@ -32,6 +34,30 @@ def get_me(current_user = Depends(get_current_user)):
 def logout_user(current_session = Depends(get_current_auth_session), db: Session = Depends(get_db)):
     logout_auth_session(current_session, db)
     return LogoutResponse(message = "Logged out.")
+
+
+@router.patch("/settings", response_model = AuthUserResponse)
+def update_settings(body: UpdateSettingsRequest, current_user: UserAccount = Depends(get_current_user), db: Session = Depends(get_db)):
+    current = copy.deepcopy(current_user.settings)
+    updates = body.model_dump(exclude_none = True)
+
+    # Deep-merge chart_preferences
+    if "chart_preferences" in updates:
+        current_chart = current.get("chart_preferences", {})
+        current_chart.update(updates.pop("chart_preferences"))
+        current["chart_preferences"] = current_chart
+
+    current.update(updates)
+    current_user.settings = current
+    db.commit()
+    db.refresh(current_user)
+
+    logger.info(
+        "auth.settings.updated %s",
+        compact_context(user_id = current_user.id, changed_keys = list(body.model_dump(exclude_none = True).keys())),
+    )
+
+    return AuthUserResponse.model_validate(current_user)
 
 
 @router.post("/claim", response_model = ClaimGuestDataResponse)
