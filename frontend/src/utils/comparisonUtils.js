@@ -1,10 +1,16 @@
-const DOMAIN_METRICS = {
-  graph: [
+const GRAPH_SUBCATEGORY_METRICS = {
+  pathfinding: [
     { key: 'nodes_visited',  label: 'Nodes Visited',  polarity: 'lower' },
     { key: 'edges_explored', label: 'Edges Explored', polarity: 'lower' },
-    { key: 'path_cost',      label: 'Path Cost',      polarity: 'lower' },
-    { key: 'path_length',    label: 'Path Length',     polarity: 'lower' },
   ],
+  mst: [
+    { key: 'edges_added',      label: 'Edges Added',      polarity: 'lower' },
+    { key: 'mst_total_weight', label: 'MST Total Weight', polarity: 'lower' },
+  ],
+  ordering: [],
+}
+
+const DOMAIN_METRICS = {
   sorting: [
     { key: 'comparisons',     label: 'Comparisons',         polarity: 'lower' },
     { key: 'swaps',           label: 'Swaps',               polarity: 'lower' },
@@ -16,12 +22,15 @@ const DOMAIN_METRICS = {
   ],
 }
 
-export function getDomainMetrics(moduleType) {
+export function getDomainMetrics(moduleType, graphSubCategory) {
+  if (moduleType === 'graph') {
+    return GRAPH_SUBCATEGORY_METRICS[graphSubCategory] ?? GRAPH_SUBCATEGORY_METRICS.pathfinding
+  }
   return DOMAIN_METRICS[moduleType] ?? []
 }
 
-export function computeDeltaMetrics(slots, stepIndex, moduleType) {
-  const metricDefs = getDomainMetrics(moduleType)
+export function computeDeltaMetrics(slots, stepIndex, moduleType, graphSubCategory) {
+  const metricDefs = getDomainMetrics(moduleType, graphSubCategory)
   if (metricDefs.length === 0) return { metrics: [] }
 
   const readySlots = slots.filter((s) => s.status === 'ready')
@@ -69,6 +78,11 @@ const ALGO_LABELS = {
   bfs: 'BFS',
   dfs: 'DFS',
   dijkstra: "Dijkstra's",
+  astar: 'A*',
+  bellman_ford: 'Bellman-Ford',
+  prims: "Prim's",
+  kruskals: "Kruskal's",
+  topological_sort: 'Topo Sort',
   quicksort: 'QuickSort',
   mergesort: 'MergeSort',
   lcs: 'LCS',

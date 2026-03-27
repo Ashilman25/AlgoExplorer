@@ -19,6 +19,7 @@ function gridClass(count) {
 export default function ComparePage() {
   const slots        = useComparisonStore((s) => s.slots)
   const moduleType   = useComparisonStore((s) => s.moduleType)
+  const graphSubCategory = useComparisonStore((s) => s.graphSubCategory)
   const inputPayload = useComparisonStore((s) => s.inputPayload)
   const stepIndex    = useComparisonStore((s) => s.stepIndex)
   const maxSteps     = useComparisonStore((s) => s.maxSteps)
@@ -33,9 +34,9 @@ export default function ComparePage() {
     const readySlots = slots.filter((s) => s.status === 'ready')
     if (readySlots.length < 2 || !moduleType) return
 
-    const updated = computeDeltaMetrics(readySlots, stepIndex, moduleType)
+    const updated = computeDeltaMetrics(readySlots, stepIndex, moduleType, graphSubCategory)
     useComparisonStore.setState({ deltaMetrics: updated })
-  }, [stepIndex, slots, moduleType])
+  }, [stepIndex, slots, moduleType, graphSubCategory])
 
   const handleRun = useCallback(async () => {
     setIsRunning(true)
