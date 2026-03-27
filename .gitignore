@@ -5,3 +5,4 @@ _docs
 **/__pycache__/
 **/*.py[cod]
 CLAUDE.md
+docs
