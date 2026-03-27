@@ -111,7 +111,7 @@ ANIMATION_SIZE_LIMIT = 200
 
 
 # validates sorting input payload
-def validate_array_payload(input_payload: dict):
+def validate_array_payload(input_payload: dict, algorithm_key: str = "quicksort"):
 
     try:
         parsed = SortingInputPayload.model_validate(input_payload)
@@ -148,6 +148,23 @@ def validate_array_payload(input_payload: dict):
             f"Array size ({len(arr)}) exceeds animation limit ({parsed.animation_max_size}). "
             "Reduce size or increase animation_max_size."
         )
+
+    # search algorithms require a target value
+    if algorithm_key in ("binary_search", "linear_search"):
+        if parsed.target is None:
+            raise DomainError("Search algorithms require a 'target' value")
+
+        if isinstance(parsed.target, float) and (math.isnan(parsed.target) or math.isinf(parsed.target)):
+            raise DomainError("Search target must not be NaN or infinity")
+
+    # binary search requires a sorted array
+    if algorithm_key == "binary_search":
+        for i in range(len(arr) - 1):
+            if arr[i] > arr[i + 1]:
+                raise DomainError(
+                    "Binary Search requires a sorted array. "
+                    "Use a sorted preset or provide a sorted custom array."
+                )
 
 
 

@@ -10,27 +10,36 @@ const GRAPH_SUBCATEGORY_METRICS = {
   ordering: [],
 }
 
-const DOMAIN_METRICS = {
+const SORTING_SUBCATEGORY_METRICS = {
   sorting: [
     { key: 'comparisons',     label: 'Comparisons',         polarity: 'lower' },
     { key: 'swaps',           label: 'Swaps',               polarity: 'lower' },
-    { key: 'recursion_depth', label: 'Max Recursion Depth', polarity: 'lower' },
   ],
+  searching: [
+    { key: 'comparisons',     label: 'Comparisons',         polarity: 'lower' },
+    { key: 'array_accesses',  label: 'Array Accesses',      polarity: 'lower' },
+  ],
+}
+
+const DOMAIN_METRICS = {
   dp: [
     { key: 'cells_computed',      label: 'Cells Computed',      polarity: 'lower' },
     { key: 'subproblems_avoided', label: 'Subproblems Avoided', polarity: 'higher' },
   ],
 }
 
-export function getDomainMetrics(moduleType, graphSubCategory) {
+export function getDomainMetrics(moduleType, graphSubCategory, sortingSubCategory) {
   if (moduleType === 'graph') {
     return GRAPH_SUBCATEGORY_METRICS[graphSubCategory] ?? GRAPH_SUBCATEGORY_METRICS.pathfinding
+  }
+  if (moduleType === 'sorting') {
+    return SORTING_SUBCATEGORY_METRICS[sortingSubCategory] ?? SORTING_SUBCATEGORY_METRICS.sorting
   }
   return DOMAIN_METRICS[moduleType] ?? []
 }
 
-export function computeDeltaMetrics(slots, stepIndex, moduleType, graphSubCategory) {
-  const metricDefs = getDomainMetrics(moduleType, graphSubCategory)
+export function computeDeltaMetrics(slots, stepIndex, moduleType, graphSubCategory, sortingSubCategory) {
+  const metricDefs = getDomainMetrics(moduleType, graphSubCategory, sortingSubCategory)
   if (metricDefs.length === 0) return { metrics: [] }
 
   const readySlots = slots.filter((s) => s.status === 'ready')
@@ -85,6 +94,12 @@ const ALGO_LABELS = {
   topological_sort: 'Topo Sort',
   quicksort: 'QuickSort',
   mergesort: 'MergeSort',
+  bubble_sort: 'Bubble Sort',
+  insertion_sort: 'Insertion Sort',
+  selection_sort: 'Selection Sort',
+  heap_sort: 'Heap Sort',
+  binary_search: 'Binary Search',
+  linear_search: 'Linear Search',
   lcs: 'LCS',
   edit_distance: 'Edit Distance',
 }

@@ -124,7 +124,7 @@ def _validate_payload(module_type: str, algorithm_key: str, input_payload: dict)
         validate_graph_payload(input_payload, algorithm_key = algorithm_key)
         
     elif module_type == "sorting":
-        validate_array_payload(input_payload)
+        validate_array_payload(input_payload, algorithm_key = algorithm_key)
         
     elif module_type == "dp":
         validate_dp_payload(algorithm_key, input_payload)
