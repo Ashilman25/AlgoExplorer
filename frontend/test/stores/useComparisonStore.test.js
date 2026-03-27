@@ -18,6 +18,7 @@ const INITIAL_STATE = {
   inputPayload: null,
   algorithmConfig: {},
   explanationLevel: 'standard',
+  graphSubCategory: null,
   stepIndex: 0,
   maxSteps: 0,
   isPlaying: false,
@@ -103,6 +104,41 @@ describe('useComparisonStore', () => {
     it('sets input payload', () => {
       useComparisonStore.getState().setInputPayload({ nodes: [] })
       expect(useComparisonStore.getState().inputPayload).toEqual({ nodes: [] })
+    })
+  })
+
+  describe('graphSubCategory', () => {
+    it('setModuleType("graph") defaults graphSubCategory to pathfinding', () => {
+      useComparisonStore.getState().setModuleType('graph')
+      expect(useComparisonStore.getState().graphSubCategory).toBe('pathfinding')
+    })
+
+    it('setModuleType("sorting") sets graphSubCategory to null', () => {
+      useComparisonStore.getState().setModuleType('graph')
+      useComparisonStore.getState().setModuleType('sorting')
+      expect(useComparisonStore.getState().graphSubCategory).toBeNull()
+    })
+
+    it('setGraphSubCategory clears slots and resets playback', () => {
+      useComparisonStore.getState().setModuleType('graph')
+      useComparisonStore.getState().addSlot('bfs')
+      useComparisonStore.getState().addSlot('dfs')
+      expect(useComparisonStore.getState().slots).toHaveLength(2)
+
+      useComparisonStore.getState().setGraphSubCategory('mst')
+      const state = useComparisonStore.getState()
+      expect(state.graphSubCategory).toBe('mst')
+      expect(state.slots).toHaveLength(0)
+      expect(state.stepIndex).toBe(0)
+      expect(state.maxSteps).toBe(0)
+      expect(state.isPlaying).toBe(false)
+      expect(state.deltaMetrics).toBeNull()
+    })
+
+    it('setGraphSubCategory("ordering") sets graphSubCategory', () => {
+      useComparisonStore.getState().setModuleType('graph')
+      useComparisonStore.getState().setGraphSubCategory('ordering')
+      expect(useComparisonStore.getState().graphSubCategory).toBe('ordering')
     })
   })
 
