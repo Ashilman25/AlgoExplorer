@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   Gauge, Play, Check, X, ChevronDown, ChevronUp,
   Clock, Hash, ArrowUpDown, PenTool, Loader2,
@@ -438,7 +438,7 @@ function ExportBar({ resultData }) {
 
 export default function BenchmarksPage() {
   const toast = useToast()
-  const { setJob, setActiveJob } = useBenchmarkStore()
+  const { setJob, setActiveJob, pollJob, stopPolling, jobs, activeJobId } = useBenchmarkStore()
 
   // Form state
   const [algorithms, setAlgorithms] = useState(
@@ -454,13 +454,66 @@ export default function BenchmarksPage() {
 
   // Result state
   const [isRunning, setIsRunning] = useState(false)
-  const [jobResult, setJobResult] = useState(null)
   const [resultData, setResultData] = useState(null)
   const [benchmarkError, setBenchmarkError] = useState(null)
+  const [workerHealthy, setWorkerHealthy] = useState(true)
+
+  // Active job tracking
+  const activeJob = activeJobId != null ? jobs[activeJobId] : null
+
+  // Check worker health on mount
+  useEffect(() => {
+    benchmarksService.getWorkerHealth()
+      .then((health) => setWorkerHealthy(health.healthy))
+      .catch(() => setWorkerHealthy(false))
+  }, [])
+
+  // React to polling updates
+  useEffect(() => {
+    if (!activeJob) return
+
+    if (activeJob.status === 'completed') {
+      setIsRunning(false)
+
+      if (activeJob.results) {
+        setResultData({
+          status: 'completed',
+          summary: activeJob.results?.summary || activeJob.summary || {},
+          series: activeJob.results?.series || {},
+          table: activeJob.results?.table || [],
+        })
+      } else {
+        benchmarksService.getResults(activeJobId).then((results) => {
+          setResultData(results)
+        })
+      }
+
+      toast({
+        type: 'success',
+        title: 'Benchmark complete',
+        message: `Benchmark finished successfully.`,
+      })
+    } else if (activeJob.status === 'failed') {
+      setIsRunning(false)
+      setBenchmarkError({
+        title: 'Benchmark failed',
+        message: activeJob.summary?.error || 'An unexpected error occurred during benchmarking.',
+      })
+      toast({
+        type: 'error',
+        title: 'Benchmark failed',
+        message: activeJob.summary?.error || 'An unexpected error occurred.',
+      })
+    }
+  }, [activeJob?.status])
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => stopPolling()
+  }, [stopPolling])
 
   const handleLaunch = useCallback(async () => {
     setIsRunning(true)
-    setJobResult(null)
     setResultData(null)
     setBenchmarkError(null)
 
@@ -476,17 +529,10 @@ export default function BenchmarksPage() {
 
       setJob(statusResp.id, statusResp)
       setActiveJob(statusResp.id)
-      setJobResult(statusResp)
+      pollJob(statusResp.id)
 
-      const results = await benchmarksService.getResults(statusResp.id)
-      setResultData(results)
-
-      toast({
-        type: 'success',
-        title: 'Benchmark complete',
-        message: `${results.summary?.total_runs ?? 0} runs completed in ${results.summary?.elapsed_ms ?? 0} ms`,
-      })
     } catch (err) {
+      setIsRunning(false)
       const parsed = parseApiError(err)
       setBenchmarkError(parsed)
       toast({
@@ -494,10 +540,15 @@ export default function BenchmarksPage() {
         title: parsed.title,
         message: parsed.message,
       })
-    } finally {
-      setIsRunning(false)
     }
-  }, [algorithms, inputFamily, sizes, trials, metrics, setJob, setActiveJob, toast])
+  }, [algorithms, inputFamily, sizes, trials, metrics, setJob, setActiveJob, pollJob, toast])
+
+  const progress = activeJob?.progress ?? 0
+  const statusLabel = activeJob?.status === 'pending'
+    ? 'Queued...'
+    : activeJob?.status === 'running'
+      ? `Running benchmarks... ${Math.round(progress * 100)}%`
+      : null
 
   const hasResults = resultData && resultData.status === 'completed'
 
@@ -509,14 +560,20 @@ export default function BenchmarksPage() {
         description="Compare algorithm performance across input sizes with repeated trials and aggregated statistics."
         accent="emerald"
       >
-        {jobResult && (
-          <Badge variant={jobResult.status === 'completed' ? 'success' : jobResult.status === 'failed' ? 'error' : 'info'}>
-            {jobResult.status}
+        {activeJob && (
+          <Badge variant={activeJob.status === 'completed' ? 'success' : activeJob.status === 'failed' ? 'error' : 'info'}>
+            {activeJob.status}
           </Badge>
         )}
       </PageHeader>
 
       <GuestPromptBanner />
+
+      {!workerHealthy && (
+        <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
+          No benchmark workers detected. Jobs will be queued until a worker is available.
+        </div>
+      )}
 
       <div className="flex gap-6 items-start">
         <BenchmarkConfig
@@ -539,11 +596,24 @@ export default function BenchmarksPage() {
         <div className="flex-1 min-w-0 space-y-4">
           {isRunning && (
             <Card>
-              <div className="flex items-center justify-center gap-3 p-10">
-                <Spinner size="md" />
-                <span className="text-sm text-slate-400">
-                  Running benchmark ({algorithms.length} algorithms x {sizes.length} sizes x {trials} trials)...
-                </span>
+              <div className="p-6 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Spinner size="md" />
+                    <span className="text-sm text-slate-400">
+                      {statusLabel || `Running benchmark (${algorithms.length} algorithms x ${sizes.length} sizes x ${trials} trials)...`}
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono text-slate-500">
+                    {Math.round(progress * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-800 rounded-full h-1.5">
+                  <div
+                    className="bg-cyan-500 h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.round(progress * 100)}%` }}
+                  />
+                </div>
               </div>
             </Card>
           )}

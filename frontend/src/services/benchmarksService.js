@@ -19,4 +19,7 @@ export const benchmarksService = {
   // GET /api/benchmarks/:benchmarkId/results → BenchmarkResultsResponse
   // { id, status, summary, series: { [metric]: AlgorithmSeries[] }, table: TableRow[] }
   getResults: (benchmarkId) => client.get(`/api/benchmarks/${benchmarkId}/results`),
+
+  // GET /api/benchmarks/workers/health → WorkerHealthResponse
+  getWorkerHealth: () => client.get('/api/benchmarks/workers/health'),
 }
