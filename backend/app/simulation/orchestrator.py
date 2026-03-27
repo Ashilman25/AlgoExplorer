@@ -121,7 +121,7 @@ def run_simulation(request: CreateRunRequest, db, user_id: int | None = None) ->
 
 def _validate_payload(module_type: str, algorithm_key: str, input_payload: dict) -> None:
     if module_type == "graph":
-        validate_graph_payload(input_payload)
+        validate_graph_payload(input_payload, algorithm_key = algorithm_key)
         
     elif module_type == "sorting":
         validate_array_payload(input_payload)
