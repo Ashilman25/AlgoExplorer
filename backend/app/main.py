@@ -15,6 +15,10 @@ from app.db import init_db
 
 # to start:
 # python -m uvicorn app.main:app --reload
+# rq worker benchmarks --url redis://localhost:6379
+# have redis-server already running
+
+
 
 configure_logging(settings.log_level)
 logger = get_logger("main")

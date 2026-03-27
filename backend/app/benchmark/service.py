@@ -1,6 +1,7 @@
 import random
 import statistics
 import time
+from collections.abc import Callable
 
 from app.observability import get_logger, compact_context, summarize_benchmark_config, summarize_summary_metrics
 from app.simulation import registry
@@ -55,12 +56,15 @@ def _aggregate_metric(trial_metrics: list[dict], metric_key: str) -> dict:
     }
 
 
-def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = None) -> dict:
+def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = None, progress_callback: Callable[[int, int], None] | None = None) -> dict:
     algorithm_keys = config["algorithm_keys"]
     input_family = config["input_family"]
     sizes = config["sizes"]
     trials_per_size = config["trials_per_size"]
     metrics = config["metrics"]
+
+    total_runs = len(algorithm_keys) * len(sizes) * trials_per_size
+    completed_runs = 0
 
     t_start = time.perf_counter()
 
@@ -98,6 +102,10 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
                 output = algorithm.run(algo_input)
                 trial_results.append(output.summary_metrics)
 
+            completed_runs += trials_per_size
+
+            if progress_callback is not None:
+                progress_callback(completed_runs, total_runs)
 
             aggregated = {}
             for metric_key in metrics:
@@ -135,7 +143,7 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
         "total_algorithms": len(algorithm_keys),
         "total_sizes": len(sizes),
         "trials_per_size": trials_per_size,
-        "total_runs": len(algorithm_keys) * len(sizes) * trials_per_size,
+        "total_runs": total_runs,
         "input_family": input_family,
         "elapsed_ms": elapsed_ms,
     }

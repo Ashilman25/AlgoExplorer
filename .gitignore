@@ -6,3 +6,4 @@ _docs
 **/*.py[cod]
 CLAUDE.md
 docs
+*.rdb

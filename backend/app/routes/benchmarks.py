@@ -1,13 +1,21 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends
+from rq import Queue
 from app.exceptions import NotFoundException, PermissionError
-from app.observability import get_logger, compact_context, summarize_benchmark_config, summarize_summary_metrics
+from app.observability import get_logger, compact_context, summarize_benchmark_config
 from app.persistence import safe_json_value
-from app.schemas.benchmarks import CreateBenchmarkRequest, BenchmarkResultsResponse, BenchmarkStatusResponse, UpdateBenchmarkStatusRequest
+from app.worker.connection import get_redis
+from app.worker.health import get_worker_health
+from app.worker.tasks import execute_benchmark
+from app.config import settings
+from app.schemas.benchmarks import (
+    CreateBenchmarkRequest,
+    BenchmarkResultsResponse,
+    BenchmarkStatusResponse,
+    UpdateBenchmarkStatusRequest,
+    WorkerHealthResponse,
+)
 from app.db import get_db
 from app.data.models import BenchmarkJob, UserAccount
-from app.benchmark.service import run_benchmark
 from app.services.auth_service import get_optional_user
 
 router = APIRouter(prefix = "/api/benchmarks")
@@ -18,6 +26,20 @@ def _check_benchmark_access(job: BenchmarkJob, user: UserAccount | None) -> None
     if job.user_id is not None:
         if user is None or user.id != job.user_id:
             raise PermissionError("You do not have access to this benchmark.")
+
+
+def enqueue_benchmark(benchmark_id: int) -> None:
+    connection = get_redis()
+    queue = Queue(settings.benchmark_queue_name, connection = connection)
+    queue.enqueue(execute_benchmark, benchmark_id, job_timeout = "30m")
+
+    logger.info(
+        "benchmark.job.enqueued %s",
+        compact_context(
+            benchmark_id = benchmark_id,
+            queue = settings.benchmark_queue_name,
+        ),
+    )
 
 
 @router.get("/", response_model = list[BenchmarkStatusResponse])
@@ -54,7 +76,7 @@ def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db), use
         user_id = user.id if user else None,
         module_type = body.module_type,
         config = config,
-        status = "running",
+        status = "pending",
         progress = 0.0,
         summary = {},
         results = {},
@@ -74,45 +96,14 @@ def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db), use
         ),
     )
 
-    try:
-        result = run_benchmark(body.module_type, config, benchmark_id = job.id)
-
-        job.results = safe_json_value({"series": result["series"], "table": result["table"]}, label = "benchmark results")
-        job.summary = safe_json_value(result["summary"], label = "benchmark summary")
-        job.status = "completed"
-        job.progress = 1.0
-        job.completed_at = datetime.utcnow()
-
-        logger.info(
-            "benchmark.job.completed %s",
-            compact_context(
-                benchmark_id = job.id,
-                module_type = job.module_type,
-                status = job.status,
-                summary = summarize_summary_metrics(job.summary),
-            ),
-        )
-
-    except Exception:
-        job.status = "failed"
-        job.progress = 0.0
-        job.completed_at = datetime.utcnow()
-        logger.exception(
-            "benchmark.job.failed %s",
-            compact_context(
-                benchmark_id = job.id,
-                module_type = job.module_type,
-                status = job.status,
-                **summarize_benchmark_config(job.config),
-            ),
-        )
-        raise
-
-    finally:
-        db.commit()
-        db.refresh(job)
+    enqueue_benchmark(job.id)
 
     return BenchmarkStatusResponse.model_validate(job)
+
+
+@router.get("/workers/health", response_model = WorkerHealthResponse)
+def worker_health():
+    return get_worker_health()
 
 
 @router.get("/{benchmark_id}", response_model = BenchmarkStatusResponse)

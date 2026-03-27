@@ -192,3 +192,19 @@ class BenchmarkResultsResponse(BaseModel):
     series: dict[str, list[BenchmarkAlgorithmSeries]]
     table: list[BenchmarkTableRow]
     completed_at: datetime | None = None
+
+
+class WorkerCountResponse(BaseModel):
+    active: int
+    idle: int
+
+
+class QueueCountResponse(BaseModel):
+    pending: int
+    failed: int
+
+
+class WorkerHealthResponse(BaseModel):
+    workers: WorkerCountResponse
+    queue: QueueCountResponse
+    healthy: bool
