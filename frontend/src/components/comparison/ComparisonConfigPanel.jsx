@@ -70,11 +70,41 @@ const GRAPH_SUBCATEGORY_PAYLOADS = {
   },
 }
 
-const DOMAIN_ALGORITHMS = {
+const SORTING_SUBCATEGORY_OPTIONS = [
+  { value: 'sorting',   label: 'Sorting' },
+  { value: 'searching', label: 'Searching' },
+]
+
+const SORTING_SUBCATEGORY_ALGORITHMS = {
   sorting: [
-    { value: 'quicksort', label: 'Quick Sort' },
-    { value: 'mergesort', label: 'Merge Sort' },
+    { value: 'bubble_sort',    label: 'Bubble Sort' },
+    { value: 'insertion_sort', label: 'Insertion Sort' },
+    { value: 'selection_sort', label: 'Selection Sort' },
+    { value: 'quicksort',      label: 'Quick Sort' },
+    { value: 'mergesort',      label: 'Merge Sort' },
+    { value: 'heap_sort',      label: 'Heap Sort' },
   ],
+  searching: [
+    { value: 'binary_search', label: 'Binary Search' },
+    { value: 'linear_search', label: 'Linear Search' },
+  ],
+}
+
+const SORTING_SUBCATEGORY_PAYLOADS = {
+  sorting: {
+    array: [38, 27, 43, 3, 9, 82, 10, 64, 15, 57, 21, 76, 33, 48, 5, 91, 12, 68, 29, 55],
+    preset: 'random',
+    duplicate_density: 'none',
+  },
+  searching: {
+    array: [3, 5, 9, 10, 12, 15, 21, 27, 29, 33, 38, 43, 48, 55, 57, 64, 68, 76, 82, 91],
+    preset: 'custom',
+    duplicate_density: 'none',
+    target: 33,
+  },
+}
+
+const DOMAIN_ALGORITHMS = {
   dp: [
     { value: 'lcs',           label: 'LCS — Longest Common Subsequence' },
     { value: 'edit_distance', label: 'Edit Distance (Levenshtein)' },
@@ -82,11 +112,6 @@ const DOMAIN_ALGORITHMS = {
 }
 
 const DEFAULT_INPUT_PAYLOADS = {
-  sorting: {
-    array: [38, 27, 43, 3, 9, 82, 10, 64, 15, 57, 21, 76, 33, 48, 5, 91, 12, 68, 29, 55],
-    preset: 'random',
-    duplicate_density: 'none',
-  },
   dp: {
     string1: 'ABCDEF',
     string2: 'ACBDFE',
@@ -94,14 +119,17 @@ const DEFAULT_INPUT_PAYLOADS = {
 }
 
 export default function ComparisonConfigPanel({ isRunning, onRun }) {
-  const moduleType       = useComparisonStore((s) => s.moduleType)
-  const graphSubCategory = useComparisonStore((s) => s.graphSubCategory)
-  const slots            = useComparisonStore((s) => s.slots)
-  const maxSlots         = useComparisonStore((s) => s.maxSlots)
-  const { setModuleType, setInputPayload, setGraphSubCategory, addSlot, removeSlot } = useComparisonStore()
+  const moduleType         = useComparisonStore((s) => s.moduleType)
+  const graphSubCategory   = useComparisonStore((s) => s.graphSubCategory)
+  const sortingSubCategory = useComparisonStore((s) => s.sortingSubCategory)
+  const slots              = useComparisonStore((s) => s.slots)
+  const maxSlots           = useComparisonStore((s) => s.maxSlots)
+  const { setModuleType, setInputPayload, setGraphSubCategory, setSortingSubCategory, addSlot, removeSlot } = useComparisonStore()
 
   const moduleAlgorithms = moduleType === 'graph'
     ? (GRAPH_SUBCATEGORY_ALGORITHMS[graphSubCategory] ?? [])
+    : moduleType === 'sorting'
+    ? (SORTING_SUBCATEGORY_ALGORITHMS[sortingSubCategory ?? 'sorting'] ?? [])
     : (DOMAIN_ALGORITHMS[moduleType] ?? [])
 
   const [pendingAlg, setPendingAlg] = useState('')
@@ -142,6 +170,8 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
             setModuleType(domain)
             if (domain === 'graph') {
               setInputPayload(GRAPH_SUBCATEGORY_PAYLOADS.pathfinding)
+            } else if (domain === 'sorting') {
+              setInputPayload(SORTING_SUBCATEGORY_PAYLOADS.sorting)
             } else {
               setInputPayload(domain ? DEFAULT_INPUT_PAYLOADS[domain] : null)
             }
@@ -167,6 +197,26 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
               setPendingAlg('')
             }}
             aria-label = "Graph sub-category"
+          />
+        </div>
+      )}
+
+      {/* Sorting sub-category */}
+      {moduleType === 'sorting' && (
+        <div className = "space-y-2">
+          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+            Category
+          </p>
+          <Select
+            options = {SORTING_SUBCATEGORY_OPTIONS}
+            value = {sortingSubCategory ?? 'sorting'}
+            onChange = {(e) => {
+              const cat = e.target.value
+              setSortingSubCategory(cat)
+              setInputPayload(SORTING_SUBCATEGORY_PAYLOADS[cat])
+              setPendingAlg('')
+            }}
+            aria-label = "Sorting sub-category"
           />
         </div>
       )}

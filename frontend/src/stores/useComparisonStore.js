@@ -31,6 +31,7 @@ export const useComparisonStore = create((set, get) => ({
   algorithmConfig: {},
   explanationLevel: 'standard',
   graphSubCategory: null,
+  sortingSubCategory: null,
 
   // ── Synchronized playback ──────────────────────────────────────────
   stepIndex: 0,
@@ -81,6 +82,7 @@ export const useComparisonStore = create((set, get) => ({
     set({
       moduleType,
       graphSubCategory: moduleType === 'graph' ? 'pathfinding' : null,
+      sortingSubCategory: moduleType === 'sorting' ? 'sorting' : null,
       slots: [],
       stepIndex: 0,
       maxSteps: 0,
@@ -92,6 +94,17 @@ export const useComparisonStore = create((set, get) => ({
   setGraphSubCategory: (graphSubCategory) =>
     set({
       graphSubCategory,
+      slots: [],
+      stepIndex: 0,
+      maxSteps: 0,
+      isPlaying: false,
+      deltaMetrics: null,
+      commentary: { summary: '', divergences: [] },
+    }),
+
+  setSortingSubCategory: (sortingSubCategory) =>
+    set({
+      sortingSubCategory,
       slots: [],
       stepIndex: 0,
       maxSteps: 0,
@@ -262,10 +275,10 @@ export const useComparisonStore = create((set, get) => ({
   // ── Internal helpers ───────────────────────────────────────────────
 
   _finalizeTimelines: () => {
-    const { slots, moduleType, graphSubCategory } = get()
+    const { slots, moduleType, graphSubCategory, sortingSubCategory } = get()
     const maxSteps = recomputeMaxSteps(slots)
     const readySlots = slots.filter((s) => s.status === 'ready')
-    const deltaMetrics = computeDeltaMetrics(readySlots, 0, moduleType, graphSubCategory)
+    const deltaMetrics = computeDeltaMetrics(readySlots, 0, moduleType, graphSubCategory, sortingSubCategory)
     const divergences = findDivergences(readySlots)
     const summary = generateCommentary(readySlots, deltaMetrics)
 
