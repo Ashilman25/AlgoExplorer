@@ -76,6 +76,9 @@ class SortingInputPayload(BaseModel):
 
     animation_max_size: int = Field(default = 200, ge = 1, le = 10000)
 
+    # searching algorithms only — ignored by sorting algorithms
+    target: int | float | None = None
+
 
 class SortingEvents:
     INITIALIZE = "initialize"   
@@ -99,6 +102,24 @@ class SortingStatePayload(BaseModel):
     pivot_index: int | None = None
     sorted_boundary: int | None = None
 
+    # searching visualization fields
+    search_low: int | None = None
+    search_mid: int | None = None
+    search_high: int | None = None
+    search_target: int | float | None = None
+    found_index: int | None = None
+
+
+class SearchingEvents:
+    INITIALIZE = "initialize"
+    SET_RANGE = "set_range"
+    CHECK_MID = "check_mid"
+    NARROW_LEFT = "narrow_left"
+    NARROW_RIGHT = "narrow_right"
+    SCAN = "scan"
+    FOUND = "found"
+    NOT_FOUND = "not_found"
+    COMPLETE = "complete"
 
 
 class DPStringInputPayload(BaseModel):
