@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -151,11 +152,12 @@ def test_guest_can_fetch_guest_run_timeline(client):
 
 
 def test_guest_can_access_guest_benchmark_results(client):
-    job = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD).json()
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        job = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD).json()
 
     resp = client.get(f"/api/benchmarks/{job['id']}/results")
     assert resp.status_code == 200
-    assert resp.json()["status"] == "completed"
+    assert resp.json()["status"] == "pending"
 
 
 def test_guest_cannot_access_owned_run(client):
@@ -171,7 +173,8 @@ def test_guest_cannot_access_owned_run(client):
 
 
 def test_guest_benchmark_has_no_user_id(client, session_factory):
-    resp = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD)
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        resp = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD)
     assert resp.status_code == 200
     job_id = resp.json()["id"]
 
@@ -184,7 +187,8 @@ def test_authenticated_benchmark_has_user_id(client, session_factory):
     auth = register_user(client, "owner@test.com", "owner")
     token = auth["access_token"]
 
-    resp = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = auth_header(token))
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        resp = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = auth_header(token))
     assert resp.status_code == 200
     job_id = resp.json()["id"]
 
@@ -197,14 +201,15 @@ def test_benchmark_list_scoped_by_user(client):
     owner = register_user(client, "owner@test.com", "owner")
     other = register_user(client, "other@test.com", "other")
 
-    # Guest creates a benchmark
-    client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD)
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        # Guest creates a benchmark
+        client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD)
 
-    # Owner creates a benchmark
-    client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = auth_header(owner["access_token"]))
+        # Owner creates a benchmark
+        client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = auth_header(owner["access_token"]))
 
-    # Other creates a benchmark
-    client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = auth_header(other["access_token"]))
+        # Other creates a benchmark
+        client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = auth_header(other["access_token"]))
 
     # Owner sees only their benchmark
     owner_list = client.get("/api/benchmarks/", headers = auth_header(owner["access_token"])).json()
@@ -223,7 +228,8 @@ def test_other_user_cannot_access_owned_benchmark(client):
     owner = register_user(client, "owner@test.com", "owner")
     other = register_user(client, "other@test.com", "other")
 
-    job = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = auth_header(owner["access_token"])).json()
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        job = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = auth_header(owner["access_token"])).json()
 
     resp = client.get(f"/api/benchmarks/{job['id']}", headers = auth_header(other["access_token"]))
     assert resp.status_code == 403
@@ -238,7 +244,8 @@ def test_other_user_cannot_access_owned_benchmark(client):
 def test_claim_reassigns_guest_resources(client, session_factory):
     # Create guest resources
     run = client.post("/api/runs/", json = SORTING_RUN_PAYLOAD).json()
-    benchmark = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD).json()
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        benchmark = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD).json()
 
     # Register and claim
     auth = register_user(client, "claimer@test.com", "claimer")

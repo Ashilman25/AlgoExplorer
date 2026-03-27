@@ -4,6 +4,7 @@ access to runs, benchmarks, and scenario-linked resources.
 """
 
 import pytest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -105,7 +106,8 @@ def create_guest_run(client, **overrides):
 
 
 def create_guest_benchmark(client):
-    resp = client.post("/api/benchmarks/", json = BENCHMARK)
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        resp = client.post("/api/benchmarks/", json = BENCHMARK)
     assert resp.status_code == 200
     return resp.json()
 
