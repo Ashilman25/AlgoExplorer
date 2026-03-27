@@ -56,6 +56,75 @@ const GRAPH_PRESETS = [
     target: '8',
     weighted: true,
   },
+  {
+    value: 'astar-coords',
+    label: 'A* with Coordinates — 6 nodes',
+    nodes: [
+      {id:'S',x:0,y:100},{id:'A',x:80,y:30},{id:'B',x:80,y:170},
+      {id:'C',x:180,y:50},{id:'D',x:180,y:150},{id:'T',x:280,y:100},
+    ],
+    edges: [
+      {source:'S',target:'A',weight:3},{source:'S',target:'B',weight:4},
+      {source:'A',target:'C',weight:4},{source:'B',target:'D',weight:3},
+      {source:'A',target:'D',weight:5},{source:'C',target:'T',weight:4},
+      {source:'D',target:'T',weight:3},
+    ],
+    source: 'S',
+    target: 'T',
+    weighted: true,
+  },
+  {
+    value: 'neg-weight',
+    label: 'Negative Weights — 5 nodes',
+    nodes: [{id:'S'},{id:'A'},{id:'B'},{id:'C'},{id:'T'}],
+    edges: [
+      {source:'S',target:'A',weight:4},{source:'S',target:'B',weight:5},
+      {source:'A',target:'B',weight:-3},{source:'A',target:'C',weight:6},
+      {source:'B',target:'C',weight:2},{source:'C',target:'T',weight:1},
+    ],
+    source: 'S',
+    target: 'T',
+    weighted: true,
+    directed: true,
+  },
+  {
+    value: 'mst-demo',
+    label: 'MST Demo — 6 nodes',
+    nodes: [{id:'A'},{id:'B'},{id:'C'},{id:'D'},{id:'E'},{id:'F'}],
+    edges: [
+      {source:'A',target:'B',weight:1},{source:'A',target:'C',weight:4},
+      {source:'B',target:'C',weight:2},{source:'B',target:'D',weight:6},
+      {source:'C',target:'D',weight:3},{source:'C',target:'E',weight:5},
+      {source:'D',target:'E',weight:7},{source:'D',target:'F',weight:4},
+      {source:'E',target:'F',weight:2},
+    ],
+    source: 'A',
+    weighted: true,
+  },
+  {
+    value: 'dag-prereqs',
+    label: 'DAG — Course Prerequisites',
+    nodes: [{id:'CS101'},{id:'CS201'},{id:'CS301'},{id:'MATH'},{id:'CS202'},{id:'CS401'},{id:'CS402'}],
+    edges: [
+      {source:'CS101',target:'CS201'},{source:'CS101',target:'CS202'},
+      {source:'MATH',target:'CS301'},{source:'CS201',target:'CS301'},
+      {source:'CS202',target:'CS401'},{source:'CS301',target:'CS401'},
+      {source:'CS301',target:'CS402'},
+    ],
+    weighted: false,
+    directed: true,
+  },
+  {
+    value: 'dag-cycle',
+    label: 'DAG with Cycle — 4 nodes',
+    nodes: [{id:'A'},{id:'B'},{id:'C'},{id:'D'}],
+    edges: [
+      {source:'A',target:'B'},{source:'B',target:'C'},
+      {source:'C',target:'A'},{source:'C',target:'D'},
+    ],
+    weighted: false,
+    directed: true,
+  },
 ]
 
 const GRAPH_PRESET_OPTIONS = [
@@ -63,9 +132,29 @@ const GRAPH_PRESET_OPTIONS = [
   ...GRAPH_PRESETS.map((p) => ({ value: p.value, label: p.label })),
 ]
 
+const ALGORITHM_CATEGORY = {
+  bfs: 'pathfinding',
+  dijkstra: 'pathfinding',
+  dfs: 'pathfinding',
+  astar: 'pathfinding',
+  bellman_ford: 'pathfinding',
+  prims: 'mst',
+  kruskals: 'mst',
+  topological_sort: 'ordering',
+}
+
 const GRAPH_ALGOS = [
-  { value: 'bfs',      label: 'BFS — Breadth-First Search' },
-  { value: 'dijkstra',  label: 'Dijkstra — Shortest Path' },
+  { value: '_pathfinding', label: '── Pathfinding ──', disabled: true },
+  { value: 'bfs',         label: 'BFS — Breadth-First Search' },
+  { value: 'dfs',         label: 'DFS — Depth-First Search' },
+  { value: 'dijkstra',    label: 'Dijkstra — Shortest Path' },
+  { value: 'astar',       label: 'A* — Heuristic Search' },
+  { value: 'bellman_ford', label: 'Bellman-Ford — Negative Weights' },
+  { value: '_mst',        label: '── Minimum Spanning Tree ──', disabled: true },
+  { value: 'prims',       label: "Prim's — Greedy MST" },
+  { value: 'kruskals',    label: "Kruskal's — Union-Find MST" },
+  { value: '_ordering',   label: '── Ordering ──', disabled: true },
+  { value: 'topological_sort', label: 'Topological Sort — DAG Ordering' },
 ]
 
 const EXPLANATION_LEVELS = [
@@ -93,6 +182,14 @@ export function GraphConfig({
   onRun, onReset, onSave,
   isRunning, error,
 }) {
+  const category = ALGORITHM_CATEGORY[algorithm] ?? 'pathfinding'
+  const showSource = category === 'pathfinding' || (category === 'mst' && algorithm === 'prims')
+  const showTarget = category === 'pathfinding'
+  const showWeighted = category !== 'ordering'
+  const showDirected = category === 'pathfinding'
+  const lockWeighted = category === 'mst'
+  const lockDirected = category === 'ordering'
+
   return (
     <ConfigPanel title = "Graph Lab">
 
@@ -113,33 +210,49 @@ export function GraphConfig({
         />
       </ConfigSection>
 
-      <ConfigSection title = "Source / Target">
-        <div className = "grid grid-cols-2 gap-2">
-          <Select label = "Source" options = {nodeOptions} value = {source} onChange = {onSourceChange} />
-          <Select label = "Target" options = {nodeOptions} value = {target} onChange = {onTargetChange} />
-        </div>
-      </ConfigSection>
+      {(showSource || showTarget) && (
+        <ConfigSection title = {showSource && showTarget ? "Source / Target" : "Start Node"}>
+          <div className = {`grid ${showSource && showTarget ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
+            {showSource && (
+              <Select label = "Source" options = {nodeOptions} value = {source} onChange = {onSourceChange} />
+            )}
+            {showTarget && (
+              <Select label = "Target" options = {nodeOptions} value = {target} onChange = {onTargetChange} />
+            )}
+          </div>
+        </ConfigSection>
+      )}
 
       <ConfigSection title = "Options">
-        <label className = "flex items-center gap-2 cursor-pointer">
-          <input
-            type = "checkbox"
-            checked = {weighted}
-            onChange = {onWeightedChange}
-            className = "accent-brand-500 w-3.5 h-3.5"
-          />
-          <span className = "text-xs text-slate-400">Weighted edges</span>
-        </label>
+        {showWeighted && (
+          <label className = "flex items-center gap-2 cursor-pointer">
+            <input
+              type = "checkbox"
+              checked = {lockWeighted ? true : weighted}
+              onChange = {lockWeighted ? undefined : onWeightedChange}
+              disabled = {lockWeighted}
+              className = "accent-brand-500 w-3.5 h-3.5"
+            />
+            <span className = {`text-xs ${lockWeighted ? 'text-slate-600' : 'text-slate-400'}`}>
+              Weighted edges {lockWeighted ? '(required)' : ''}
+            </span>
+          </label>
+        )}
 
-        <label className = "flex items-center gap-2 cursor-pointer">
-          <input
-            type = "checkbox"
-            checked = {directed}
-            onChange = {onDirectedChange}
-            className = "accent-brand-500 w-3.5 h-3.5"
-          />
-          <span className = "text-xs text-slate-400">Directed graph</span>
-        </label>
+        {(showDirected || lockDirected) && (
+          <label className = "flex items-center gap-2 cursor-pointer">
+            <input
+              type = "checkbox"
+              checked = {lockDirected ? true : directed}
+              onChange = {lockDirected ? undefined : onDirectedChange}
+              disabled = {lockDirected}
+              className = "accent-brand-500 w-3.5 h-3.5"
+            />
+            <span className = {`text-xs ${lockDirected ? 'text-slate-600' : 'text-slate-400'}`}>
+              Directed graph {lockDirected ? '(required)' : ''}
+            </span>
+          </label>
+        )}
       </ConfigSection>
 
       <ConfigSection title = "Explanation">
@@ -157,11 +270,15 @@ export function GraphConfig({
             {weighted ? ' · weighted' : ''}
             {directed ? ' · directed' : ''}
           </p>
-          
-          <p className = "font-mono text-[10px] text-slate-500">
-            Source: <span className = "text-state-source">{source}</span>
-            {'  '}Target: <span className = "text-state-target">{target}</span>
-          </p>
+
+          {showSource && source && (
+            <p className = "font-mono text-[10px] text-slate-500">
+              Source: <span className = "text-state-source">{source}</span>
+              {showTarget && target && (
+                <>{'  '}Target: <span className = "text-state-target">{target}</span></>
+              )}
+            </p>
+          )}
         </div>
       </ConfigSection>
 
@@ -567,21 +684,42 @@ function GraphCanvas({
 }
 
 
-// Data structure inspector (queue / distances / path) 
+// Data structure inspector (queue / distances / path)
 
 export function DataStructurePanel({ algorithm, frontier, distances, path }) {
-  const hasQueue = algorithm === 'bfs' && frontier.length > 0
-  const hasDistances = algorithm === 'dijkstra' && distances && Object.keys(distances).length > 0
+  const currentStep = usePlaybackStore((s) => s.currentStep)
+  const category = ALGORITHM_CATEGORY[algorithm] ?? 'pathfinding'
+
+  const hasQueue = (algorithm === 'bfs' || algorithm === 'dfs') && frontier.length > 0
+  const hasDistances = ['dijkstra', 'astar', 'bellman_ford'].includes(algorithm) && distances && Object.keys(distances).length > 0
   const hasPath = path && path.length > 0
+
+  // MST data from state_payload
+  const mstEdges = currentStep?.state_payload?.mst_edges
+  const mstWeight = currentStep?.state_payload?.mst_total_weight
+  const hasMst = category === 'mst' && mstEdges && mstEdges.length > 0
+
+  // Ordering data from state_payload
+  const ordering = currentStep?.state_payload?.ordering
+  const hasOrdering = category === 'ordering' && ordering && ordering.length > 0
+
+  // Negative cycle
+  const negativeCycle = currentStep?.state_payload?.negative_cycle
+  const hasNegCycle = negativeCycle && negativeCycle.length > 0
+
+  // Heuristic values for A*
+  const heuristicValues = currentStep?.state_payload?.heuristic_values
+  const hasHeuristic = algorithm === 'astar' && heuristicValues && Object.keys(heuristicValues).length > 0
+
+  const queueLabel = algorithm === 'dfs' ? 'Stack' : 'Queue'
 
   return (
     <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
 
-      {/* BFS queue */}
+      {/* BFS queue / DFS stack */}
       {hasQueue && (
         <div className = "flex items-center gap-2">
-          <span className = "mono-label shrink-0">Queue</span>
-
+          <span className = "mono-label shrink-0">{queueLabel}</span>
           <div className = "flex gap-1">
             {frontier.map((id, i) => (
               <span
@@ -595,7 +733,7 @@ export function DataStructurePanel({ algorithm, frontier, distances, path }) {
         </div>
       )}
 
-      {/* Dijkstra distances */}
+      {/* Distances (Dijkstra / A* / Bellman-Ford) */}
       {hasDistances && (
         <div className = "flex items-center gap-2">
           <span className = "mono-label shrink-0">Dist</span>
@@ -612,11 +750,85 @@ export function DataStructurePanel({ algorithm, frontier, distances, path }) {
         </div>
       )}
 
+      {/* A* heuristic values */}
+      {hasHeuristic && (
+        <div className = "flex items-center gap-2">
+          <span className = "mono-label shrink-0">f(n)</span>
+          <div className = "flex gap-1 flex-wrap">
+            {Object.entries(heuristicValues).map(([node, vals]) => (
+              <span
+                key = {node}
+                className = "font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/[0.08] bg-slate-800/50 text-slate-400"
+              >
+                {node}:<span className = {vals.f === 'inf' ? 'text-slate-600' : 'text-brand-400'}>{vals.f}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* MST edges */}
+      {hasMst && (
+        <div className = "flex items-center gap-2">
+          <span className = "mono-label shrink-0">MST</span>
+          <div className = "flex items-center gap-1 flex-wrap">
+            {mstEdges.map((e, i) => (
+              <span
+                key = {i}
+                className = "font-mono text-[10px] px-1.5 py-0.5 rounded border text-state-success bg-state-success/10 border-state-success/30"
+              >
+                {e.source}-{e.target} ({e.weight})
+              </span>
+            ))}
+            <span className = "font-mono text-[10px] text-slate-500 ml-1">
+              = {mstWeight}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Topological ordering */}
+      {hasOrdering && (
+        <div className = "flex items-center gap-2">
+          <span className = "mono-label shrink-0">Order</span>
+          <div className = "flex items-center gap-0.5">
+            {ordering.map((id, i) => (
+              <span key = {i} className = "flex items-center gap-0.5">
+                <span className = "font-mono text-[10px] px-1.5 py-0.5 rounded border text-state-success bg-state-success/10 border-state-success/30">
+                  {i + 1}. {id}
+                </span>
+                {i < ordering.length - 1 && (
+                  <span className = "text-[10px] text-slate-600">→</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Negative cycle */}
+      {hasNegCycle && (
+        <div className = "flex items-center gap-2">
+          <span className = "mono-label shrink-0 text-state-target">Cycle</span>
+          <div className = "flex items-center gap-0.5">
+            {negativeCycle.map((id, i) => (
+              <span key = {i} className = "flex items-center gap-0.5">
+                <span className = "font-mono text-[10px] px-1.5 py-0.5 rounded border text-state-target bg-state-target/10 border-state-target/30">
+                  {id}
+                </span>
+                {i < negativeCycle.length - 1 && (
+                  <span className = "text-[10px] text-slate-600">→</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Path */}
-      {hasPath && (
+      {hasPath && !hasMst && !hasOrdering && (
         <div className = "flex items-center gap-2">
           <span className = "mono-label shrink-0">Path</span>
-
           <div className = "flex items-center gap-0.5">
             {path.map((id, i) => (
               <span key = {i} className = "flex items-center gap-0.5">
@@ -781,9 +993,10 @@ export default function GraphLabPage() {
       setGraphNodes(p.nodes)
       setGraphEdges(p.edges)
       setNodePositions(computeNodePositions(p.nodes, canvasSize.w / 2, canvasSize.h / 2, Math.min(canvasSize.w, canvasSize.h) * 0.3))
-      setSource(String(p.source))
-      setTarget(String(p.target))
-      setWeighted(p.weighted)
+      setSource(p.source ? String(p.source) : '')
+      setTarget(p.target ? String(p.target) : '')
+      setWeighted(p.weighted ?? false)
+      setDirected(p.directed ?? false)
       setConnectSource(null)
     }
   }, [canvasSize, clearTimeline, clearRun])
@@ -846,7 +1059,8 @@ export default function GraphLabPage() {
     const input = prompt('Edge weight:', '1')
     if (input === null) return
     const w = parseFloat(input)
-    if (isNaN(w) || w < 0) return
+    if (isNaN(w)) return
+    if (w < 0 && algorithm !== 'bellman_ford') return
     setGraphEdges((prev) => prev.map((e) => {
       const es = String(e.source), et = String(e.target)
       if ((es === src && et === tgt) || (es === tgt && et === src)) {
@@ -854,18 +1068,33 @@ export default function GraphLabPage() {
       }
       return e
     }))
-  }, [])
+  }, [algorithm])
 
   // ── Run / Reset / Save ─────────────────────────────────────────────────────
   const handleRun = useCallback(() => {
+    const category = ALGORITHM_CATEGORY[algorithm] ?? 'pathfinding'
+
+    // apply category overrides
+    const effectiveWeighted = category === 'mst' ? true : weighted
+    const effectiveDirected = category === 'ordering' ? true : directed
+    const effectiveTarget = category === 'pathfinding' ? target : undefined
+    const effectiveSource = (category === 'pathfinding' || algorithm === 'prims') ? source : undefined
+
     run({
       module_type: 'graph',
       algorithm_key: algorithm,
-      input_payload: { nodes: graphNodes, edges: graphEdges, source, target, weighted, directed, mode },
+      input_payload: {
+        nodes: graphNodes,
+        edges: graphEdges,
+        source: effectiveSource,
+        target: effectiveTarget,
+        weighted: effectiveWeighted,
+        directed: effectiveDirected,
+        mode,
+      },
       execution_mode: 'simulate',
       explanation_level: explanationLevel,
     })
-
   }, [run, algorithm, graphNodes, graphEdges, source, target, weighted, directed, mode, explanationLevel])
 
   const handleReset = useCallback(() => {

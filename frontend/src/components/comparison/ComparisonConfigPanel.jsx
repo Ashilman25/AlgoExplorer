@@ -11,11 +11,66 @@ const MODULE_OPTIONS = [
   { value: 'dp',      label: 'DP' },
 ]
 
-const DOMAIN_ALGORITHMS = {
-  graph: [
-    { value: 'bfs',      label: 'BFS — Breadth-First Search' },
-    { value: 'dijkstra', label: "Dijkstra — Shortest Path" },
+const GRAPH_SUBCATEGORY_OPTIONS = [
+  { value: 'pathfinding', label: 'Pathfinding' },
+  { value: 'mst',         label: 'Minimum Spanning Tree' },
+  { value: 'ordering',    label: 'Ordering' },
+]
+
+const GRAPH_SUBCATEGORY_ALGORITHMS = {
+  pathfinding: [
+    { value: 'bfs',          label: 'BFS — Breadth-First Search' },
+    { value: 'dfs',          label: 'DFS — Depth-First Search' },
+    { value: 'dijkstra',     label: 'Dijkstra — Shortest Path' },
+    { value: 'astar',        label: 'A* — Heuristic Search' },
+    { value: 'bellman_ford', label: 'Bellman-Ford — Negative Weights' },
   ],
+  mst: [
+    { value: 'prims',    label: "Prim's — Greedy MST" },
+    { value: 'kruskals', label: "Kruskal's — Union-Find MST" },
+  ],
+  ordering: [
+    { value: 'topological_sort', label: 'Topological Sort — DAG Ordering' },
+  ],
+}
+
+const GRAPH_SUBCATEGORY_PAYLOADS = {
+  pathfinding: {
+    nodes: [
+      { id: 'S', x: 0, y: 100 }, { id: 'A', x: 100, y: 30 }, { id: 'B', x: 100, y: 170 },
+      { id: 'C', x: 200, y: 100 }, { id: 'T', x: 300, y: 100 },
+    ],
+    edges: [
+      { source: 'S', target: 'A', weight: 1 }, { source: 'S', target: 'B', weight: 4 },
+      { source: 'A', target: 'C', weight: 2 }, { source: 'B', target: 'C', weight: 1 },
+      { source: 'C', target: 'T', weight: 3 }, { source: 'A', target: 'B', weight: 2 },
+    ],
+    source: 'S', target: 'T', weighted: true, directed: false, mode: 'graph',
+  },
+  mst: {
+    nodes: [{ id: 'A' }, { id: 'B' }, { id: 'C' }, { id: 'D' }, { id: 'E' }, { id: 'F' }],
+    edges: [
+      { source: 'A', target: 'B', weight: 1 }, { source: 'A', target: 'C', weight: 4 },
+      { source: 'B', target: 'C', weight: 2 }, { source: 'B', target: 'D', weight: 6 },
+      { source: 'C', target: 'D', weight: 3 }, { source: 'C', target: 'E', weight: 5 },
+      { source: 'D', target: 'E', weight: 7 }, { source: 'D', target: 'F', weight: 4 },
+      { source: 'E', target: 'F', weight: 2 },
+    ],
+    source: 'A', weighted: true, directed: false, mode: 'graph',
+  },
+  ordering: {
+    nodes: [{ id: 'CS101' }, { id: 'CS201' }, { id: 'CS301' }, { id: 'MATH' }, { id: 'CS202' }, { id: 'CS401' }, { id: 'CS402' }],
+    edges: [
+      { source: 'CS101', target: 'CS201' }, { source: 'CS101', target: 'CS202' },
+      { source: 'MATH', target: 'CS301' }, { source: 'CS201', target: 'CS301' },
+      { source: 'CS202', target: 'CS401' }, { source: 'CS301', target: 'CS401' },
+      { source: 'CS301', target: 'CS402' },
+    ],
+    weighted: false, directed: true, mode: 'graph',
+  },
+}
+
+const DOMAIN_ALGORITHMS = {
   sorting: [
     { value: 'quicksort', label: 'Quick Sort' },
     { value: 'mergesort', label: 'Merge Sort' },
@@ -27,19 +82,6 @@ const DOMAIN_ALGORITHMS = {
 }
 
 const DEFAULT_INPUT_PAYLOADS = {
-  graph: {
-    nodes: [{ id: 'S' }, { id: 'A' }, { id: 'B' }, { id: 'C' }, { id: 'T' }],
-    edges: [
-      { source: 'S', target: 'A', weight: 1 }, { source: 'S', target: 'B', weight: 4 },
-      { source: 'A', target: 'C', weight: 2 }, { source: 'B', target: 'C', weight: 1 },
-      { source: 'C', target: 'T', weight: 3 }, { source: 'A', target: 'B', weight: 2 },
-    ],
-    source: 'S',
-    target: 'T',
-    weighted: true,
-    directed: false,
-    mode: 'graph',
-  },
   sorting: {
     array: [38, 27, 43, 3, 9, 82, 10, 64, 15, 57, 21, 76, 33, 48, 5, 91, 12, 68, 29, 55],
     preset: 'random',
@@ -52,12 +94,15 @@ const DEFAULT_INPUT_PAYLOADS = {
 }
 
 export default function ComparisonConfigPanel({ isRunning, onRun }) {
-  const moduleType = useComparisonStore((s) => s.moduleType)
-  const slots      = useComparisonStore((s) => s.slots)
-  const maxSlots   = useComparisonStore((s) => s.maxSlots)
-  const { setModuleType, setInputPayload, addSlot, removeSlot } = useComparisonStore()
+  const moduleType       = useComparisonStore((s) => s.moduleType)
+  const graphSubCategory = useComparisonStore((s) => s.graphSubCategory)
+  const slots            = useComparisonStore((s) => s.slots)
+  const maxSlots         = useComparisonStore((s) => s.maxSlots)
+  const { setModuleType, setInputPayload, setGraphSubCategory, addSlot, removeSlot } = useComparisonStore()
 
-  const moduleAlgorithms = DOMAIN_ALGORITHMS[moduleType] ?? []
+  const moduleAlgorithms = moduleType === 'graph'
+    ? (GRAPH_SUBCATEGORY_ALGORITHMS[graphSubCategory] ?? [])
+    : (DOMAIN_ALGORITHMS[moduleType] ?? [])
 
   const [pendingAlg, setPendingAlg] = useState('')
 
@@ -95,12 +140,36 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
           onChange = {(e) => {
             const domain = e.target.value || null
             setModuleType(domain)
-            setInputPayload(domain ? DEFAULT_INPUT_PAYLOADS[domain] : null)
+            if (domain === 'graph') {
+              setInputPayload(GRAPH_SUBCATEGORY_PAYLOADS.pathfinding)
+            } else {
+              setInputPayload(domain ? DEFAULT_INPUT_PAYLOADS[domain] : null)
+            }
             setPendingAlg('')
           }}
           aria-label = "Module type"
         />
       </div>
+
+      {/* Graph sub-category */}
+      {moduleType === 'graph' && (
+        <div className = "space-y-2">
+          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+            Category
+          </p>
+          <Select
+            options = {GRAPH_SUBCATEGORY_OPTIONS}
+            value = {graphSubCategory ?? 'pathfinding'}
+            onChange = {(e) => {
+              const cat = e.target.value
+              setGraphSubCategory(cat)
+              setInputPayload(GRAPH_SUBCATEGORY_PAYLOADS[cat])
+              setPendingAlg('')
+            }}
+            aria-label = "Graph sub-category"
+          />
+        </div>
+      )}
 
       {/* Algorithm slots */}
       {moduleType && (

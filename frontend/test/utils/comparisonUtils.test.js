@@ -53,6 +53,31 @@ describe('getDomainMetrics', () => {
   it('returns empty array for unknown domain', () => {
     expect(getDomainMetrics('unknown')).toEqual([])
   })
+
+  it('returns pathfinding metrics for graph with pathfinding sub-category', () => {
+    const metrics = getDomainMetrics('graph', 'pathfinding')
+    expect(metrics).toHaveLength(2)
+    expect(metrics.some(m => m.key === 'nodes_visited')).toBe(true)
+    expect(metrics.some(m => m.key === 'edges_explored')).toBe(true)
+  })
+
+  it('returns MST metrics for graph with mst sub-category', () => {
+    const metrics = getDomainMetrics('graph', 'mst')
+    expect(metrics).toHaveLength(2)
+    expect(metrics.some(m => m.key === 'edges_added')).toBe(true)
+    expect(metrics.some(m => m.key === 'mst_total_weight')).toBe(true)
+  })
+
+  it('returns empty array for graph with ordering sub-category', () => {
+    const metrics = getDomainMetrics('graph', 'ordering')
+    expect(metrics).toEqual([])
+  })
+
+  it('defaults to pathfinding metrics when no sub-category is provided for graph', () => {
+    const metrics = getDomainMetrics('graph')
+    expect(metrics).toHaveLength(2)
+    expect(metrics[0].key).toBe('nodes_visited')
+  })
 })
 
 describe('computeDeltaMetrics', () => {
@@ -111,6 +136,24 @@ describe('computeDeltaMetrics', () => {
     const nodesMetric = result.metrics.find(m => m.key === 'nodes_visited')
     expect(nodesMetric.deltas['slot-0']).toBe(0)
     expect(nodesMetric.deltas['slot-1']).toBe(0)
+  })
+
+  it('computes MST deltas using mst sub-category metrics', () => {
+    const mstSlotA = {
+      id: 'slot-0', algorithmKey: 'prims', status: 'ready',
+      timeline: [{ step_index: 0, metrics_snapshot: { edges_added: 4, mst_total_weight: 12 } }],
+    }
+    const mstSlotB = {
+      id: 'slot-1', algorithmKey: 'kruskals', status: 'ready',
+      timeline: [{ step_index: 0, metrics_snapshot: { edges_added: 4, mst_total_weight: 12 } }],
+    }
+
+    const result = computeDeltaMetrics([mstSlotA, mstSlotB], 0, 'graph', 'mst')
+    expect(result.metrics).toHaveLength(2)
+    const weightMetric = result.metrics.find(m => m.key === 'mst_total_weight')
+    expect(weightMetric).toBeDefined()
+    expect(weightMetric.values['slot-0']).toBe(12)
+    expect(weightMetric.values['slot-1']).toBe(12)
   })
 })
 
@@ -209,5 +252,14 @@ describe('fmtAlgorithmName', () => {
 
   it('title-cases unknown keys', () => {
     expect(fmtAlgorithmName('a_star')).toBe('A Star')
+  })
+
+  it('maps new graph algorithm keys to labels', () => {
+    expect(fmtAlgorithmName('astar')).toBe('A*')
+    expect(fmtAlgorithmName('bellman_ford')).toBe('Bellman-Ford')
+    expect(fmtAlgorithmName('prims')).toBe("Prim's")
+    expect(fmtAlgorithmName('kruskals')).toBe("Kruskal's")
+    expect(fmtAlgorithmName('topological_sort')).toBe('Topo Sort')
+    expect(fmtAlgorithmName('dfs')).toBe('DFS')
   })
 })

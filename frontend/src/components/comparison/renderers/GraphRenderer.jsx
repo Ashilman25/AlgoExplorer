@@ -17,6 +17,7 @@ function edgeColor(s) {
   if (s === 'frontier') return STATE_COLOR.frontier
   if (s === 'visited')  return STATE_COLOR.visited
   if (s === 'success')  return STATE_COLOR.success
+  if (s === 'target')   return STATE_COLOR.target
   return 'rgba(100,116,139,0.20)'
 }
 
@@ -84,6 +85,27 @@ export default function GraphRenderer({ currentStep, inputPayload }) {
   const nodeStates = hasStep ? (currentStep.state_payload?.node_states ?? baselineNodeStates) : baselineNodeStates
   const edgeStates = currentStep?.state_payload?.edge_states ?? {}
 
+  const mstEdgeSet = useMemo(() => {
+    const mstEdges = currentStep?.state_payload?.mst_edges
+    if (!mstEdges) return null
+    const set = new Set()
+    for (const e of mstEdges) {
+      set.add(`${e.source}-${e.target}`)
+      set.add(`${e.target}-${e.source}`)
+    }
+    return set
+  }, [currentStep])
+
+  const orderingMap = useMemo(() => {
+    const ordering = currentStep?.state_payload?.ordering
+    if (!ordering) return null
+    const map = {}
+    ordering.forEach((id, i) => { map[String(id)] = i + 1 })
+    return map
+  }, [currentStep])
+
+  const heuristicValues = currentStep?.state_payload?.heuristic_values ?? null
+
   return (
     <div ref = {containerRef} className = "w-full h-full min-h-0 overflow-hidden">
       <svg viewBox = {`0 0 ${canvasSize.w} ${canvasSize.h}`} className = "w-full h-full">
@@ -100,6 +122,9 @@ export default function GraphRenderer({ currentStep, inputPayload }) {
             </marker>
             <marker id = "cmp-arrow-success"  markerWidth = "8" markerHeight = "6" refX = "8" refY = "3" orient = "auto">
               <path d = "M0,0 L8,3 L0,6" fill = "var(--color-state-success)" />
+            </marker>
+            <marker id = "cmp-arrow-target" markerWidth = "8" markerHeight = "6" refX = "8" refY = "3" orient = "auto">
+              <path d = "M0,0 L8,3 L0,6" fill = "var(--color-state-target)" />
             </marker>
           </defs>
         )}
@@ -120,6 +145,7 @@ export default function GraphRenderer({ currentStep, inputPayload }) {
           const arrowState = state === 'default' ? 'default'
             : state === 'success' ? 'success'
             : state === 'visited' ? 'visited'
+            : state === 'target' ? 'target'
             : 'frontier'
 
           const mx = (from.cx + to.cx) / 2, my = (from.cy + to.cy) / 2
@@ -129,10 +155,13 @@ export default function GraphRenderer({ currentStep, inputPayload }) {
               <line
                 x1 = {line.x1} y1 = {line.y1} x2 = {line.x2} y2 = {line.y2}
                 stroke = {edgeColor(state)}
-                strokeWidth = {state === 'default' ? 1.5 : 2.5}
+                strokeWidth = {mstEdgeSet && mstEdgeSet.has(key) ? 3.5 : state === 'default' ? 1.5 : 2.5}
                 strokeLinecap = "round"
                 markerEnd = {directed ? `url(#cmp-arrow-${arrowState})` : undefined}
-                style = {{ transition: 'stroke 0.2s ease, stroke-width 0.2s ease' }}
+                style = {{
+                  transition: 'stroke 0.2s ease, stroke-width 0.2s ease',
+                  filter: mstEdgeSet && mstEdgeSet.has(key) ? 'drop-shadow(0 0 4px var(--color-state-success))' : undefined,
+                }}
               />
               {weighted && e.weight != null && (
                 <text
@@ -179,6 +208,33 @@ export default function GraphRenderer({ currentStep, inputPayload }) {
               >
                 {nid}
               </text>
+
+              {/* A* f-score label */}
+              {heuristicValues && heuristicValues[nid] && heuristicValues[nid].f !== 'inf' && (
+                <text
+                  x = {cx} y = {cy + 24} textAnchor = "middle"
+                  fill = "var(--color-brand-400)" fontSize = {9} opacity = {0.8}
+                  fontFamily = "'IBM Plex Mono', monospace" fontWeight = "500"
+                  style = {{ pointerEvents: 'none' }}
+                >
+                  f={heuristicValues[nid].f}
+                </text>
+              )}
+
+              {/* Topo sort ordering badge */}
+              {orderingMap && orderingMap[nid] && (
+                <g>
+                  <circle cx = {cx + 12} cy = {cy - 12} r = {8} fill = "var(--color-state-success)" opacity = {0.9} />
+                  <text
+                    x = {cx + 12} y = {cy - 12} textAnchor = "middle" dominantBaseline = "central"
+                    fill = "rgba(15, 23, 42, 0.95)" fontSize = {8}
+                    fontFamily = "'IBM Plex Mono', monospace" fontWeight = "700"
+                    style = {{ pointerEvents: 'none' }}
+                  >
+                    {orderingMap[nid]}
+                  </text>
+                </g>
+              )}
             </g>
           )
         })}

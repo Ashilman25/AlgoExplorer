@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class GraphNode(BaseModel):
     id: str | int
+    x: float | None = None
+    y: float | None = None
 
 
 class GraphEdge(BaseModel):
@@ -17,8 +19,8 @@ class GraphInputPayload(BaseModel):
 
     nodes: list[GraphNode]
     edges: list[GraphEdge]
-    
-    source: str | int
+
+    source: str | int | None = None
     target: str | int | None = None
     
     weighted: bool = False

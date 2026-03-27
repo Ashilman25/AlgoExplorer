@@ -25,7 +25,7 @@ def validate_module_algorithm(module_key: str, algorithm_key: str):
 #edges is a list, each edge has source and target
 #no duplicate node ids
 #edge endpoints reference existing node ids
-def validate_graph_payload(input_payload: dict):
+def validate_graph_payload(input_payload: dict, algorithm_key: str = "bfs"):
     if "nodes" not in input_payload:
         raise DomainError("Missing 'nodes' in payload")
 
@@ -60,17 +60,17 @@ def validate_graph_payload(input_payload: dict):
 
         if edge["target"] not in ids:
             raise DomainError(f"Edge target '{edge['target']}' does not reference a valid node")
-        
+
         if "weight" in edge and edge["weight"] is not None:
             w = edge["weight"]
-            
+
             if not isinstance(w, (int, float)):
                 raise DomainError(f"Edge weight '{w}' must be a number")
-            
+
             if math.isnan(w) or math.isinf(w):
                 raise DomainError(f"Edge weight must not be NaN or infinity")
-            
-            if w < 0:
+
+            if w < 0 and algorithm_key != "bellman_ford":
                 raise DomainError(f"Edge weight '{w}' must not be negative")
 
     # valid source and target
@@ -81,6 +81,29 @@ def validate_graph_payload(input_payload: dict):
     target = input_payload.get("target")
     if target is not None and target not in ids:
         raise DomainError(f"Target '{target}' does not reference a valid node")
+
+    # A* requires coordinates on every node
+    if algorithm_key == "astar":
+        for node in nodes:
+            if node.get("x") is None or node.get("y") is None:
+                raise DomainError(
+                    f"A* requires coordinates (x, y) on every node. "
+                    f"Node '{node['id']}' is missing coordinates."
+                )
+
+    # MST algorithms require weighted edges
+    if algorithm_key in ("prims", "kruskals"):
+        for edge in edges:
+            if edge.get("weight") is None:
+                raise DomainError(
+                    f"MST algorithms require weighted edges. "
+                    f"Edge '{edge['source']}' -> '{edge['target']}' has no weight."
+                )
+
+    # Topological sort requires directed graph
+    if algorithm_key == "topological_sort":
+        if not input_payload.get("directed", False):
+            raise DomainError("Topological Sort requires a directed graph.")
         
         
         

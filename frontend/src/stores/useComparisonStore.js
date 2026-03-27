@@ -30,6 +30,7 @@ export const useComparisonStore = create((set, get) => ({
   inputPayload: null,
   algorithmConfig: {},
   explanationLevel: 'standard',
+  graphSubCategory: null,
 
   // ── Synchronized playback ──────────────────────────────────────────
   stepIndex: 0,
@@ -79,6 +80,18 @@ export const useComparisonStore = create((set, get) => ({
   setModuleType: (moduleType) =>
     set({
       moduleType,
+      graphSubCategory: moduleType === 'graph' ? 'pathfinding' : null,
+      slots: [],
+      stepIndex: 0,
+      maxSteps: 0,
+      isPlaying: false,
+      deltaMetrics: null,
+      commentary: { summary: '', divergences: [] },
+    }),
+
+  setGraphSubCategory: (graphSubCategory) =>
+    set({
+      graphSubCategory,
       slots: [],
       stepIndex: 0,
       maxSteps: 0,
@@ -249,10 +262,10 @@ export const useComparisonStore = create((set, get) => ({
   // ── Internal helpers ───────────────────────────────────────────────
 
   _finalizeTimelines: () => {
-    const { slots, moduleType } = get()
+    const { slots, moduleType, graphSubCategory } = get()
     const maxSteps = recomputeMaxSteps(slots)
     const readySlots = slots.filter((s) => s.status === 'ready')
-    const deltaMetrics = computeDeltaMetrics(readySlots, 0, moduleType)
+    const deltaMetrics = computeDeltaMetrics(readySlots, 0, moduleType, graphSubCategory)
     const divergences = findDivergences(readySlots)
     const summary = generateCommentary(readySlots, deltaMetrics)
 
