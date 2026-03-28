@@ -78,6 +78,26 @@ describe('getDomainMetrics', () => {
     expect(metrics).toHaveLength(2)
     expect(metrics[0].key).toBe('nodes_visited')
   })
+
+  it('returns string_dp metrics for dp with string_dp sub-category', () => {
+    const metrics = getDomainMetrics('dp', null, null, 'string_dp')
+    expect(metrics).toHaveLength(2)
+    expect(metrics.some(m => m.key === 'cells_computed')).toBe(true)
+    expect(metrics.some(m => m.key === 'subproblems_reused')).toBe(true)
+  })
+
+  it('returns fibonacci metrics for dp with fibonacci sub-category', () => {
+    const metrics = getDomainMetrics('dp', null, null, 'fibonacci')
+    expect(metrics).toHaveLength(2)
+    expect(metrics.some(m => m.key === 'total_calls')).toBe(true)
+    expect(metrics.some(m => m.key === 'redundant_calls')).toBe(true)
+  })
+
+  it('defaults to string_dp metrics when no dp sub-category provided', () => {
+    const metrics = getDomainMetrics('dp')
+    expect(metrics).toHaveLength(2)
+    expect(metrics[0].key).toBe('cells_computed')
+  })
 })
 
 describe('computeDeltaMetrics', () => {
@@ -110,16 +130,16 @@ describe('computeDeltaMetrics', () => {
   it('handles higher-is-better polarity', () => {
     const dpSlotA = {
       id: 'slot-0', algorithmKey: 'lcs', status: 'ready',
-      timeline: [{ step_index: 0, metrics_snapshot: { cells_computed: 20, subproblems_avoided: 5 } }],
+      timeline: [{ step_index: 0, metrics_snapshot: { cells_computed: 20, subproblems_reused: 5 } }],
     }
     const dpSlotB = {
       id: 'slot-1', algorithmKey: 'edit_distance', status: 'ready',
-      timeline: [{ step_index: 0, metrics_snapshot: { cells_computed: 15, subproblems_avoided: 10 } }],
+      timeline: [{ step_index: 0, metrics_snapshot: { cells_computed: 15, subproblems_reused: 10 } }],
     }
 
     const result = computeDeltaMetrics([dpSlotA, dpSlotB], 0, 'dp')
-    const avoided = result.metrics.find(m => m.key === 'subproblems_avoided')
-    expect(avoided.best).toBe('slot-1')
+    const reused = result.metrics.find(m => m.key === 'subproblems_reused')
+    expect(reused.best).toBe('slot-1')
   })
 
   it('handles equal values — best is first slot with that value', () => {
@@ -136,6 +156,33 @@ describe('computeDeltaMetrics', () => {
     const nodesMetric = result.metrics.find(m => m.key === 'nodes_visited')
     expect(nodesMetric.deltas['slot-0']).toBe(0)
     expect(nodesMetric.deltas['slot-1']).toBe(0)
+  })
+
+  it('uses dp sub-category metrics when dpSubCategory is provided', () => {
+    const dpSlotA = {
+      id: 'slot-0', algorithmKey: 'lcs', status: 'ready',
+      timeline: [{ step_index: 0, metrics_snapshot: { cells_computed: 20, subproblems_reused: 5 } }],
+    }
+    const dpSlotB = {
+      id: 'slot-1', algorithmKey: 'edit_distance', status: 'ready',
+      timeline: [{ step_index: 0, metrics_snapshot: { cells_computed: 15, subproblems_reused: 10 } }],
+    }
+
+    const result = computeDeltaMetrics([dpSlotA, dpSlotB], 0, 'dp', null, null, 'string_dp')
+    expect(result.metrics).toHaveLength(2)
+    expect(result.metrics[0].key).toBe('cells_computed')
+    expect(result.metrics[1].key).toBe('subproblems_reused')
+  })
+
+  it('uses fibonacci metrics for dp fibonacci sub-category', () => {
+    const fibSlot = {
+      id: 'slot-0', algorithmKey: 'fibonacci', status: 'ready',
+      timeline: [{ step_index: 0, metrics_snapshot: { total_calls: 8, redundant_calls: 0 } }],
+    }
+
+    const result = computeDeltaMetrics([fibSlot], 0, 'dp', null, null, 'fibonacci')
+    expect(result.metrics).toHaveLength(2)
+    expect(result.metrics[0].key).toBe('total_calls')
   })
 
   it('computes MST deltas using mst sub-category metrics', () => {
@@ -261,5 +308,11 @@ describe('fmtAlgorithmName', () => {
     expect(fmtAlgorithmName('kruskals')).toBe("Kruskal's")
     expect(fmtAlgorithmName('topological_sort')).toBe('Topo Sort')
     expect(fmtAlgorithmName('dfs')).toBe('DFS')
+  })
+
+  it('maps new DP algorithm keys to labels', () => {
+    expect(fmtAlgorithmName('knapsack_01')).toBe('0/1 Knapsack')
+    expect(fmtAlgorithmName('coin_change')).toBe('Coin Change')
+    expect(fmtAlgorithmName('fibonacci')).toBe('Fibonacci')
   })
 })

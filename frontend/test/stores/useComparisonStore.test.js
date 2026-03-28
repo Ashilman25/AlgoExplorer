@@ -19,6 +19,8 @@ const INITIAL_STATE = {
   algorithmConfig: {},
   explanationLevel: 'standard',
   graphSubCategory: null,
+  sortingSubCategory: null,
+  dpSubCategory: null,
   stepIndex: 0,
   maxSteps: 0,
   isPlaying: false,
@@ -139,6 +141,35 @@ describe('useComparisonStore', () => {
       useComparisonStore.getState().setModuleType('graph')
       useComparisonStore.getState().setGraphSubCategory('ordering')
       expect(useComparisonStore.getState().graphSubCategory).toBe('ordering')
+    })
+  })
+
+  describe('dpSubCategory', () => {
+    it('setModuleType("dp") defaults dpSubCategory to string_dp', () => {
+      useComparisonStore.getState().setModuleType('dp')
+      expect(useComparisonStore.getState().dpSubCategory).toBe('string_dp')
+    })
+
+    it('setModuleType("graph") sets dpSubCategory to null', () => {
+      useComparisonStore.getState().setModuleType('dp')
+      useComparisonStore.getState().setModuleType('graph')
+      expect(useComparisonStore.getState().dpSubCategory).toBeNull()
+    })
+
+    it('setDpSubCategory clears slots and resets playback', () => {
+      useComparisonStore.getState().setModuleType('dp')
+      useComparisonStore.getState().addSlot('lcs')
+      useComparisonStore.getState().addSlot('edit_distance')
+      expect(useComparisonStore.getState().slots).toHaveLength(2)
+
+      useComparisonStore.getState().setDpSubCategory('knapsack')
+      const state = useComparisonStore.getState()
+      expect(state.dpSubCategory).toBe('knapsack')
+      expect(state.slots).toHaveLength(0)
+      expect(state.stepIndex).toBe(0)
+      expect(state.maxSteps).toBe(0)
+      expect(state.isPlaying).toBe(false)
+      expect(state.deltaMetrics).toBeNull()
     })
   })
 
