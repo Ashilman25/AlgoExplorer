@@ -49,7 +49,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, pivot_index = None):
+        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, pivot_index = None, pseudocode_lines: list[int] | None = None):
             if benchmark_mode:
                 return
 
@@ -60,6 +60,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
                 "swapping": list(swapping) if swapping else [],
                 "pivot_index": pivot_index,
                 "sorted_boundary": None,
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -84,7 +85,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
             f"Initialize Merge Sort on {n} elements. "
             f"Top-down divide-and-conquer: split, sort halves, merge."
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message)
+        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0])
 
 
         def mergesort(low, high, depth):
@@ -101,6 +102,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
                     SortingEvents.MARK_SORTED,
                     [HighlightedEntity(id = low, state = "visited", label = str(arr[low]))],
                     f"Single element arr[{low}] = {arr[low]} is trivially sorted.",
+                    pseudocode_lines = [1],
                 )
                 return
 
@@ -124,7 +126,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
                 f"Split [{low}..{high}]: [{subarray_vals}] "
                 f"into {left_range} and {right_range} (depth {depth})."
             )
-            add_step(SortingEvents.PARTITION_START, highlighted_entities, message)
+            add_step(SortingEvents.PARTITION_START, highlighted_entities, message, pseudocode_lines = [2, 3, 4])
 
             # reset before recursing so children manage their own states
             for k in range(low, high + 1):
@@ -179,6 +181,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
                     highlighted_entities,
                     message,
                     comparing = [left_idx, right_idx],
+                    pseudocode_lines = [10, 11],
                 )
 
 
@@ -193,6 +196,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = k, state = "swap", label = str(winner))],
                     f"Write {winner} to arr[{k}].",
                     swapping = [k],
+                    pseudocode_lines = [11],
                 )
 
                 element_states[k] = "visited"
@@ -211,6 +215,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = k, state = "swap", label = str(write_val))],
                     f"Copy remaining left value {write_val} to arr[{k}].",
                     swapping = [k],
+                    pseudocode_lines = [12],
                 )
 
                 element_states[k] = "visited"
@@ -230,6 +235,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = k, state = "swap", label = str(write_val))],
                     f"Copy remaining right value {write_val} to arr[{k}].",
                     swapping = [k],
+                    pseudocode_lines = [13],
                 )
 
                 element_states[k] = "visited"
@@ -250,7 +256,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
                 f"Merge complete [{low}..{high}]: [{merged_vals}]. "
                 f"{high - low + 1} elements sorted in this range."
             )
-            add_step(SortingEvents.PARTITION_END, highlighted_entities, message)
+            add_step(SortingEvents.PARTITION_END, highlighted_entities, message, pseudocode_lines = [5, 7])
 
 
 
@@ -275,6 +281,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
             f"Merge Sort complete! Sorted: [{sorted_vals}]. "
             f"{metrics['comparisons']} comparisons, {metrics['writes']} writes, "
             f"max depth {metrics['max_recursion_depth']}.",
+            pseudocode_lines = [0],
         )
 
 

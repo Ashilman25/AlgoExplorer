@@ -49,7 +49,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, pivot_index = None):
+        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, pivot_index = None, pseudocode_lines: list[int] | None = None):
             if benchmark_mode:
                 return
 
@@ -60,6 +60,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                 "swapping": list(swapping) if swapping else [],
                 "pivot_index": pivot_index,
                 "sorted_boundary": None,
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -84,7 +85,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
             f"Initialize Quick Sort on {n} elements. "
             f"Using Lomuto partition (last element as pivot)."
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message)
+        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0])
         
 
         def quicksort(low, high, depth):
@@ -101,6 +102,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                     SortingEvents.MARK_SORTED,
                     [HighlightedEntity(id = low, state = "success", label = str(arr[low]))],
                     f"Single element arr[{low}] = {arr[low]} is in its sorted position.",
+                    pseudocode_lines = [1],
                 )
                 return
 
@@ -121,7 +123,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                 f"Partition [{low}..{high}]: [{subarray_vals}] "
                 f"({high - low + 1} elements, depth {depth})."
             )
-            add_step(SortingEvents.PARTITION_START, highlighted_entities, message)
+            add_step(SortingEvents.PARTITION_START, highlighted_entities, message, pseudocode_lines = [2, 6])
 
 
             # SET_PIVOT
@@ -135,6 +137,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = pivot_pos, state = "source", label = str(pivot_val))],
                 f"Choose pivot = arr[{pivot_pos}] = {pivot_val}.",
                 pivot_index = pivot_pos,
+                pseudocode_lines = [7, 8],
             )
 
 
@@ -162,6 +165,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                             f"arr[{j}] = {arr[j]} ≤ pivot {pivot_val}. Swap with arr[{i}] = {arr[i]}.",
                             comparing = [j, pivot_pos],
                             pivot_index = pivot_pos,
+                            pseudocode_lines = [9, 10, 11],
                         )
 
                         # SWAP
@@ -180,6 +184,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                             f"Swap arr[{i}] ↔ arr[{j}].",
                             swapping = [i, j],
                             pivot_index = pivot_pos,
+                            pseudocode_lines = [12],
                         )
 
                         element_states[i] = "active"
@@ -196,6 +201,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                             f"arr[{j}] = {arr[j]} ≤ pivot {pivot_val}. Already in left partition.",
                             comparing = [j, pivot_pos],
                             pivot_index = pivot_pos,
+                            pseudocode_lines = [9, 10, 11],
                         )
                         element_states[j] = "active"
 
@@ -210,6 +216,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                         f"arr[{j}] = {arr[j]} > pivot {pivot_val}. Stays in right partition.",
                         comparing = [j, pivot_pos],
                         pivot_index = pivot_pos,
+                        pseudocode_lines = [9, 10],
                     )
                     element_states[j] = "active"
 
@@ -233,6 +240,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                     f"Place pivot {pivot_val} into its final position arr[{final_pivot_pos}].",
                     swapping = [final_pivot_pos, high],
                     pivot_index = final_pivot_pos,
+                    pseudocode_lines = [13, 14],
                 )
 
 
@@ -253,6 +261,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                 f"Partition complete. Pivot {pivot_val} is sorted at index {final_pivot_pos}. "
                 f"Left: {left_size} element(s), Right: {right_size} element(s).",
                 pivot_index = final_pivot_pos,
+                pseudocode_lines = [3, 4],
             )
 
             # recurse into left then right partitions
@@ -280,6 +289,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
             f"Quick Sort complete! Sorted: [{sorted_vals}]. "
             f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps, "
             f"max depth {metrics['max_recursion_depth']}.",
+            pseudocode_lines = [0],
         )
 
 

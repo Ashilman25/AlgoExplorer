@@ -76,13 +76,14 @@ class BFSAlgorithm(BaseAlgorithm):
             return f"{a}-{b}"
         
         
-        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, frontier: list[str] | None = None, path: list[str] | None = None) -> None:
+        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, frontier: list[str] | None = None, path: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
             s_payload = {
                 "node_states" : dict(node_states),
                 "edge_states" : dict(edge_states),
                 "frontier" : list(frontier) if frontier is not None else [],
                 "distances" : None,
-                "path" : list(path) if path else None
+                "path" : list(path) if path else None,
+                "pseudocode_lines" : pseudocode_lines or [],
             }
             
             step = TimelineStep(
@@ -116,7 +117,7 @@ class BFSAlgorithm(BaseAlgorithm):
         else:
             target_message = "Visiting all reachable nodes."
             
-        add_step("INITIALIZE", initial_highlight, f"Initialize BFS from '{source}'. {target_message}", frontier = list(queue))
+        add_step("INITIALIZE", initial_highlight, f"Initialize BFS from '{source}'. {target_message}", frontier = list(queue), pseudocode_lines = [0, 1, 2, 3, 4])
         
         path_found = False
         final_path: list[str] | None = None
@@ -150,7 +151,7 @@ class BFSAlgorithm(BaseAlgorithm):
                 )
             ]
             
-            add_step("DEQUEUE", highlight, explanation, frontier = list(queue))
+            add_step("DEQUEUE", highlight, explanation, frontier = list(queue), pseudocode_lines = [5, 6])
             
             
             #target check
@@ -189,7 +190,7 @@ class BFSAlgorithm(BaseAlgorithm):
                     "BFS guarantees the shortest path in an unweighted graph."
                 )
                 
-                add_step("PATH_FOUND", highlighted_path, explanation, frontier = list(queue), path = path)
+                add_step("PATH_FOUND", highlighted_path, explanation, frontier = list(queue), path = path, pseudocode_lines = [7, 8])
                 path_found = True
                 break
             
@@ -232,7 +233,7 @@ class BFSAlgorithm(BaseAlgorithm):
                         f"Enqueue it. Frontier size is now {frontier_size}."
                     )
                     
-                    add_step("ENQUEUE", highlighted_entities, explanation, frontier = list(queue))
+                    add_step("ENQUEUE", highlighted_entities, explanation, frontier = list(queue), pseudocode_lines = [9, 10, 11, 12])
                     
                     
                 else:
@@ -253,7 +254,7 @@ class BFSAlgorithm(BaseAlgorithm):
                         f"'{neighbor}' is already visited. Skip."
                     )
                     
-                    add_step("SKIP_EDGE", highlighted_entities, explanation, frontier = list(queue))
+                    add_step("SKIP_EDGE", highlighted_entities, explanation, frontier = list(queue), pseudocode_lines = [9, 10])
                     
             if node_states[current] not in ("source", "target", "success"):
                 node_states[current] = "visited"
@@ -273,7 +274,7 @@ class BFSAlgorithm(BaseAlgorithm):
                 f"{result_message}"
             )
             
-            add_step("COMPLETE", [], explanation, frontier = [])
+            add_step("COMPLETE", [], explanation, frontier = [], pseudocode_lines = [13])
             
             
             

@@ -46,7 +46,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, sorted_boundary = None):
+        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, sorted_boundary = None, pseudocode_lines: list[int] | None = None):
             if benchmark_mode:
                 return
 
@@ -57,6 +57,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                 "swapping": list(swapping) if swapping else [],
                 "pivot_index": None,
                 "sorted_boundary": sorted_boundary,
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -78,7 +79,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
             f"Initialize Selection Sort on {n} elements. "
             f"Repeatedly finds the minimum of the unsorted portion and places it at the front."
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message)
+        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0])
 
 
         # run the sort
@@ -94,6 +95,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                 f"Pass {i + 1}: Start scan from index {i}. Current minimum candidate: arr[{i}] = {arr[i]}.",
                 comparing = [i],
                 sorted_boundary = i,
+                pseudocode_lines = [1, 2],
             )
 
             for j in range(i + 1, n):
@@ -122,6 +124,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                         f"arr[{j}] = {arr[j]} < current min arr[{old_min_idx}] = {arr[old_min_idx]}. New minimum at index {j}.",
                         comparing = [j, old_min_idx],
                         sorted_boundary = i,
+                        pseudocode_lines = [3, 4, 5],
                     )
 
                 else:
@@ -134,6 +137,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                         f"arr[{j}] = {arr[j]} >= current min arr[{min_idx}] = {arr[min_idx]}. Minimum unchanged.",
                         comparing = [j, min_idx],
                         sorted_boundary = i,
+                        pseudocode_lines = [3, 4],
                     )
 
                     element_states[j] = "default"
@@ -156,6 +160,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                     f"Swap arr[{i}] = {arr[i]} into sorted position {i} (was arr[{min_idx}]).",
                     swapping = [i, min_idx],
                     sorted_boundary = i,
+                    pseudocode_lines = [6],
                 )
 
             # reset unsorted states to default, mark position i as success
@@ -170,6 +175,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = i, state = "success", label = str(arr[i]))],
                 f"arr[{i}] = {arr[i]} is now in its final sorted position.",
                 sorted_boundary = i + 1,
+                pseudocode_lines = [1],
             )
 
         # mark the last element as success
@@ -187,6 +193,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = list(range(n)), state = "success")],
             f"Selection Sort complete! Sorted: [{sorted_vals}]. "
             f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps.",
+            pseudocode_lines = [7],
         )
 
 

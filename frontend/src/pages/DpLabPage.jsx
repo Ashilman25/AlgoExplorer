@@ -1011,6 +1011,8 @@ export default function DpLabPage() {
       <GuestPromptBanner />
 
       <SimulationLayout
+        moduleKey = "dp"
+        algorithmKey = {algorithm}
         configPanel = {
           <DpConfig
             algorithm = {algorithm}

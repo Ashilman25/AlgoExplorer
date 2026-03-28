@@ -56,7 +56,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
         def ek(a: str, b: str) -> str:
             return f"{a}-{b}"
 
-        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, cycle_detected: bool = False, cycle_nodes: list[str] | None = None) -> None:
+        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, cycle_detected: bool = False, cycle_nodes: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),
@@ -66,6 +66,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                 "ordering": list(ordering),
                 "cycle_detected": cycle_detected,
                 "cycle_nodes": cycle_nodes or [],
+                "pseudocode_lines": pseudocode_lines or [],
             }
             step = TimelineStep(
                 step_index = len(steps),
@@ -86,6 +87,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
             [],
             f"Initialize Kahn's algorithm. In-degrees: {degree_summary}. "
             f"Found {len(zero_in)} node(s) with in-degree 0.",
+            pseudocode_lines = [0, 1, 2, 3],
         )
 
         # enqueue zero in-degree nodes
@@ -97,6 +99,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                 "ENQUEUE_ZERO",
                 [HighlightedEntity(id = n, state = "frontier", label = n)],
                 f"Enqueue '{n}' (in-degree = 0).",
+                pseudocode_lines = [2],
             )
 
         # main loop
@@ -111,6 +114,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = current, state = "active", label = current)],
                 f"Dequeue '{current}'. Add to ordering at position {len(ordering)}. "
                 f"Processing its {len(adj[current])} outgoing edge(s).",
+                pseudocode_lines = [4, 5, 6],
             )
 
             for neighbor in adj[current]:
@@ -128,6 +132,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                     ],
                     f"Edge {current} -> {neighbor}: "
                     f"Decrement in-degree of '{neighbor}' to {in_degree[neighbor]}.",
+                    pseudocode_lines = [7, 8],
                 )
 
                 if in_degree[neighbor] == 0:
@@ -138,6 +143,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                         "ENQUEUE_ZERO",
                         [HighlightedEntity(id = neighbor, state = "frontier", label = neighbor)],
                         f"'{neighbor}' in-degree reached 0. Enqueue it.",
+                        pseudocode_lines = [9],
                     )
 
             node_states[current] = "success"
@@ -157,6 +163,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                 f"Remaining nodes form a cycle: {', '.join(cycle_nodes)}.",
                 cycle_detected = True,
                 cycle_nodes = cycle_nodes,
+                pseudocode_lines = [10],
             )
         else:
             ordering_str = " -> ".join(ordering)
@@ -167,6 +174,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                 f"Ordering: {ordering_str}. "
                 f"Processed {metrics['edges_processed']} edge(s), "
                 f"{metrics['in_degree_updates']} in-degree update(s).",
+                pseudocode_lines = [11],
             )
 
         final_result = {

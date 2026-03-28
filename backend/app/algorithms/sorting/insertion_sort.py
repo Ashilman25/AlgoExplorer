@@ -47,7 +47,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, sorted_boundary = None):
+        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, sorted_boundary = None, pseudocode_lines: list[int] | None = None):
             if benchmark_mode:
                 return
 
@@ -58,6 +58,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                 "swapping": list(swapping) if swapping else [],
                 "pivot_index": None,
                 "sorted_boundary": sorted_boundary,
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -81,7 +82,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
             f"Initialize Insertion Sort on {n} elements. "
             f"Build sorted portion from left; insert each element into its correct position."
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, sorted_boundary = 0)
+        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, sorted_boundary = 0, pseudocode_lines = [0])
 
 
         # run the sort
@@ -99,6 +100,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                 f"Pick key = arr[{i}] = {key}. Scan left to find insertion point.",
                 comparing = [i],
                 sorted_boundary = i - 1,
+                pseudocode_lines = [1, 2, 3],
             )
 
             j = i - 1
@@ -120,6 +122,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                         f"arr[{j}] = {arr[j]} > key {key}. Shift arr[{j}] right to arr[{j + 1}].",
                         comparing = [j, j + 1],
                         sorted_boundary = i - 1,
+                        pseudocode_lines = [4, 5, 6],
                     )
 
                     # shift element right
@@ -144,6 +147,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                         f"arr[{j}] = {arr[j]} ≤ key {key}. Insertion point found at index {j + 1}.",
                         comparing = [j, j + 1],
                         sorted_boundary = i - 1,
+                        pseudocode_lines = [4],
                     )
                     break
 
@@ -154,6 +158,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = 0, state = "active", label = str(key))],
                     f"key {key} is smaller than all elements. Insertion point is index 0.",
                     sorted_boundary = i - 1,
+                    pseudocode_lines = [4],
                 )
 
             # place key at insertion point
@@ -167,6 +172,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = j + 1, state = "source", label = str(key))],
                 f"Insert key {key} at arr[{j + 1}].",
                 sorted_boundary = i,
+                pseudocode_lines = [7],
             )
 
             # mark sorted portion [0..i] as success
@@ -178,6 +184,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = list(range(i + 1)), state = "success")],
                 f"Sorted portion is now arr[0..{i}].",
                 sorted_boundary = i,
+                pseudocode_lines = [1],
             )
 
         t_end = time.perf_counter()
@@ -197,6 +204,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
             f"{metrics['comparisons']} comparisons, {metrics['shifts']} shifts, "
             f"{metrics['writes']} writes.",
             sorted_boundary = n - 1,
+            pseudocode_lines = [8],
         )
 
 

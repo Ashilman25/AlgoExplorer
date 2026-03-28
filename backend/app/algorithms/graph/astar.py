@@ -101,7 +101,7 @@ class AStarAlgorithm(BaseAlgorithm):
                 result[n] = round(d, 2) if d != math.inf else "inf"
             return result
 
-        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, path: list[str] | None = None) -> None:
+        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, path: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),
@@ -109,6 +109,7 @@ class AStarAlgorithm(BaseAlgorithm):
                 "distances": dist_display(),
                 "path": list(path) if path else None,
                 "heuristic_values": heuristic_display(),
+                "pseudocode_lines": pseudocode_lines or [],
             }
             step = TimelineStep(
                 step_index = len(steps),
@@ -139,6 +140,7 @@ class AStarAlgorithm(BaseAlgorithm):
             f"Initialize A* from '{source}'. "
             f"h({source}) = {round(h_scores[source], 2)}, f({source}) = {round(f_scores[source], 2)}. "
             f"{target_message}",
+            pseudocode_lines = [0, 1, 2, 3, 4],
         )
 
         path_found = False
@@ -166,6 +168,7 @@ class AStarAlgorithm(BaseAlgorithm):
                 f"(g = {round(g_scores[current], 2)}, h = {round(h_scores[current], 2)}). "
                 f"Inspecting its {neighbors_count} outgoing edge(s). "
                 f"({metrics['nodes_visited']} node(s) finalized so far.)",
+                pseudocode_lines = [5, 6],
             )
 
             # target check
@@ -193,6 +196,7 @@ class AStarAlgorithm(BaseAlgorithm):
                     f"Shortest path: {path_string} (cost {round(g_scores[target], 2)}). "
                     f"A* guarantees the shortest path with an admissible heuristic.",
                     path = path,
+                    pseudocode_lines = [7],
                 )
                 path_found = True
                 break
@@ -211,6 +215,7 @@ class AStarAlgorithm(BaseAlgorithm):
                         ],
                         f"Edge {current} -> {neighbor} (w={weight}): "
                         f"'{neighbor}' already finalized. Skip.",
+                        pseudocode_lines = [8, 9],
                     )
                     continue
 
@@ -240,6 +245,7 @@ class AStarAlgorithm(BaseAlgorithm):
                         f"Edge {current} -> {neighbor} (w={weight}): "
                         f"Relax g[{neighbor}] from {old_label} to {round(new_g, 2)}. "
                         f"f = {round(f_scores[neighbor], 2)} (g={round(new_g, 2)} + h={round(h_scores[neighbor], 2)}). Push to heap.",
+                        pseudocode_lines = [8, 9, 10, 11, 12, 13],
                     )
                 else:
                     add_step(
@@ -250,6 +256,7 @@ class AStarAlgorithm(BaseAlgorithm):
                         ],
                         f"Edge {current} -> {neighbor} (w={weight}): "
                         f"g[{neighbor}] = {round(g_scores[neighbor], 2)} <= {round(new_g, 2)}. No improvement.",
+                        pseudocode_lines = [8, 9, 10],
                     )
 
             if node_states[current] not in ("source", "target", "success"):
@@ -263,6 +270,7 @@ class AStarAlgorithm(BaseAlgorithm):
                 [],
                 f"A* complete. Finalized {metrics['nodes_visited']} node(s), "
                 f"explored {metrics['edges_explored']} edge(s). {result_message}",
+                pseudocode_lines = [14],
             )
 
         final_result = {

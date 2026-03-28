@@ -103,13 +103,14 @@ class DijkstraAlgorithm(BaseAlgorithm):
             return result
         
         
-        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, frontier_size: int = 0, path: list[str] | None = None) -> None:
+        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, frontier_size: int = 0, path: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),
                 "frontier": [],
                 "distances": dist_display(),
                 "path": list(path) if path else None,
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -146,10 +147,11 @@ class DijkstraAlgorithm(BaseAlgorithm):
         highlighted_entities = [HighlightedEntity(id = source, state = "source", label = source)]
         
         add_step(
-            "INITIALIZE", 
-            highlighted_entities, 
-            f"Initialize Dijkstra from '{source}'. Set dist[{source}] = 0, all others = inf. {target_message}", 
-            frontier_size = 1
+            "INITIALIZE",
+            highlighted_entities,
+            f"Initialize Dijkstra from '{source}'. Set dist[{source}] = 0, all others = inf. {target_message}",
+            frontier_size = 1,
+            pseudocode_lines = [0, 1, 2, 3, 4]
         )
         
         path_found = False
@@ -181,7 +183,8 @@ class DijkstraAlgorithm(BaseAlgorithm):
                 f"Pop '{current}' with dist = {current_dist}. "
                 f"Inspecting its {neighbors_count} outgoing edge(s). "
                 f"({metrics['nodes_visited']} node(s) finalized so far.)",
-                frontier_size = len(heap)
+                frontier_size = len(heap),
+                pseudocode_lines = [5, 6, 7]
             )
             
             #target check
@@ -219,7 +222,7 @@ class DijkstraAlgorithm(BaseAlgorithm):
                     f"Dijkstra guarantees the shortest path in a non-negative weighted graph."
                 )
                 
-                add_step("PATH_FOUND", highlighted_entities, message, frontier_size = len(heap), path = path)
+                add_step("PATH_FOUND", highlighted_entities, message, frontier_size = len(heap), path = path, pseudocode_lines = [8])
                 
                 path_found = True
                 break
@@ -251,7 +254,7 @@ class DijkstraAlgorithm(BaseAlgorithm):
                         f"'{neighbor}' already finalized at dist = {dist[neighbor]}. Skip."
                     )
                     
-                    add_step("SKIP_EDGE", highlighted_entities, message, frontier_size = len(heap))
+                    add_step("SKIP_EDGE", highlighted_entities, message, frontier_size = len(heap), pseudocode_lines = [9, 10])
                     continue
                 
                 
@@ -293,7 +296,7 @@ class DijkstraAlgorithm(BaseAlgorithm):
                         f"Edge {current} → {neighbor} (w={weight}): "
                         f"Relax dist[{neighbor}] from {old_label} to {new_dist}. Push to heap."
                     )
-                    add_step("RELAX", highlighted_entities, message, frontier_size = len(heap))
+                    add_step("RELAX", highlighted_entities, message, frontier_size = len(heap), pseudocode_lines = [9, 10, 11, 12, 13])
                     
                     
                 else:
@@ -305,7 +308,7 @@ class DijkstraAlgorithm(BaseAlgorithm):
                         f"Edge {current} → {neighbor} (w={weight}): "
                         f"dist[{neighbor}] = {dist[neighbor]} <= {new_dist}. No improvement."
                     )
-                    add_step("NO_RELAX", highlighted_entities, message, frontier_size = len(heap))
+                    add_step("NO_RELAX", highlighted_entities, message, frontier_size = len(heap), pseudocode_lines = [9, 10, 11])
                     
                     
             if node_states[current] not in ("source", "target", "success"):
@@ -326,7 +329,7 @@ class DijkstraAlgorithm(BaseAlgorithm):
                 f"explored {explored_edges} edge(s), "
                 f"{relaxation_count} relaxation(s). {result_message}"
             )
-            add_step("COMPLETE", [], message, frontier_size = 0)
+            add_step("COMPLETE", [], message, frontier_size = 0, pseudocode_lines = [14])
             
             
         

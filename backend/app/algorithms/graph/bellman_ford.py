@@ -69,7 +69,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                 result[n] = round(d, 2) if d != math.inf else "inf"
             return result
 
-        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, path: list[str] | None = None, negative_cycle: list[str] | None = None) -> None:
+        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, path: list[str] | None = None, negative_cycle: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),
@@ -77,6 +77,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                 "distances": dist_display(),
                 "path": list(path) if path else None,
                 "negative_cycle": negative_cycle,
+                "pseudocode_lines": pseudocode_lines or [],
             }
             step = TimelineStep(
                 step_index = len(steps),
@@ -102,6 +103,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
             f"Initialize Bellman-Ford from '{source}'. "
             f"Set dist[{source}] = 0, all others = inf. "
             f"Will perform {V - 1} relaxation pass(es) over {len(all_edges)} edge(s).",
+            pseudocode_lines = [0, 1, 2],
         )
 
         # V-1 relaxation passes
@@ -111,6 +113,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                 "START_PASS",
                 [],
                 f"Pass {pass_num}/{V - 1}: Relaxing all {len(all_edges)} edges.",
+                pseudocode_lines = [3, 4],
             )
 
             for u, v, w in all_edges:
@@ -140,6 +143,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                         ],
                         f"Edge {u} -> {v} (w={w}): "
                         f"Relax dist[{v}] from {old_label} to {round(new_dist, 2)}.",
+                        pseudocode_lines = [4, 5, 6],
                     )
                 else:
                     add_step(
@@ -150,6 +154,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                         ],
                         f"Edge {u} -> {v} (w={w}): "
                         f"dist[{v}] = {round(dist[v], 2)} <= {round(new_dist, 2)}. No improvement.",
+                        pseudocode_lines = [4, 5],
                     )
 
         # negative cycle detection (V-th pass)
@@ -161,6 +166,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
             [],
             f"Detection pass: checking for negative cycles. "
             f"If any edge can still be relaxed, a negative cycle exists.",
+            pseudocode_lines = [7],
         )
 
         for u, v, w in all_edges:
@@ -196,6 +202,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                     f"Negative cycle detected! Cycle: {cycle_str}. "
                     f"Shortest paths are undefined when a negative cycle is reachable.",
                     negative_cycle = cycle_nodes,
+                    pseudocode_lines = [7, 8, 9],
                 )
                 break
 
@@ -226,6 +233,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                 f"Shortest path to '{target}': {path_string} (cost {round(dist[target], 2)}). "
                 f"Bellman-Ford handles negative edge weights correctly.",
                 path = path,
+                pseudocode_lines = [10],
             )
 
         elif not negative_cycle_detected:
@@ -237,6 +245,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                 f"Processed {metrics['edges_processed']} edge checks, "
                 f"{metrics['relaxation_count']} relaxation(s) over {metrics['passes_completed']} pass(es). "
                 f"{result_message}",
+                pseudocode_lines = [10],
             )
 
         final_result = {

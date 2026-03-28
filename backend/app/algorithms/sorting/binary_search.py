@@ -47,7 +47,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, search_low = None, search_mid = None, search_high = None, found_index = None):
+        def add_step(event_type, highlighted, explanation, search_low = None, search_mid = None, search_high = None, found_index = None, pseudocode_lines: list[int] | None = None):
             if benchmark_mode:
                 return
 
@@ -63,6 +63,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                 "search_high": search_high,
                 "search_target": target,
                 "found_index": found_index,
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -84,7 +85,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
             f"Initialize Binary Search on {n} elements. "
             f"Searching for target = {target}. Array must be sorted."
         )
-        add_step(SearchingEvents.INITIALIZE, highlighted_entities, message)
+        add_step(SearchingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0, 1])
 
 
         # binary search
@@ -119,6 +120,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                 search_low = low,
                 search_mid = mid,
                 search_high = high,
+                pseudocode_lines = [2, 3],
             )
 
             metrics["comparisons"] += 1
@@ -135,6 +137,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                     search_mid = mid,
                     search_high = high,
                     found_index = mid,
+                    pseudocode_lines = [4, 5],
                 )
                 break
 
@@ -153,6 +156,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                     search_low = low,
                     search_mid = mid,
                     search_high = high,
+                    pseudocode_lines = [6, 7],
                 )
                 low = mid + 1
 
@@ -171,6 +175,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                     search_low = low,
                     search_mid = mid,
                     search_high = high,
+                    pseudocode_lines = [8],
                 )
                 high = mid - 1
 
@@ -187,6 +192,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                 SearchingEvents.NOT_FOUND,
                 [HighlightedEntity(id = list(range(n)), state = "default")],
                 f"Target {target} not found in the array. Search exhausted.",
+                pseudocode_lines = [9],
             )
 
 
@@ -208,6 +214,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = list(range(n)), state = "success" if found_idx is not None else "default")],
             complete_msg,
             found_index = found_idx,
+            pseudocode_lines = [0],
         )
 
 

@@ -83,7 +83,7 @@ class KruskalsAlgorithm(BaseAlgorithm):
         def ek(a: str, b: str) -> str:
             return f"{a}-{b}"
 
-        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str) -> None:
+        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, pseudocode_lines: list[int] | None = None) -> None:
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),
@@ -92,6 +92,7 @@ class KruskalsAlgorithm(BaseAlgorithm):
                 "path": None,
                 "mst_edges": [dict(e) for e in mst_edges],
                 "mst_total_weight": mst_total_weight,
+                "pseudocode_lines": pseudocode_lines or [],
             }
             step = TimelineStep(
                 step_index = len(steps),
@@ -111,6 +112,7 @@ class KruskalsAlgorithm(BaseAlgorithm):
             f"Initialize Kruskal's MST. "
             f"{len(sorted_edges)} edge(s) sorted by weight. "
             f"{len(node_ids)} component(s) initially.",
+            pseudocode_lines = [0, 1, 2, 3],
         )
 
         # process edges
@@ -132,6 +134,7 @@ class KruskalsAlgorithm(BaseAlgorithm):
                 ],
                 f"Consider edge {u} - {v} (w={weight}). "
                 f"Check if adding it creates a cycle.",
+                pseudocode_lines = [4, 5],
             )
 
             if uf.union(u, v):
@@ -156,6 +159,7 @@ class KruskalsAlgorithm(BaseAlgorithm):
                     f"Accept edge {u} - {v} (w={weight}). "
                     f"No cycle formed. MST weight: {mst_total_weight}. "
                     f"{uf.num_components} component(s) remaining.",
+                    pseudocode_lines = [5, 6, 7, 8],
                 )
             else:
                 # rejected
@@ -170,6 +174,7 @@ class KruskalsAlgorithm(BaseAlgorithm):
                     ],
                     f"Reject edge {u} - {v} (w={weight}). "
                     f"Would create a cycle (both in same component).",
+                    pseudocode_lines = [5],
                 )
 
             # early exit: full spanning tree found (connected graph only;
@@ -185,6 +190,7 @@ class KruskalsAlgorithm(BaseAlgorithm):
             f"total weight {mst_total_weight}. "
             f"Considered {metrics['edges_considered']} of {len(sorted_edges)} edge(s). "
             f"{uf.num_components} component(s) in final forest.",
+            pseudocode_lines = [9],
         )
 
         final_result = {

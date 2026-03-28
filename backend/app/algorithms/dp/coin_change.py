@@ -50,7 +50,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
             "runtime_ms": 0,
         }
 
-        def add_step(event_type, highlighted, explanation, current_index = None, dependency_indices = None, traceback_path = None):
+        def add_step(event_type, highlighted, explanation, current_index = None, dependency_indices = None, traceback_path = None, pseudocode_lines: list[int] | None = None):
             s_payload = {
                 "array": list(array),
                 "cell_states": list(cell_states),
@@ -58,6 +58,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                 "dependency_indices": list(dependency_indices) if dependency_indices else [],
                 "coins_used": list(coin_used),
                 "traceback_path": list(traceback_path) if traceback_path else [],
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -82,6 +83,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
             f"Initialize Coin Change array (length {size}). "
             f"Coins: [{coins_str}]. Target: {target}. "
             f"Base case: dp[0] = 0 — zero coins needed for amount 0.",
+            pseudocode_lines = [0, 1, 2],
         )
 
         # FILL ARRAY
@@ -95,6 +97,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = i, state = "active", label = str(i))],
                 f"Computing dp[{i}]: minimum coins to make amount {i}.",
                 current_index = i,
+                pseudocode_lines = [3, 4],
             )
 
             best = INFINITY
@@ -128,6 +131,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                     f"Check coins against amount {i}. Dependencies: {dep_str}.",
                     current_index = i,
                     dependency_indices = dep_indices,
+                    pseudocode_lines = [4, 5],
                 )
 
                 for d in dep_indices:
@@ -144,6 +148,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = i, state = "visited", label = str(best))],
                     f"dp[{i}] = {best} (using coin {best_coin}).",
                     current_index = i,
+                    pseudocode_lines = [5],
                 )
             else:
                 array[i] = None
@@ -155,6 +160,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = i, state = "visited", label = "INF")],
                     f"dp[{i}] = INF — no coin combination reaches amount {i}.",
                     current_index = i,
+                    pseudocode_lines = [5],
                 )
 
         t_end = time.perf_counter()
@@ -171,6 +177,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = target, state = "source", label = str(array[target]))],
                 f"Begin traceback from dp[{target}] = {array[target]}.",
                 current_index = target,
+                pseudocode_lines = [7],
             )
 
             pos = target
@@ -186,6 +193,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                     f"At dp[{pos}]: used coin {c}. Move to dp[{pos - c}].",
                     current_index = pos,
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [7],
                 )
 
                 pos -= c
@@ -217,6 +225,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = target, state = "success" if array[target] is not None else "target", label = str(array[target]))],
             complete_msg,
             traceback_path = list(tb_path),
+            pseudocode_lines = [6, 7] if array[target] is None else [7],
         )
 
         final_result = {

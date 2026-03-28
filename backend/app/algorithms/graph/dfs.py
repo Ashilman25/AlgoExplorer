@@ -56,13 +56,14 @@ class DFSAlgorithm(BaseAlgorithm):
         def ek(a: str, b: str) -> str:
             return f"{a}-{b}"
 
-        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, frontier: list[str] | None = None, path: list[str] | None = None) -> None:
+        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, frontier: list[str] | None = None, path: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),
                 "frontier": list(frontier) if frontier else [],
                 "distances": None,
                 "path": list(path) if path else None,
+                "pseudocode_lines": pseudocode_lines or [],
             }
             step = TimelineStep(
                 step_index = len(steps),
@@ -91,6 +92,7 @@ class DFSAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = source, state = "source", label = source)],
             f"Initialize DFS from '{source}'. Push onto stack. {target_message}",
             frontier = list(stack),
+            pseudocode_lines = [0, 1, 2, 3],
         )
 
         path_found = False
@@ -112,6 +114,7 @@ class DFSAlgorithm(BaseAlgorithm):
                 f"Exploring its {neighbors_count} neighbor(s). "
                 f"({metrics['nodes_visited']} node(s) visited so far.)",
                 frontier = list(stack),
+                pseudocode_lines = [4, 5, 6, 7],
             )
 
             # target check
@@ -141,6 +144,7 @@ class DFSAlgorithm(BaseAlgorithm):
                     f"Note: DFS does not guarantee the shortest path.",
                     frontier = list(stack),
                     path = path,
+                    pseudocode_lines = [8],
                 )
                 path_found = True
                 break
@@ -171,6 +175,7 @@ class DFSAlgorithm(BaseAlgorithm):
                         f"Edge {current} -> {neighbor}: '{neighbor}' is unvisited. "
                         f"Push onto stack. Stack size is now {len(stack)}.",
                         frontier = list(stack),
+                        pseudocode_lines = [9, 10, 11],
                     )
                 else:
                     add_step(
@@ -181,6 +186,7 @@ class DFSAlgorithm(BaseAlgorithm):
                         ],
                         f"Edge {current} -> {neighbor}: '{neighbor}' already visited. Skip.",
                         frontier = list(stack),
+                        pseudocode_lines = [9, 10],
                     )
 
             if node_states[current] not in ("source", "target", "success"):
@@ -197,6 +203,7 @@ class DFSAlgorithm(BaseAlgorithm):
                 f"DFS complete. Visited {visited_nodes} node(s), "
                 f"explored {explored_edges} edge(s). {result_message}",
                 frontier = [],
+                pseudocode_lines = [12],
             )
 
         final_result = {

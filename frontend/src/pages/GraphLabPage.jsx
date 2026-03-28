@@ -1129,6 +1129,8 @@ export default function GraphLabPage() {
       <GuestPromptBanner />
 
       <SimulationLayout
+        moduleKey = "graph"
+        algorithmKey = {algorithm}
         configPanel = {
           <GraphConfig
             algorithm = {algorithm}
