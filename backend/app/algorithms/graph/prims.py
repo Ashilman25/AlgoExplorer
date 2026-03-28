@@ -63,7 +63,7 @@ class PrimsAlgorithm(BaseAlgorithm):
         def ek(a: str, b: str) -> str:
             return f"{a}-{b}"
 
-        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str) -> None:
+        def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, pseudocode_lines: list[int] | None = None) -> None:
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),
@@ -72,6 +72,7 @@ class PrimsAlgorithm(BaseAlgorithm):
                 "path": None,
                 "mst_edges": [dict(e) for e in mst_edges],
                 "mst_total_weight": mst_total_weight,
+                "pseudocode_lines": pseudocode_lines or [],
             }
             step = TimelineStep(
                 step_index = len(steps),
@@ -94,6 +95,7 @@ class PrimsAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = source, state = "source", label = source)],
             f"Initialize Prim's MST from '{source}'. "
             f"Add '{source}' to the tree. Push its {len(adj[source])} edge(s) to the heap.",
+            pseudocode_lines = [0, 1, 2, 3, 4],
         )
 
         # push initial edges
@@ -123,6 +125,7 @@ class PrimsAlgorithm(BaseAlgorithm):
                     ],
                     f"Edge {from_node} - {to_node} (w={weight}): "
                     f"'{to_node}' already in MST. Skip.",
+                    pseudocode_lines = [5, 6, 9],
                 )
                 continue
 
@@ -133,6 +136,7 @@ class PrimsAlgorithm(BaseAlgorithm):
                     HighlightedEntity(id = to_node, state = "active", label = to_node),
                 ],
                 f"Pop cheapest cross-edge: {from_node} - {to_node} (w={weight}).",
+                pseudocode_lines = [5, 6],
             )
 
             # add to MST
@@ -155,6 +159,7 @@ class PrimsAlgorithm(BaseAlgorithm):
                 f"Add edge {from_node} - {to_node} (w={weight}) to MST. "
                 f"Total weight: {mst_total_weight}. "
                 f"Tree has {len(in_tree)} node(s), {len(mst_edges)} edge(s).",
+                pseudocode_lines = [7, 8, 9, 10, 11],
             )
 
             # push new edges from to_node
@@ -176,6 +181,7 @@ class PrimsAlgorithm(BaseAlgorithm):
             f"Prim's complete. MST has {len(mst_edges)} edge(s), "
             f"total weight {mst_total_weight}, "
             f"spanning {len(in_tree)} of {len(node_ids)} node(s).",
+            pseudocode_lines = [12],
         )
 
         final_result = {
