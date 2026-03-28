@@ -50,7 +50,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
             "runtime_ms": 0,
         }
 
-        def add_step(event_type, highlighted, explanation, current_cell = None, dependency_cells = None, traceback_path = None):
+        def add_step(event_type, highlighted, explanation, current_cell = None, dependency_cells = None, traceback_path = None, pseudocode_lines: list[int] | None = None):
             s_payload = {
                 "table": [list(row) for row in table],
                 "cell_states": [list(row) for row in cell_states],
@@ -58,6 +58,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
                 "dependency_cells": [list(c) for c in dependency_cells] if dependency_cells else [],
                 "traceback_path": [list(c) for c in traceback_path] if traceback_path else [],
                 "selected_items": [],
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -87,6 +88,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
             f"Initialize 0/1 Knapsack table ({rows} x {cols}). "
             f"Capacity = {W}. Items: {items_desc}. "
             f"Base row and column filled with 0 — zero items or zero capacity means zero value.",
+            pseudocode_lines = [0, 1, 2, 3],
         )
 
         # FILL TABLE
@@ -105,6 +107,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = [i, j], state = "active", label = f"({i},{j})")],
                     f"Computing cell ({i}, {j}): Item {i} (w={w_i}, v={v_i}), capacity {j}.",
                     current_cell = [i, j],
+                    pseudocode_lines = [4, 5],
                 )
 
                 exclude_val = table[i - 1][j]
@@ -131,6 +134,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
                         f"Include: dp[{i - 1}][{j - w_i}] + {v_i} = {include_val}.",
                         current_cell = [i, j],
                         dependency_cells = dep_cells,
+                        pseudocode_lines = [6, 7],
                     )
 
                     cell_states[i - 1][j] = "visited"
@@ -138,6 +142,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
 
                     new_val = max(exclude_val, include_val)
                     choice = f"include ({include_val})" if include_val > exclude_val else f"exclude ({exclude_val})"
+                    fill_pseudocode = [7]
 
                 else:
                     cell_states[i - 1][j] = "frontier"
@@ -152,12 +157,14 @@ class KnapsackAlgorithm(BaseAlgorithm):
                         f"dp[{i - 1}][{j}] = {exclude_val}.",
                         current_cell = [i, j],
                         dependency_cells = [[i - 1, j]],
+                        pseudocode_lines = [8, 9],
                     )
 
                     cell_states[i - 1][j] = "visited"
 
                     new_val = exclude_val
                     choice = "exclude (too heavy)"
+                    fill_pseudocode = [9]
 
                 table[i][j] = new_val
                 cell_states[i][j] = "visited"
@@ -168,6 +175,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = [i, j], state = "visited", label = str(new_val))],
                     f"dp[{i}][{j}] = {new_val} (chose {choice}).",
                     current_cell = [i, j],
+                    pseudocode_lines = fill_pseudocode,
                 )
 
             row_vals = ", ".join(str(table[i][j]) for j in range(cols))
@@ -175,6 +183,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
                 DPEvents.ROW_COMPLETE,
                 [HighlightedEntity(id = [i, 0], state = "visited", label = f"Row {i}")],
                 f"Row {i} complete (Item {i}: w={items[i - 1].weight}, v={items[i - 1].value}): [{row_vals}].",
+                pseudocode_lines = [4],
             )
 
         t_end = time.perf_counter()
@@ -191,6 +200,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = [i, j], state = "source", label = str(table[i][j]))],
             f"Begin traceback from cell ({i}, {j}) with optimal value = {table[n][W]}.",
             current_cell = [i, j],
+            pseudocode_lines = [10],
         )
 
         while i > 0 and j > 0:
@@ -208,6 +218,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
                     f"Move to ({i - 1}, {j - items[i - 1].weight}).",
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [10],
                 )
 
                 j -= items[i - 1].weight
@@ -222,6 +233,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
                     f"Item {i} was NOT selected. Move up to ({i - 1}, {j}).",
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [10],
                 )
 
                 i -= 1
@@ -242,6 +254,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
             f"Selected: {selected_desc if selected_desc else 'none'}. "
             f"{metrics['cells_computed']} cells computed in a {rows} x {cols} table.",
             traceback_path = list(tb_path),
+            pseudocode_lines = [10],
         )
 
         final_result = {

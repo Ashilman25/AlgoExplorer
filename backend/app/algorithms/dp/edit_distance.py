@@ -59,13 +59,14 @@ class EditDistanceAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, current_cell = None, dependency_cells = None, traceback_path = None):
+        def add_step(event_type, highlighted, explanation, current_cell = None, dependency_cells = None, traceback_path = None, pseudocode_lines: list[int] | None = None):
             s_payload = {
                 "table": [list(row) for row in table],
                 "cell_states": [list(row) for row in cell_states],
                 "current_cell": list(current_cell) if current_cell else None,
                 "dependency_cells": [list(c) for c in dependency_cells] if dependency_cells else [],
                 "traceback_path": [list(c) for c in traceback_path] if traceback_path else [],
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -98,6 +99,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
             f'Source = "{s1}" (length {m}), Target = "{s2}" (length {n}). '
             f"Column 0 filled with 0..{m} (cost of deleting all chars from source). "
             f"Row 0 filled with 0..{n} (cost of inserting all chars into empty string).",
+            pseudocode_lines = [0, 1, 2, 3],
         )
 
 
@@ -117,6 +119,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = [i, j], state = "active", label = f"({i},{j})")],
                     f"Computing cell ({i}, {j}): comparing source[{i - 1}] = '{char_a}' with target[{j - 1}] = '{char_b}'.",
                     current_cell = [i, j],
+                    pseudocode_lines = [4, 5],
                 )
 
                 diag_val = table[i - 1][j - 1]
@@ -140,6 +143,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                     f"up ({i - 1}, {j}) = {up_val}, left ({i}, {j - 1}) = {left_val}.",
                     current_cell = [i, j],
                     dependency_cells = [[i - 1, j - 1], [i - 1, j], [i, j - 1]],
+                    pseudocode_lines = [5],
                 )
 
                 cell_states[i - 1][j - 1] = "visited"
@@ -148,10 +152,11 @@ class EditDistanceAlgorithm(BaseAlgorithm):
 
 
                 if char_a == char_b:
-                    # MATCH 
+                    # MATCH
                     new_val = diag_val
                     metrics["matches"] += 1
                     operation = "match"
+                    fill_pseudocode = [6, 7]
                     fill_explanation = (
                         f"Match! '{char_a}' == '{char_b}'. "
                         f"table[{i}][{j}] = table[{i - 1}][{j - 1}] = {diag_val} (no cost)."
@@ -163,6 +168,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                     delete_cost = up_val + 1
                     insert_cost = left_val + 1
                     new_val = min(replace_cost, delete_cost, insert_cost)
+                    fill_pseudocode = [8, 9]
 
                     if new_val == replace_cost:
                         operation = "replace"
@@ -202,6 +208,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = [i, j], state = "visited", label = str(new_val))],
                     fill_explanation,
                     current_cell = [i, j],
+                    pseudocode_lines = fill_pseudocode,
                 )
 
 
@@ -212,6 +219,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                 DPEvents.ROW_COMPLETE,
                 [HighlightedEntity(id = [i, 0], state = "visited", label = f"Row {i}")],
                 f"Row {i} complete (source[{i - 1}] = '{s1[i - 1]}'): [{row_vals}].",
+                pseudocode_lines = [4],
             )
 
 
@@ -232,6 +240,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = [i, j], state = "source", label = str(table[i][j]))],
             f"Begin traceback from cell ({i}, {j}) with edit distance = {table[m][n]}.",
             current_cell = [i, j],
+            pseudocode_lines = [10],
         )
 
         while i > 0 or j > 0:
@@ -250,6 +259,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                     f"keep '{s1[i - 1]}'. Move diagonal to ({i - 1}, {j - 1}).",
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [10],
                 )
 
                 i -= 1
@@ -267,6 +277,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                     f"Move diagonal to ({i - 1}, {j - 1}).",
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [10],
                 )
 
                 i -= 1
@@ -283,6 +294,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                     f"Delete source[{i - 1}] = '{s1[i - 1]}'. Move up to ({i - 1}, {j}).",
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [10],
                 )
 
                 i -= 1
@@ -298,6 +310,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
                     f"Insert '{s2[j - 1]}'. Move left to ({i}, {j - 1}).",
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [10],
                 )
 
                 j -= 1
@@ -315,6 +328,7 @@ class EditDistanceAlgorithm(BaseAlgorithm):
             f"{table[m][n]} operation(s): {ops_summary}. "
             f"{metrics['cells_computed']} cells computed in a {rows} × {cols} table.",
             traceback_path = list(tb_path),
+            pseudocode_lines = [10],
         )
 
 

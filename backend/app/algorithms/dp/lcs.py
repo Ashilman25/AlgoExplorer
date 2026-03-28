@@ -55,13 +55,14 @@ class LCSAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, current_cell = None, dependency_cells = None, traceback_path = None):
+        def add_step(event_type, highlighted, explanation, current_cell = None, dependency_cells = None, traceback_path = None, pseudocode_lines: list[int] | None = None):
             s_payload = {
                 "table": [list(row) for row in table],
                 "cell_states": [list(row) for row in cell_states],
                 "current_cell": list(current_cell) if current_cell else None,
                 "dependency_cells": [list(c) for c in dependency_cells] if dependency_cells else [],
                 "traceback_path": [list(c) for c in traceback_path] if traceback_path else [],
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -93,6 +94,7 @@ class LCSAlgorithm(BaseAlgorithm):
             f"Initialize LCS table ({rows} × {cols}). "
             f'String A = "{s1}" (length {m}), String B = "{s2}" (length {n}). '
             f"Base row and column filled with 0 — an empty string has LCS length 0 with anything.",
+            pseudocode_lines = [0, 1, 2, 3],
         )
 
 
@@ -112,6 +114,7 @@ class LCSAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = [i, j], state = "active", label = f"({i},{j})")],
                     f"Computing cell ({i}, {j}): comparing A[{i - 1}] = '{char_a}' with B[{j - 1}] = '{char_b}'.",
                     current_cell = [i, j],
+                    pseudocode_lines = [4, 5],
                 )
 
 
@@ -132,6 +135,7 @@ class LCSAlgorithm(BaseAlgorithm):
                         f"Read diagonal cell ({i - 1}, {j - 1}) = {diag_val}.",
                         current_cell = [i, j],
                         dependency_cells = [[i - 1, j - 1]],
+                        pseudocode_lines = [6, 7],
                     )
 
                     cell_states[i - 1][j - 1] = "visited"
@@ -146,6 +150,7 @@ class LCSAlgorithm(BaseAlgorithm):
                         [HighlightedEntity(id = [i, j], state = "visited", label = str(new_val))],
                         f"Match! table[{i}][{j}] = table[{i - 1}][{j - 1}] + 1 = {diag_val} + 1 = {new_val}.",
                         current_cell = [i, j],
+                        pseudocode_lines = [7],
                     )
 
                 else:
@@ -168,6 +173,7 @@ class LCSAlgorithm(BaseAlgorithm):
                         f"Read up ({i - 1}, {j}) = {up_val} and left ({i}, {j - 1}) = {left_val}.",
                         current_cell = [i, j],
                         dependency_cells = [[i - 1, j], [i, j - 1]],
+                        pseudocode_lines = [8, 9],
                     )
 
                     cell_states[i - 1][j] = "visited"
@@ -189,6 +195,7 @@ class LCSAlgorithm(BaseAlgorithm):
                         [HighlightedEntity(id = [i, j], state = "visited", label = str(new_val))],
                         f"No match. table[{i}][{j}] = max(up={up_val}, left={left_val}) = {new_val} (chose {branch}).",
                         current_cell = [i, j],
+                        pseudocode_lines = [9],
                     )
 
 
@@ -199,6 +206,7 @@ class LCSAlgorithm(BaseAlgorithm):
                 DPEvents.ROW_COMPLETE,
                 [HighlightedEntity(id = [i, 0], state = "visited", label = f"Row {i}")],
                 f"Row {i} complete (A[{i - 1}] = '{s1[i - 1]}'): [{row_vals}].",
+                pseudocode_lines = [4],
             )
 
 
@@ -218,6 +226,7 @@ class LCSAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = [i, j], state = "source", label = str(table[i][j]))],
             f"Begin traceback from cell ({i}, {j}) with LCS length = {table[m][n]}.",
             current_cell = [i, j],
+            pseudocode_lines = [10],
         )
 
         while i > 0 and j > 0:
@@ -235,6 +244,7 @@ class LCSAlgorithm(BaseAlgorithm):
                     f"character '{s1[i - 1]}' is in the LCS. Move diagonal to ({i - 1}, {j - 1}).",
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [10],
                 )
 
                 i -= 1
@@ -252,6 +262,7 @@ class LCSAlgorithm(BaseAlgorithm):
                     f"Move up to ({i - 1}, {j}).",
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [10],
                 )
 
                 i -= 1
@@ -268,6 +279,7 @@ class LCSAlgorithm(BaseAlgorithm):
                     f"Move left to ({i}, {j - 1}).",
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
+                    pseudocode_lines = [10],
                 )
 
                 j -= 1
@@ -286,6 +298,7 @@ class LCSAlgorithm(BaseAlgorithm):
             f'"{lcs_string}" (length {len(lcs_string)}). '
             f"{metrics['cells_computed']} cells computed in a {rows} × {cols} table.",
             traceback_path = list(tb_path),
+            pseudocode_lines = [10],
         )
 
 

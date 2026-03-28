@@ -73,13 +73,14 @@ class FibonacciAlgorithm(BaseAlgorithm):
             "runtime_ms": 0,
         }
 
-        def add_step(event_type, highlighted, explanation, current_index = None, dependency_indices = None):
+        def add_step(event_type, highlighted, explanation, current_index = None, dependency_indices = None, pseudocode_lines: list[int] | None = None):
             s_payload = {
                 "array": list(array),
                 "cell_states": list(cell_states),
                 "current_index": current_index,
                 "dependency_indices": list(dependency_indices) if dependency_indices else [],
                 "call_tree": None,
+                "pseudocode_lines": pseudocode_lines or [],
             }
             step = TimelineStep(
                 step_index = len(steps),
@@ -109,6 +110,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
             ),
             f"Initialize Fibonacci tabulation (n={n}). "
             f"Base cases: F(1) = 1" + (", F(2) = 1." if n >= 2 else "."),
+            pseudocode_lines = [0, 2, 3, 4],
         )
 
         if n <= 2:
@@ -118,6 +120,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 DPEvents.COMPLETE,
                 [HighlightedEntity(id = n, state = "success", label = f"F({n})={array[n]}")],
                 f"Fibonacci({n}) = {array[n]} (base case).",
+                pseudocode_lines = [1],
             )
             final_result = {
                 "fib_result": array[n],
@@ -147,6 +150,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = i, state = "active", label = f"F({i})")],
                 f"Computing F({i}) = F({i - 1}) + F({i - 2}).",
                 current_index = i,
+                pseudocode_lines = [5],
             )
 
             dep_indices = [i - 1, i - 2]
@@ -163,6 +167,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 f"F({i}) reads F({i - 1}) = {array[i - 1]} and F({i - 2}) = {array[i - 2]}.",
                 current_index = i,
                 dependency_indices = dep_indices,
+                pseudocode_lines = [6],
             )
 
             for d in dep_indices:
@@ -176,6 +181,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = i, state = "visited", label = f"F({i})={array[i]}")],
                 f"F({i}) = {array[i - 1]} + {array[i - 2]} = {array[i]}.",
                 current_index = i,
+                pseudocode_lines = [6],
             )
 
         t_end = time.perf_counter()
@@ -187,6 +193,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = n, state = "success", label = f"F({n})={array[n]}")],
             f"Fibonacci tabulation complete! F({n}) = {array[n]}. "
             f"{metrics['total_calls']} cells computed after base cases.",
+            pseudocode_lines = [7],
         )
 
         final_result = {
@@ -237,7 +244,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
             _node_id_counter[0] += 1
             return _node_id_counter[0]
 
-        def add_step(event_type, highlighted, explanation, current_index = None, dependency_indices = None):
+        def add_step(event_type, highlighted, explanation, current_index = None, dependency_indices = None, pseudocode_lines: list[int] | None = None):
             s_payload = {
                 "array": list(array),
                 "cell_states": list(cell_states),
@@ -246,6 +253,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 "call_tree": {
                     "nodes": [dict(nd) for nd in call_tree_nodes],
                 },
+                "pseudocode_lines": pseudocode_lines or [],
             }
             step = TimelineStep(
                 step_index = len(steps),
@@ -263,6 +271,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
             [HighlightedEntity(id = n, state = "active", label = f"F({n})")],
             f"Initialize Fibonacci memoized (n={n}). "
             f"Top-down recursion with memo table. Each sub-problem computed at most once.",
+            pseudocode_lines = [0],
         )
 
         t_start = time.perf_counter()
@@ -289,6 +298,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = k, state = "active", label = f"F({k})")],
                 f"Call F({k}) at depth {depth}.",
                 current_index = k,
+                pseudocode_lines = [5],
             )
 
             if k in memo:
@@ -306,6 +316,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = k, state = "source", label = f"F({k})={result} (memo)")],
                     f"F({k}) = {result} (memo hit — already computed).",
                     current_index = k,
+                    pseudocode_lines = [6],
                 )
                 return result
 
@@ -325,6 +336,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = k, state = "visited", label = f"F({k})={result} (base)")],
                     f"F({k}) = {result} (base case).",
                     current_index = k,
+                    pseudocode_lines = [1],
                 )
                 return result
 
@@ -336,6 +348,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 f"F({k}) will recurse into F({k - 1}) and F({k - 2}).",
                 current_index = k,
                 dependency_indices = dep_indices,
+                pseudocode_lines = [6],
             )
 
             left = fib_memo(k - 1, node_id, depth + 1)
@@ -356,6 +369,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = k, state = "visited", label = f"F({k})={result}")],
                 f"F({k}) = F({k - 1}) + F({k - 2}) = {left} + {right} = {result}. Cached in memo.",
                 current_index = k,
+                pseudocode_lines = [6],
             )
             return result
 
@@ -371,6 +385,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
             f"Fibonacci memoized complete! F({n}) = {result}. "
             f"{metrics['total_calls']} calls, {metrics['redundant_calls']} redundant (memo prevented recomputation), "
             f"max depth {metrics['max_depth']}.",
+            pseudocode_lines = [7],
         )
 
         final_result = {
@@ -415,7 +430,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
             _node_id_counter[0] += 1
             return _node_id_counter[0]
 
-        def add_step(event_type, highlighted, explanation):
+        def add_step(event_type, highlighted, explanation, pseudocode_lines: list[int] | None = None):
             s_payload = {
                 "array": None,
                 "cell_states": None,
@@ -424,6 +439,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 "call_tree": {
                     "nodes": [dict(nd) for nd in call_tree_nodes],
                 },
+                "pseudocode_lines": pseudocode_lines or [],
             }
             step = TimelineStep(
                 step_index = len(steps),
@@ -442,6 +458,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
             f"Initialize Fibonacci naive recursive (n={n}). "
             f"No memoization — every sub-problem recomputed from scratch. "
             f"Exponential time complexity O(2^n).",
+            pseudocode_lines = [0],
         )
 
         t_start = time.perf_counter()
@@ -473,6 +490,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                     f" (REDUNDANT — F({k}) already computed {_computed[k]} time(s))."
                     if k in _computed else "."
                 ),
+                pseudocode_lines = [5],
             )
 
             if k <= 2:
@@ -489,6 +507,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                     DPEvents.FILL_CELL,
                     [HighlightedEntity(id = node_id, state = "visited", label = f"F({k})={result}")],
                     f"F({k}) = {result} (base case).",
+                    pseudocode_lines = [1],
                 )
                 return result
 
@@ -507,6 +526,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 DPEvents.FILL_CELL,
                 [HighlightedEntity(id = node_id, state = "visited", label = f"F({k})={result}")],
                 f"F({k}) = F({k - 1}) + F({k - 2}) = {left} + {right} = {result}.",
+                pseudocode_lines = [6],
             )
             return result
 
@@ -522,6 +542,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
             f"Fibonacci naive recursive complete! F({n}) = {result}. "
             f"{metrics['total_calls']} total calls, {metrics['redundant_calls']} redundant. "
             f"Max recursion depth: {metrics['max_depth']}.",
+            pseudocode_lines = [7],
         )
 
         final_result = {
