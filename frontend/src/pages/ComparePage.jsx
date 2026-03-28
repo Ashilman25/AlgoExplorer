@@ -18,9 +18,11 @@ function gridClass(count) {
 
 export default function ComparePage() {
   const slots        = useComparisonStore((s) => s.slots)
-  const moduleType   = useComparisonStore((s) => s.moduleType)
-  const graphSubCategory = useComparisonStore((s) => s.graphSubCategory)
-  const inputPayload = useComparisonStore((s) => s.inputPayload)
+  const moduleType         = useComparisonStore((s) => s.moduleType)
+  const graphSubCategory   = useComparisonStore((s) => s.graphSubCategory)
+  const sortingSubCategory = useComparisonStore((s) => s.sortingSubCategory)
+  const dpSubCategory      = useComparisonStore((s) => s.dpSubCategory)
+  const inputPayload       = useComparisonStore((s) => s.inputPayload)
   const stepIndex    = useComparisonStore((s) => s.stepIndex)
   const maxSteps     = useComparisonStore((s) => s.maxSteps)
   const deltaMetrics = useComparisonStore((s) => s.deltaMetrics)
@@ -34,9 +36,9 @@ export default function ComparePage() {
     const readySlots = slots.filter((s) => s.status === 'ready')
     if (readySlots.length < 2 || !moduleType) return
 
-    const updated = computeDeltaMetrics(readySlots, stepIndex, moduleType, graphSubCategory)
+    const updated = computeDeltaMetrics(readySlots, stepIndex, moduleType, graphSubCategory, sortingSubCategory, dpSubCategory)
     useComparisonStore.setState({ deltaMetrics: updated })
-  }, [stepIndex, slots, moduleType, graphSubCategory])
+  }, [stepIndex, slots, moduleType, graphSubCategory, sortingSubCategory, dpSubCategory])
 
   const handleRun = useCallback(async () => {
     setIsRunning(true)

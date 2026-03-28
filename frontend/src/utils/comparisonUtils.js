@@ -21,25 +21,40 @@ const SORTING_SUBCATEGORY_METRICS = {
   ],
 }
 
-const DOMAIN_METRICS = {
-  dp: [
+const DP_SUBCATEGORY_METRICS = {
+  string_dp: [
     { key: 'cells_computed',      label: 'Cells Computed',      polarity: 'lower' },
-    { key: 'subproblems_avoided', label: 'Subproblems Avoided', polarity: 'higher' },
+    { key: 'subproblems_reused',  label: 'Subproblems Reused',  polarity: 'higher' },
+  ],
+  knapsack: [
+    { key: 'cells_computed',      label: 'Cells Computed',      polarity: 'lower' },
+    { key: 'subproblems_reused',  label: 'Subproblems Reused',  polarity: 'higher' },
+  ],
+  coin_change: [
+    { key: 'cells_computed',      label: 'Cells Computed',      polarity: 'lower' },
+    { key: 'subproblems_reused',  label: 'Subproblems Reused',  polarity: 'higher' },
+  ],
+  fibonacci: [
+    { key: 'total_calls',      label: 'Total Calls',      polarity: 'lower' },
+    { key: 'redundant_calls',  label: 'Redundant Calls',  polarity: 'lower' },
   ],
 }
 
-export function getDomainMetrics(moduleType, graphSubCategory, sortingSubCategory) {
+export function getDomainMetrics(moduleType, graphSubCategory, sortingSubCategory, dpSubCategory) {
   if (moduleType === 'graph') {
     return GRAPH_SUBCATEGORY_METRICS[graphSubCategory] ?? GRAPH_SUBCATEGORY_METRICS.pathfinding
   }
   if (moduleType === 'sorting') {
     return SORTING_SUBCATEGORY_METRICS[sortingSubCategory] ?? SORTING_SUBCATEGORY_METRICS.sorting
   }
-  return DOMAIN_METRICS[moduleType] ?? []
+  if (moduleType === 'dp') {
+    return DP_SUBCATEGORY_METRICS[dpSubCategory] ?? DP_SUBCATEGORY_METRICS.string_dp
+  }
+  return []
 }
 
-export function computeDeltaMetrics(slots, stepIndex, moduleType, graphSubCategory, sortingSubCategory) {
-  const metricDefs = getDomainMetrics(moduleType, graphSubCategory, sortingSubCategory)
+export function computeDeltaMetrics(slots, stepIndex, moduleType, graphSubCategory, sortingSubCategory, dpSubCategory) {
+  const metricDefs = getDomainMetrics(moduleType, graphSubCategory, sortingSubCategory, dpSubCategory)
   if (metricDefs.length === 0) return { metrics: [] }
 
   const readySlots = slots.filter((s) => s.status === 'ready')
@@ -102,6 +117,9 @@ const ALGO_LABELS = {
   linear_search: 'Linear Search',
   lcs: 'LCS',
   edit_distance: 'Edit Distance',
+  knapsack_01: '0/1 Knapsack',
+  coin_change: 'Coin Change',
+  fibonacci: 'Fibonacci',
 }
 
 export function fmtAlgorithmName(key) {

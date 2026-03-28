@@ -26,9 +26,77 @@ const GLOW = {
 
 const HEADER_CELL = 'flex items-center justify-center bg-slate-800/80 border border-white/[0.06] font-mono text-xs font-semibold text-slate-400 select-none'
 
-export default function DpRenderer({ currentStep, inputPayload }) {
-  const { string1 = '', string2 = '' } = inputPayload ?? {}
+// ── Layout Detection ──────────────────────────────────────────────────
 
+function detectLayout(currentStep, inputPayload) {
+  const sp = currentStep?.state_payload
+  if (!sp) return 'none'
+
+  if (sp.table && Array.isArray(sp.table)) {
+    if (inputPayload?.items) return 'table_knapsack'
+    return 'table_string'
+  }
+
+  if (sp.array && Array.isArray(sp.array)) {
+    return 'strip'
+  }
+
+  return 'none'
+}
+
+// ── Main Component ────────────────────────────────────────────────────
+
+export default function DpRenderer({ currentStep, inputPayload }) {
+  const layout = detectLayout(currentStep, inputPayload)
+
+  if (layout === 'table_string')   return <TableStringLayout   currentStep = {currentStep} inputPayload = {inputPayload} />
+  if (layout === 'table_knapsack') return <TableKnapsackLayout currentStep = {currentStep} inputPayload = {inputPayload} />
+  if (layout === 'strip')          return <StripLayout          currentStep = {currentStep} inputPayload = {inputPayload} />
+
+  return null
+}
+
+// ── 2D String Table (LCS, Edit Distance) ──────────────────────────────
+
+function TableStringLayout({ currentStep, inputPayload }) {
+  const { string1 = '', string2 = '' } = inputPayload ?? {}
+  const rowHeaders = ['\u03b5', ...string1.split('')]
+  const colHeaders = ['\u03b5', ...string2.split('')]
+  const cornerLabel = <>{`A\u2193 B\u2192`}</>
+
+  return (
+    <TableGrid
+      currentStep = {currentStep}
+      rowHeaders = {rowHeaders}
+      colHeaders = {colHeaders}
+      cornerLabel = {cornerLabel}
+    />
+  )
+}
+
+// ── 2D Knapsack Table ─────────────────────────────────────────────────
+
+function TableKnapsackLayout({ currentStep, inputPayload }) {
+  const items    = inputPayload?.items ?? []
+  const capacity = inputPayload?.capacity ?? 0
+
+  const rowHeaders = ['0', ...items.map((_, i) => `Item ${i + 1}`)]
+  const colHeaders = Array.from({ length: capacity + 1 }, (_, j) => String(j))
+  const cornerLabel = <>{`Item\u2193 Cap\u2192`}</>
+
+  return (
+    <TableGrid
+      currentStep = {currentStep}
+      rowHeaders = {rowHeaders}
+      colHeaders = {colHeaders}
+      cornerLabel = {cornerLabel}
+    />
+  )
+}
+
+// ── Shared 2D Table Grid ──────────────────────────────────────────────
+
+function TableGrid({ currentStep, rowHeaders, colHeaders, cornerLabel }) {
   const activeCellRef = useRef(null)
 
   const table         = currentStep?.state_payload?.table ?? null
@@ -54,9 +122,6 @@ export default function DpRenderer({ currentStep, inputPayload }) {
   const rows = table.length
   const cols = table[0]?.length ?? 0
 
-  const rowHeaders = ['\u03b5', ...string1.split('')]
-  const colHeaders = ['\u03b5', ...string2.split('')]
-
   const gridWidth  = CELL_SIZE * (cols + 1)
   const gridHeight = CELL_SIZE * (rows + 1)
 
@@ -72,7 +137,7 @@ export default function DpRenderer({ currentStep, inputPayload }) {
         >
           {/* corner */}
           <div className = {HEADER_CELL} style = {{ fontSize: 9, color: 'var(--color-slate-600, #475569)' }}>
-            A{'\u2193'} B{'\u2192'}
+            {cornerLabel}
           </div>
 
           {/* column headers */}
@@ -135,6 +200,85 @@ export default function DpRenderer({ currentStep, inputPayload }) {
               />
             ))}
           </svg>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── 1D Strip (Coin Change, Fibonacci tabulation) ──────────────────────
+
+function StripLayout({ currentStep }) {
+  const activeCellRef = useRef(null)
+
+  const array       = currentStep?.state_payload?.array ?? []
+  const cellStates  = currentStep?.state_payload?.cell_states ?? []
+  const currentIdx  = currentStep?.state_payload?.current_index ?? null
+  const coinsUsed   = currentStep?.state_payload?.coins_used ?? null
+
+  useEffect(() => {
+    activeCellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+  }, [currentIdx])
+
+  if (array.length === 0) {
+    return (
+      <div className = "w-full h-full flex items-center justify-center">
+        <p className = "text-sm text-slate-500">No array data yet.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className = "w-full h-full overflow-x-auto min-h-0 p-2">
+      <div className = "inline-flex flex-col gap-0.5">
+        {/* index labels */}
+        <div className = "flex">
+          {array.map((_, i) => (
+            <div
+              key = {`idx-${i}`}
+              className = "font-mono text-[9px] text-slate-600 text-center select-none"
+              style = {{ width: CELL_SIZE }}
+            >
+              {i}
+            </div>
+          ))}
+        </div>
+
+        {/* cells */}
+        <div className = "flex">
+          {array.map((val, i) => {
+            const state    = cellStates[i] ?? 'default'
+            const isActive = state === 'active'
+            const isDep    = state === 'frontier'
+            const cls      = CELL_STATE_CLASSES[state] ?? CELL_STATE_CLASSES.default
+            const glow     = isActive ? GLOW.active : isDep ? GLOW.frontier : undefined
+
+            return (
+              <div
+                key = {`s-${i}`}
+                ref = {isActive ? activeCellRef : undefined}
+                className = {cls}
+                style = {{ width: CELL_SIZE, height: CELL_SIZE, ...(glow ? { boxShadow: glow } : {}) }}
+              >
+                {val != null ? val : ''}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* coin-used labels (Coin Change only) */}
+        {coinsUsed && (
+          <div className = "flex">
+            {coinsUsed.map((coin, i) => (
+              <div
+                key = {`cu-${i}`}
+                className = "font-mono text-[9px] text-state-source/70 text-center select-none"
+                style = {{ width: CELL_SIZE }}
+              >
+                {coin != null ? `+${coin}` : ''}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
