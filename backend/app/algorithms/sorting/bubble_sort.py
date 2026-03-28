@@ -47,7 +47,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, sorted_boundary = None):
+        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, sorted_boundary = None, pseudocode_lines: list[int] | None = None):
             if benchmark_mode:
                 return
 
@@ -58,6 +58,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                 "swapping": list(swapping) if swapping else [],
                 "pivot_index": None,
                 "sorted_boundary": sorted_boundary,
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -79,7 +80,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
             f"Initialize Bubble Sort on {n} elements. "
             f"Repeatedly compare adjacent pairs, bubbling the largest to the end."
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message)
+        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0, 1])
 
 
         # run the sort
@@ -106,6 +107,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                         ],
                         f"Compare arr[{j}] = {arr[j]} > arr[{j + 1}] = {arr[j + 1]}. Swap needed.",
                         comparing = [j, j + 1],
+                        pseudocode_lines = [4, 5],
                     )
 
                     # SWAP
@@ -124,6 +126,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                         ],
                         f"Swap arr[{j}] ↔ arr[{j + 1}].",
                         swapping = [j, j + 1],
+                        pseudocode_lines = [6, 7],
                     )
 
                     element_states[j] = "active"
@@ -139,6 +142,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                         ],
                         f"Compare arr[{j}] = {arr[j]} ≤ arr[{j + 1}] = {arr[j + 1]}. No swap needed.",
                         comparing = [j, j + 1],
+                        pseudocode_lines = [4, 5],
                     )
 
                     element_states[j] = "active"
@@ -152,6 +156,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = i, state = "success", label = str(arr[i]))],
                 f"Pass {metrics['passes']} complete. arr[{i}] = {arr[i]} is in its sorted position.",
                 sorted_boundary = i,
+                pseudocode_lines = [2],
             )
 
             # early termination: if no swaps occurred, the array is already sorted
@@ -164,6 +169,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = list(range(0, i)), state = "success")],
                     f"No swaps in pass {metrics['passes']}. Array is sorted early — remaining elements are in place.",
                     sorted_boundary = 0,
+                    pseudocode_lines = [8],
                 )
                 break
 
@@ -185,6 +191,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
             f"Bubble Sort complete! Sorted: [{sorted_vals}]. "
             f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps, "
             f"{metrics['passes']} passes.",
+            pseudocode_lines = [9],
         )
 
 

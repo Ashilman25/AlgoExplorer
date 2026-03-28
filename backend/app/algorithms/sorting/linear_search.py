@@ -46,7 +46,7 @@ class LinearSearchAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, search_low = None, search_mid = None, search_high = None, found_index = None):
+        def add_step(event_type, highlighted, explanation, search_low = None, search_mid = None, search_high = None, found_index = None, pseudocode_lines: list[int] | None = None):
             if benchmark_mode:
                 return
 
@@ -62,6 +62,7 @@ class LinearSearchAlgorithm(BaseAlgorithm):
                 "search_high": search_high,
                 "search_target": target,
                 "found_index": found_index,
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -83,7 +84,7 @@ class LinearSearchAlgorithm(BaseAlgorithm):
             f"Initialize Linear Search on {n} elements. "
             f"Searching for target = {target}."
         )
-        add_step(SearchingEvents.INITIALIZE, highlighted_entities, message)
+        add_step(SearchingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0])
 
 
         # run the search
@@ -99,6 +100,7 @@ class LinearSearchAlgorithm(BaseAlgorithm):
                 SearchingEvents.SCAN,
                 [HighlightedEntity(id = i, state = "active", label = str(arr[i]))],
                 f"Check arr[{i}] = {arr[i]}. Target = {target}.",
+                pseudocode_lines = [1, 2],
             )
 
             if arr[i] == target:
@@ -110,6 +112,7 @@ class LinearSearchAlgorithm(BaseAlgorithm):
                     [HighlightedEntity(id = i, state = "success", label = str(arr[i]))],
                     f"Found target {target} at index {i}!",
                     found_index = i,
+                    pseudocode_lines = [2, 3],
                 )
                 break
             else:
@@ -123,6 +126,7 @@ class LinearSearchAlgorithm(BaseAlgorithm):
                 SearchingEvents.NOT_FOUND,
                 [HighlightedEntity(id = list(range(n)), state = "visited")],
                 f"Target {target} not found in the array after {metrics['comparisons']} comparisons.",
+                pseudocode_lines = [4],
             )
 
 
@@ -134,6 +138,7 @@ class LinearSearchAlgorithm(BaseAlgorithm):
             + (f"Target {target} found at index {found_idx}." if found_idx is not None else f"Target {target} not found.")
             + f" {metrics['comparisons']} comparisons.",
             found_index = found_idx,
+            pseudocode_lines = [0],
         )
 
 

@@ -47,7 +47,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
         }
 
 
-        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, sorted_boundary = None):
+        def add_step(event_type, highlighted, explanation, comparing = None, swapping = None, sorted_boundary = None, pseudocode_lines: list[int] | None = None):
             if benchmark_mode:
                 return
 
@@ -58,6 +58,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
                 "swapping": list(swapping) if swapping else [],
                 "pivot_index": None,
                 "sorted_boundary": sorted_boundary,
+                "pseudocode_lines": pseudocode_lines or [],
             }
 
             step = TimelineStep(
@@ -106,6 +107,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
                     f"arr[{root}] = {arr[root]} < arr[{largest}] = {arr[largest]}. Swap to restore heap property.",
                     comparing = [root, largest],
                     sorted_boundary = sorted_boundary,
+                    pseudocode_lines = [6, 7, 8, 9, 10, 11, 12],
                 )
 
                 # SWAP
@@ -124,6 +126,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
                     f"Swap arr[{root}] ↔ arr[{largest}].",
                     swapping = [root, largest],
                     sorted_boundary = sorted_boundary,
+                    pseudocode_lines = [13],
                 )
 
                 # reset states respecting sorted boundary
@@ -140,7 +143,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
             f"Initialize Heap Sort on {n} elements. "
             f"Phase 1: build a max-heap. Phase 2: repeatedly extract the max."
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message)
+        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0, 1])
 
 
         t_start = time.perf_counter()
@@ -167,6 +170,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
                 f"Extract max {arr[i]}: swap arr[0] ↔ arr[{i}].",
                 swapping = [0, i],
                 sorted_boundary = i,
+                pseudocode_lines = [2, 3],
             )
 
             # mark extracted element as sorted
@@ -178,6 +182,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = i, state = "success", label = str(arr[i]))],
                 f"arr[{i}] = {arr[i]} is now in its final sorted position.",
                 sorted_boundary = i,
+                pseudocode_lines = [4],
             )
 
             # restore heap property on reduced heap
@@ -201,6 +206,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
             f"Heap Sort complete! Sorted: [{sorted_vals}]. "
             f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps, "
             f"{metrics['heapify_ops']} heapify operations.",
+            pseudocode_lines = [0],
         )
 
 
