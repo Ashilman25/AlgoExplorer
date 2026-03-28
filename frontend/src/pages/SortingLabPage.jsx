@@ -812,6 +812,8 @@ export default function SortingLabPage() {
       <GuestPromptBanner />
 
       <SimulationLayout
+        moduleKey = "sorting"
+        algorithmKey = {algorithm}
         configPanel = {
           <SortingConfig
             subcategory = {subcategory}
