@@ -243,7 +243,7 @@ describe('module setup forms', () => {
       />,
     )
 
-    expect(screen.getByText('|A| = 6, |B| = 6 · table 7 × 7 (49 cells)')).toBeInTheDocument()
+    expect(screen.getByText('|A| = 6, |B| = 6 · table 7 × 7')).toBeInTheDocument()
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Algorithm' }), {
       target: { value: 'edit_distance' },

@@ -2,7 +2,7 @@ import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Grid3x3, Play, RotateCcw, Save } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast, ErrorAlert } from '../components/ui'
-import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
+import { SimulationLayout, ConfigPanel, ConfigSection, DpStripCanvas, FibCallTree } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { useReopenRun } from '../hooks/useReopenRun'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
@@ -18,6 +18,9 @@ import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 const DP_ALGOS = [
   {value: 'lcs', label: 'LCS — Longest Common Subsequence'},
   {value: 'edit_distance', label: 'Edit Distance (Levenshtein)'},
+  {value: 'knapsack_01', label: '0/1 Knapsack'},
+  {value: 'coin_change', label: 'Coin Change (Min Coins)'},
+  {value: 'fibonacci', label: 'Fibonacci Variants'},
 ]
 
 const EXPLANATION_LEVELS = [
@@ -46,6 +49,59 @@ const PRESET_DATA = {
   insert_delete: { string1: 'abcde',     string2: 'aebdc' },
   medium:        { string1: 'ALGORITHM', string2: 'ALTRUISTIC' },
 }
+
+const KNAPSACK_PRESETS = [
+  { value: 'custom',          label: 'Custom' },
+  { value: 'textbook',        label: 'Textbook classic' },
+  { value: 'tight_fit',       label: 'Tight fit' },
+  { value: 'single_item',     label: 'Single item' },
+  { value: 'all_fit',         label: 'All fit' },
+]
+
+const KNAPSACK_PRESET_DATA = {
+  textbook:    { capacity: 10, items: [{weight: 2, value: 3}, {weight: 3, value: 4}, {weight: 4, value: 5}, {weight: 5, value: 6}] },
+  tight_fit:   { capacity: 7,  items: [{weight: 3, value: 4}, {weight: 4, value: 5}, {weight: 5, value: 7}] },
+  single_item: { capacity: 5,  items: [{weight: 3, value: 10}] },
+  all_fit:     { capacity: 50, items: [{weight: 2, value: 3}, {weight: 3, value: 4}, {weight: 5, value: 8}] },
+}
+
+const COIN_PRESETS = [
+  { value: 'custom',      label: 'Custom' },
+  { value: 'us_coins',    label: 'US coins' },
+  { value: 'greedy_fails', label: 'Greedy fails' },
+  { value: 'impossible',  label: 'Impossible' },
+  { value: 'powers_of_2', label: 'Powers of 2' },
+]
+
+const COIN_PRESET_DATA = {
+  us_coins:    { coins: [1, 5, 10, 25], target: 41 },
+  greedy_fails: { coins: [1, 3, 4], target: 6 },
+  impossible:  { coins: [3, 7], target: 5 },
+  powers_of_2: { coins: [1, 2, 4, 8, 16], target: 31 },
+}
+
+const FIB_PRESETS = [
+  { value: 'custom',   label: 'Custom' },
+  { value: 'small',    label: 'Small (n=8)' },
+  { value: 'medium',   label: 'Medium (n=15)' },
+  { value: 'large',    label: 'Large (n=30)' },
+  { value: 'max_tab',  label: 'Max tabulation (n=50)' },
+]
+
+const FIB_PRESET_DATA = {
+  small:   { n: 8 },
+  medium:  { n: 15 },
+  large:   { n: 30 },
+  max_tab: { n: 50 },
+}
+
+const FIB_MODES = [
+  { value: 'tabulation',      label: 'Tabulation' },
+  { value: 'memoized',        label: 'Memoized' },
+  { value: 'naive_recursive', label: 'Naive Recursive' },
+]
+
+const FIB_MODE_CAPS = { tabulation: 50, memoized: 40, naive_recursive: 15 }
 
 const MAX_STRING_LENGTH = 50
 const DP_TABLE_MAX_CELLS = 2500
@@ -92,20 +148,65 @@ export function validateDpStrings(s1, s2) {
   return null
 }
 
+export function validateKnapsack(capacity, items) {
+  if (items.length === 0) return 'Add at least one item'
+  for (let i = 0; i < items.length; i++) {
+    if (!items[i].weight || items[i].weight < 1) return `Item ${i + 1}: weight must be >= 1`
+    if (!items[i].value || items[i].value < 1) return `Item ${i + 1}: value must be >= 1`
+  }
+  const cells = (items.length + 1) * (capacity + 1)
+  if (cells > DP_TABLE_MAX_CELLS) {
+    return `Table size (${items.length + 1} x ${capacity + 1} = ${cells} cells) exceeds limit of ${DP_TABLE_MAX_CELLS}`
+  }
+  return null
+}
+
+export function validateCoinChange(coins, target) {
+  if (coins.length === 0) return 'Add at least one coin'
+  for (const c of coins) {
+    if (c < 1) return `Coin value ${c} must be >= 1`
+  }
+  if (new Set(coins).size !== coins.length) return 'Coin values must be unique'
+  if (target + 1 > DP_TABLE_MAX_CELLS) {
+    return `Array size (${target + 1}) exceeds limit of ${DP_TABLE_MAX_CELLS}`
+  }
+  return null
+}
+
+export function validateFibonacci(n, mode) {
+  const cap = FIB_MODE_CAPS[mode] || 50
+  if (n < 1) return 'n must be >= 1'
+  if (n > cap) return `n=${n} exceeds maximum of ${cap} for ${mode} mode`
+  return null
+}
+
 
 // ─── Config Panel ───────────────────────────────────────
 
 export function DpConfig({
   algorithm, onAlgorithmChange,
+  // string-pair (LCS / Edit Distance)
   preset, onPresetChange,
   string1, onString1Change,
   string2, onString2Change,
+  // knapsack
+  knapsackPreset, onKnapsackPresetChange,
+  capacity, onCapacityChange,
+  items, onItemAdd, onItemRemove, onItemChange,
+  // coin change
+  coinPreset, onCoinPresetChange,
+  coins, coinsText, onCoinsTextChange,
+  coinTarget, onCoinTargetChange,
+  // fibonacci
+  fibPreset, onFibPresetChange,
+  fibN, onFibNChange,
+  fibMode, onFibModeChange,
+  // shared
   explanationLevel, onExplanationLevelChange,
   inputError,
   onRun, onReset, onSave,
   isRunning, error,
 }) {
-  const tableCells = (string1.length + 1) * (string2.length + 1)
 
   return (
     <ConfigPanel title = "DP Lab">
@@ -115,42 +216,120 @@ export function DpConfig({
       </ConfigSection>
 
       <ConfigSection title = "Preset">
-        <Select aria-label = "Preset" options = {DP_PRESETS} value = {preset} onChange = {onPresetChange} />
+        {(algorithm === 'lcs' || algorithm === 'edit_distance') && (
+          <Select aria-label = "Preset" options = {DP_PRESETS} value = {preset} onChange = {onPresetChange} />
+        )}
+        {algorithm === 'knapsack_01' && (
+          <Select aria-label = "Preset" options = {KNAPSACK_PRESETS} value = {knapsackPreset} onChange = {onKnapsackPresetChange} />
+        )}
+        {algorithm === 'coin_change' && (
+          <Select aria-label = "Preset" options = {COIN_PRESETS} value = {coinPreset} onChange = {onCoinPresetChange} />
+        )}
+        {algorithm === 'fibonacci' && (
+          <Select aria-label = "Preset" options = {FIB_PRESETS} value = {fibPreset} onChange = {onFibPresetChange} />
+        )}
       </ConfigSection>
 
-      <ConfigSection title = "Input Strings">
-        <div className = "space-y-1.5">
-          <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">
-            String A
-          </label>
+      {/* Input — string pair (LCS / Edit Distance) */}
+      {(algorithm === 'lcs' || algorithm === 'edit_distance') && (
+        <ConfigSection title = "Input Strings">
+          <div className = "space-y-1.5">
+            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">String A</label>
+            <input type = "text" aria-label = "String A" value = {string1} onChange = {onString1Change}
+              placeholder = "e.g. ABCDEF" maxLength = {MAX_STRING_LENGTH}
+              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+            />
+          </div>
+          <div className = "space-y-1.5">
+            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">String B</label>
+            <input type = "text" aria-label = "String B" value = {string2} onChange = {onString2Change}
+              placeholder = "e.g. ACBDFE" maxLength = {MAX_STRING_LENGTH}
+              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+            />
+          </div>
+        </ConfigSection>
+      )}
 
-          <input
-            type = "text"
-            aria-label = "String A"
-            value = {string1}
-            onChange = {onString1Change}
-            placeholder = "e.g. ABCDEF"
-            maxLength = {MAX_STRING_LENGTH}
-            className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
-          />
-        </div>
+      {/* Input — knapsack */}
+      {algorithm === 'knapsack_01' && (
+        <ConfigSection title = "Knapsack Input">
+          <div className = "space-y-1.5">
+            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Capacity</label>
+            <input type = "number" aria-label = "Capacity" value = {capacity} min = {1} max = {1000}
+              onChange = {onCapacityChange}
+              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+            />
+          </div>
+          <div className = "space-y-2">
+            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Items</label>
+            {items.map((item, i) => (
+              <div key = {i} className = "flex gap-2 items-center">
+                <input type = "number" aria-label = {`Item ${i + 1} weight`} value = {item.weight} min = {1}
+                  onChange = {(e) => onItemChange(i, 'weight', Number(e.target.value))}
+                  className = "w-16 bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-lg px-2 py-1.5 text-slate-200 text-xs font-mono outline-none"
+                  placeholder = "w"
+                />
+                <input type = "number" aria-label = {`Item ${i + 1} value`} value = {item.value} min = {1}
+                  onChange = {(e) => onItemChange(i, 'value', Number(e.target.value))}
+                  className = "w-16 bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-lg px-2 py-1.5 text-slate-200 text-xs font-mono outline-none"
+                  placeholder = "v"
+                />
+                <span className = "text-[10px] text-slate-600 font-mono">#{i + 1}</span>
+                {items.length > 1 && (
+                  <button onClick = {() => onItemRemove(i)}
+                    className = "text-rose-400/60 hover:text-rose-400 text-xs px-1"
+                  >&times;</button>
+                )}
+              </div>
+            ))}
+            <button onClick = {onItemAdd}
+              className = "text-xs text-brand-500 hover:text-brand-400 font-medium"
+            >+ Add item</button>
+          </div>
+        </ConfigSection>
+      )}
 
-        <div className = "space-y-1.5">
-          <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">
-            String B
-          </label>
+      {/* Input — coin change */}
+      {algorithm === 'coin_change' && (
+        <ConfigSection title = "Coin Change Input">
+          <div className = "space-y-1.5">
+            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Coins (comma-separated)</label>
+            <input type = "text" aria-label = "Coins" value = {coinsText} onChange = {onCoinsTextChange}
+              placeholder = "e.g. 1, 5, 10, 25"
+              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+            />
+          </div>
+          <div className = "space-y-1.5">
+            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Target Amount</label>
+            <input type = "number" aria-label = "Target" value = {coinTarget} min = {1} max = {2499}
+              onChange = {onCoinTargetChange}
+              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+            />
+          </div>
+        </ConfigSection>
+      )}
 
-          <input
-            type = "text"
-            aria-label = "String B"
-            value = {string2}
-            onChange = {onString2Change}
-            placeholder = "e.g. ACBDFE"
-            maxLength = {MAX_STRING_LENGTH}
-            className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
-          />
-        </div>
-      </ConfigSection>
+      {/* Input — fibonacci */}
+      {algorithm === 'fibonacci' && (
+        <ConfigSection title = "Fibonacci Input">
+          <div className = "space-y-1.5">
+            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Mode</label>
+            <Select aria-label = "Mode" options = {FIB_MODES} value = {fibMode} onChange = {onFibModeChange} />
+          </div>
+          <div className = "space-y-1.5">
+            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">
+              n (max {FIB_MODE_CAPS[fibMode]})
+            </label>
+            <input type = "number" aria-label = "n" value = {fibN} min = {1} max = {FIB_MODE_CAPS[fibMode]}
+              onChange = {onFibNChange}
+              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+            />
+            {fibMode === 'naive_recursive' && (
+              <p className = "text-[10px] text-amber-400/70">Capped at 15 for recursive to keep the call tree manageable</p>
+            )}
+          </div>
+        </ConfigSection>
+      )}
 
       <ConfigSection title = "Explanation">
         <Select
@@ -161,29 +340,29 @@ export function DpConfig({
         />
       </ConfigSection>
 
-      {/* input summary */}
       <ConfigSection title = "Input Summary">
         <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
           <p className = "text-xs font-medium text-slate-300">
             {DP_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm}
           </p>
-
-          <p className = "font-mono text-[10px] text-slate-500">
-            {string1.length + string2.length > 0
-              ? `|A| = ${string1.length}, |B| = ${string2.length} · table ${string1.length + 1} × ${string2.length + 1} (${tableCells} cells)`
-              : 'No input yet'
-            }
-          </p>
-
-          {string1.length > 0 && (
-            <p className = "font-mono text-[10px] text-slate-600 leading-relaxed truncate" title = {string1}>
-              A = "{string1}"
+          {(algorithm === 'lcs' || algorithm === 'edit_distance') && string1.length + string2.length > 0 && (
+            <p className = "font-mono text-[10px] text-slate-500">
+              |A| = {string1.length}, |B| = {string2.length} &middot; table {string1.length + 1} &times; {string2.length + 1}
             </p>
           )}
-
-          {string2.length > 0 && (
-            <p className = "font-mono text-[10px] text-slate-600 leading-relaxed truncate" title = {string2}>
-              B = "{string2}"
+          {algorithm === 'knapsack_01' && (
+            <p className = "font-mono text-[10px] text-slate-500">
+              cap={capacity}, {items.length} items &middot; table {items.length + 1} &times; {capacity + 1}
+            </p>
+          )}
+          {algorithm === 'coin_change' && (
+            <p className = "font-mono text-[10px] text-slate-500">
+              coins=[{coins.join(',')}], target={coinTarget} &middot; array length {coinTarget + 1}
+            </p>
+          )}
+          {algorithm === 'fibonacci' && (
+            <p className = "font-mono text-[10px] text-slate-500">
+              F({fibN}), mode={fibMode}
             </p>
           )}
         </div>
@@ -263,7 +442,7 @@ const GLOW = {
 const HEADER_CELL = 'flex items-center justify-center bg-slate-800/80 border border-white/[0.06] font-mono text-xs font-semibold text-slate-400 select-none'
 
 
-function DpTableCanvas({ string1, string2 }) {
+function DpTableCanvas({ string1, string2, algorithm, items }) {
   const currentStep = usePlaybackStore((s) => s.currentStep)
   const isLoading  = usePlaybackStore((s) => s.isLoading)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
@@ -300,8 +479,8 @@ function DpTableCanvas({ string1, string2 }) {
           Enter your input strings, then step through the recurrence relation.
         </p>
 
-        <div className = "flex gap-2 mt-1">
-          {['LCS', 'Edit Distance'].map((alg) => (
+        <div className = "flex flex-wrap gap-2 mt-1">
+          {['LCS', 'Edit Distance', 'Knapsack', 'Coin Change', 'Fibonacci'].map((alg) => (
             <span
               key = {alg}
               className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-500 border border-white/[0.06]"
@@ -327,8 +506,16 @@ function DpTableCanvas({ string1, string2 }) {
   const rows = table.length
   const cols = table[0]?.length ?? 0
 
-  const rowHeaders = ['\u03b5', ...string1.split('')]   // ε + chars of string1
-  const colHeaders = ['\u03b5', ...string2.split('')]   // ε + chars of string2
+  // derive headers based on algorithm
+  const isKnapsack = algorithm === 'knapsack_01'
+
+  const rowHeaders = isKnapsack
+    ? ['\u2205', ...Array.from({ length: rows - 1 }, (_, i) => `Item ${i + 1}`)]
+    : ['\u03b5', ...(string1 || '').split('')]
+
+  const colHeaders = isKnapsack
+    ? Array.from({ length: cols }, (_, j) => String(j))
+    : ['\u03b5', ...(string2 || '').split('')]
 
   const gridWidth  = CELL_SIZE * (cols + 1)
   const gridHeight = CELL_SIZE * (rows + 1)
@@ -361,7 +548,7 @@ function DpTableCanvas({ string1, string2 }) {
           >
             {/* corner cell */}
             <div className = {HEADER_CELL} style = {{ fontSize: 9, color: 'var(--color-slate-600, #475569)' }}>
-              A↓ B→
+              {isKnapsack ? 'Item↓ Cap→' : 'A↓ B→'}
             </div>
 
             {/* column headers — string2 characters */}
@@ -374,7 +561,15 @@ function DpTableCanvas({ string1, string2 }) {
             {/* rows: header + data cells */}
             {table.map((row, i) => [
               /* row header — string1 character */
-              <div key = {`rh-${i}`} className = {HEADER_CELL}>
+              <div
+                key = {`rh-${i}`}
+                className = {HEADER_CELL}
+                title = {isKnapsack && i > 0 && items?.[i - 1]
+                  ? `Item ${i}: w=${items[i - 1].weight}, v=${items[i - 1].value}`
+                  : undefined
+                }
+                style = {isKnapsack ? { fontSize: 8 } : undefined}
+              >
                 {rowHeaders[i]}
               </div>,
 
@@ -513,6 +708,22 @@ export default function DpLabPage() {
   const [string2, setString2] = useState(loadedScenario?.input_payload?.string2 ?? PRESET_DATA.short_match.string2)
   const [explanationLevel, setExplanationLevel] = useState('standard')
 
+  // knapsack state
+  const [capacity, setCapacity] = useState(KNAPSACK_PRESET_DATA.textbook.capacity)
+  const [items, setItems] = useState(KNAPSACK_PRESET_DATA.textbook.items)
+  const [knapsackPreset, setKnapsackPreset] = useState('textbook')
+
+  // coin change state
+  const [coins, setCoins] = useState(COIN_PRESET_DATA.us_coins.coins)
+  const [coinTarget, setCoinTarget] = useState(COIN_PRESET_DATA.us_coins.target)
+  const [coinPreset, setCoinPreset] = useState('us_coins')
+  const [coinsText, setCoinsText] = useState('1, 5, 10, 25')
+
+  // fibonacci state
+  const [fibN, setFibN] = useState(8)
+  const [fibMode, setFibMode] = useState('tabulation')
+  const [fibPreset, setFibPreset] = useState('small')
+
   useEffect(() => {
     if (loadedScenario) {
       useScenarioStore.getState().clearScenario()
@@ -527,33 +738,79 @@ export default function DpLabPage() {
   useReopenRun(loadedScenario?._reopenRunId)
 
   // --- validation ---
-  const inputError = useMemo(
-    () => validateDpStrings(string1, string2),
-    [string1, string2],
-  )
+  const inputError = useMemo(() => {
+    if (algorithm === 'lcs' || algorithm === 'edit_distance') {
+      return validateDpStrings(string1, string2)
+    }
+    if (algorithm === 'knapsack_01') {
+      return validateKnapsack(capacity, items)
+    }
+    if (algorithm === 'coin_change') {
+      return validateCoinChange(coins, coinTarget)
+    }
+    if (algorithm === 'fibonacci') {
+      return validateFibonacci(fibN, fibMode)
+    }
+    return null
+  }, [algorithm, string1, string2, capacity, items, coins, coinTarget, fibN, fibMode])
 
 
   // --- metrics derived from current step ---
   const dpMetrics = useMemo(() => {
-    const snapshot = currentStep?.metrics_snapshot
-    if (!snapshot) {
+    const s = currentStep?.metrics_snapshot
+    if (!s) {
       return [
-        { label: 'Cells computed',     value: '—' },
-        { label: 'Table size',         value: '—' },
-        { label: 'Traceback length',   value: '—' },
-        { label: 'Subproblems reused', value: '—' },
-        { label: 'Runtime',            value: '—' },
+        { label: 'Cells computed', value: '\u2014' },
+        { label: 'Runtime',        value: '\u2014' },
       ]
     }
 
-    return [
-      { label: 'Cells computed',     value: String(snapshot.cells_computed ?? 0) },
-      { label: 'Table size',         value: `${snapshot.table_rows ?? 0} × ${snapshot.table_cols ?? 0}` },
-      { label: 'Traceback length',   value: String(snapshot.traceback_length ?? 0) },
-      { label: 'Subproblems reused', value: String(snapshot.subproblems_reused ?? 0) },
-      { label: 'Runtime',            value: snapshot.runtime_ms != null ? `${snapshot.runtime_ms} ms` : '—' },
-    ]
-  }, [currentStep])
+    if (algorithm === 'lcs' || algorithm === 'edit_distance') {
+      return [
+        { label: 'Cells computed',     value: String(s.cells_computed ?? 0) },
+        { label: 'Table size',         value: `${s.table_rows ?? 0} \u00d7 ${s.table_cols ?? 0}` },
+        { label: 'Traceback length',   value: String(s.traceback_length ?? 0) },
+        { label: 'Subproblems reused', value: String(s.subproblems_reused ?? 0) },
+        { label: 'Runtime',            value: s.runtime_ms != null ? `${s.runtime_ms} ms` : '\u2014' },
+      ]
+    }
+
+    if (algorithm === 'knapsack_01') {
+      return [
+        { label: 'Cells computed',   value: String(s.cells_computed ?? 0) },
+        { label: 'Table size',       value: `${s.table_rows ?? 0} \u00d7 ${s.table_cols ?? 0}` },
+        { label: 'Optimal value',    value: String(s.total_value ?? 0) },
+        { label: 'Total weight',     value: String(s.total_weight ?? 0) },
+        { label: 'Items selected',   value: String(s.items_selected ?? 0) },
+        { label: 'Runtime',          value: s.runtime_ms != null ? `${s.runtime_ms} ms` : '\u2014' },
+      ]
+    }
+
+    if (algorithm === 'coin_change') {
+      const coinsList = s.coins_used_list?.length > 0 ? s.coins_used_list.join(' + ') : '\u2014'
+      return [
+        { label: 'Cells computed',     value: String(s.cells_computed ?? 0) },
+        { label: 'Array length',       value: String(s.array_length ?? 0) },
+        { label: 'Min coins',          value: s.min_coins != null ? String(s.min_coins) : 'Impossible' },
+        { label: 'Coins used',         value: coinsList },
+        { label: 'Subproblems reused', value: String(s.subproblems_reused ?? 0) },
+        { label: 'Runtime',            value: s.runtime_ms != null ? `${s.runtime_ms} ms` : '\u2014' },
+      ]
+    }
+
+    if (algorithm === 'fibonacci') {
+      return [
+        { label: 'F(n) result',     value: s.fib_result != null ? String(s.fib_result) : '\u2014' },
+        { label: 'Total calls',     value: String(s.total_calls ?? 0) },
+        { label: 'Redundant calls', value: String(s.redundant_calls ?? 0) },
+        { label: 'Max depth',       value: String(s.max_depth ?? 0) },
+        { label: 'Mode',            value: s.mode ?? '\u2014' },
+        { label: 'Runtime',         value: s.runtime_ms != null ? `${s.runtime_ms} ms` : '\u2014' },
+      ]
+    }
+
+    return [{ label: 'Runtime', value: s.runtime_ms != null ? `${s.runtime_ms} ms` : '\u2014' }]
+  }, [currentStep, algorithm])
 
 
   // --- handlers ---
@@ -585,17 +842,29 @@ export default function DpLabPage() {
 
 
   const handleRun = useCallback(() => {
+    let input_payload = {}
+    let algorithm_config = null
+
+    if (algorithm === 'lcs' || algorithm === 'edit_distance') {
+      input_payload = { string1, string2 }
+    } else if (algorithm === 'knapsack_01') {
+      input_payload = { capacity, items: items.map((it) => ({ weight: it.weight, value: it.value })) }
+    } else if (algorithm === 'coin_change') {
+      input_payload = { coins: [...coins], target: coinTarget }
+    } else if (algorithm === 'fibonacci') {
+      input_payload = { n: fibN }
+      algorithm_config = { mode: fibMode }
+    }
+
     run({
       module_type: 'dp',
       algorithm_key: algorithm,
-      input_payload: {
-        string1,
-        string2,
-      },
+      input_payload,
+      algorithm_config,
       execution_mode: 'simulate',
       explanation_level: explanationLevel,
     })
-  }, [run, algorithm, string1, string2, explanationLevel])
+  }, [run, algorithm, string1, string2, capacity, items, coins, coinTarget, fibN, fibMode, explanationLevel])
 
 
   const handleReset = useCallback(() => {
@@ -605,21 +874,128 @@ export default function DpLabPage() {
 
 
   const handleSave = useCallback(() => {
-    const name = `${DP_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — "${string1}" vs "${string2}"`
+    let input_payload = {}
+    let name = ''
+
+    if (algorithm === 'lcs' || algorithm === 'edit_distance') {
+      input_payload = { string1, string2 }
+      name = `${DP_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} \u2014 "${string1}" vs "${string2}"`
+    } else if (algorithm === 'knapsack_01') {
+      input_payload = { capacity, items }
+      name = `0/1 Knapsack \u2014 cap=${capacity}, ${items.length} items`
+    } else if (algorithm === 'coin_change') {
+      input_payload = { coins, target: coinTarget }
+      name = `Coin Change \u2014 [${coins.join(',')}] target=${coinTarget}`
+    } else if (algorithm === 'fibonacci') {
+      input_payload = { n: fibN }
+      name = `Fibonacci \u2014 F(${fibN}) ${fibMode}`
+    }
+
     saveScenario({
       id: generateId(),
       name,
       module_type: 'dp',
       algorithm_key: algorithm,
-      input_payload: {
-        string1,
-        string2,
-      },
+      input_payload,
       tags: [],
       created_at: new Date().toISOString(),
     })
     toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
-  }, [saveScenario, toast, algorithm, string1, string2])
+  }, [saveScenario, toast, algorithm, string1, string2, capacity, items, coins, coinTarget, fibN, fibMode])
+
+  const handleItemChange = useCallback((index, field, val) => {
+    setItems((prev) => prev.map((it, i) => i === index ? { ...it, [field]: val } : it))
+    setKnapsackPreset('custom')
+  }, [])
+
+  const handleItemAdd = useCallback(() => {
+    setItems((prev) => [...prev, { weight: 1, value: 1 }])
+    setKnapsackPreset('custom')
+  }, [])
+
+  const handleItemRemove = useCallback((index) => {
+    setItems((prev) => prev.filter((_, i) => i !== index))
+    setKnapsackPreset('custom')
+  }, [])
+
+  const handleCoinsTextChange = useCallback((e) => {
+    const text = e.target.value
+    setCoinsText(text)
+    setCoinPreset('custom')
+    const parsed = text.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+    setCoins(parsed)
+  }, [])
+
+  const handleKnapsackPresetChange = useCallback((e) => {
+    const key = e.target.value
+    setKnapsackPreset(key)
+    clearTimeline()
+    clearRun()
+    if (key !== 'custom') {
+      const data = KNAPSACK_PRESET_DATA[key]
+      setCapacity(data.capacity)
+      setItems(data.items.map((it) => ({ ...it })))
+    }
+  }, [clearTimeline, clearRun])
+
+  const handleCoinPresetChange = useCallback((e) => {
+    const key = e.target.value
+    setCoinPreset(key)
+    clearTimeline()
+    clearRun()
+    if (key !== 'custom') {
+      const data = COIN_PRESET_DATA[key]
+      setCoins(data.coins)
+      setCoinTarget(data.target)
+      setCoinsText(data.coins.join(', '))
+    }
+  }, [clearTimeline, clearRun])
+
+  const handleFibPresetChange = useCallback((e) => {
+    const key = e.target.value
+    setFibPreset(key)
+    clearTimeline()
+    clearRun()
+    if (key !== 'custom') {
+      setFibN(FIB_PRESET_DATA[key].n)
+    }
+  }, [clearTimeline, clearRun])
+
+  const handleFibModeChange = useCallback((e) => {
+    const mode = e.target.value
+    setFibMode(mode)
+    clearTimeline()
+    clearRun()
+    const cap = FIB_MODE_CAPS[mode]
+    if (fibN > cap) setFibN(cap)
+  }, [clearTimeline, clearRun, fibN])
+
+  const handleAlgorithmChange = useCallback((e) => {
+    const key = e.target.value
+    setAlgorithm(key)
+    clearTimeline()
+    clearRun()
+
+    // select first preset for the new algorithm
+    if (key === 'lcs' || key === 'edit_distance') {
+      setPreset('short_match')
+      setString1(PRESET_DATA.short_match.string1)
+      setString2(PRESET_DATA.short_match.string2)
+    } else if (key === 'knapsack_01') {
+      setKnapsackPreset('textbook')
+      setCapacity(KNAPSACK_PRESET_DATA.textbook.capacity)
+      setItems(KNAPSACK_PRESET_DATA.textbook.items)
+    } else if (key === 'coin_change') {
+      setCoinPreset('us_coins')
+      setCoins(COIN_PRESET_DATA.us_coins.coins)
+      setCoinTarget(COIN_PRESET_DATA.us_coins.target)
+      setCoinsText(COIN_PRESET_DATA.us_coins.coins.join(', '))
+    } else if (key === 'fibonacci') {
+      setFibPreset('small')
+      setFibN(FIB_PRESET_DATA.small.n)
+      setFibMode('tabulation')
+    }
+  }, [clearTimeline, clearRun])
 
 
   return (
@@ -627,7 +1003,7 @@ export default function DpLabPage() {
       <PageHeader
         icon = {Grid3x3}
         title = "DP Lab"
-        description = "Explore LCS and Edit Distance through cell-by-cell DP table construction with traceback overlays."
+        description = "Explore dynamic programming through step-by-step table construction, traceback, and recursive call trees."
         accent = "violet"
         badge = "Phase 7"
       />
@@ -638,13 +1014,34 @@ export default function DpLabPage() {
         configPanel = {
           <DpConfig
             algorithm = {algorithm}
-            onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
+            onAlgorithmChange = {handleAlgorithmChange}
             preset = {preset}
             onPresetChange = {handlePresetChange}
             string1 = {string1}
             onString1Change = {handleString1Change}
             string2 = {string2}
             onString2Change = {handleString2Change}
+            knapsackPreset = {knapsackPreset}
+            onKnapsackPresetChange = {handleKnapsackPresetChange}
+            capacity = {capacity}
+            onCapacityChange = {(e) => { setCapacity(Number(e.target.value)); setKnapsackPreset('custom') }}
+            items = {items}
+            onItemAdd = {handleItemAdd}
+            onItemRemove = {handleItemRemove}
+            onItemChange = {handleItemChange}
+            coinPreset = {coinPreset}
+            onCoinPresetChange = {handleCoinPresetChange}
+            coins = {coins}
+            coinsText = {coinsText}
+            onCoinsTextChange = {handleCoinsTextChange}
+            coinTarget = {coinTarget}
+            onCoinTargetChange = {(e) => { setCoinTarget(Number(e.target.value)); setCoinPreset('custom') }}
+            fibPreset = {fibPreset}
+            onFibPresetChange = {handleFibPresetChange}
+            fibN = {fibN}
+            onFibNChange = {(e) => { setFibN(Number(e.target.value)); setFibPreset('custom') }}
+            fibMode = {fibMode}
+            onFibModeChange = {handleFibModeChange}
             explanationLevel = {explanationLevel}
             onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
             inputError = {inputError}
@@ -658,7 +1055,40 @@ export default function DpLabPage() {
         metrics = {dpMetrics}
       >
 
-        <DpTableCanvas string1 = {string1} string2 = {string2} />
+        {/* visualization — switches based on algorithm and mode */}
+        {(algorithm === 'lcs' || algorithm === 'edit_distance') && (
+          <DpTableCanvas string1 = {string1} string2 = {string2} />
+        )}
+
+        {algorithm === 'knapsack_01' && (
+          <DpTableCanvas
+            algorithm = "knapsack_01"
+            items = {items}
+          />
+        )}
+
+        {algorithm === 'coin_change' && (
+          <DpStripCanvas showCoinUsed />
+        )}
+
+        {algorithm === 'fibonacci' && fibMode === 'tabulation' && (
+          <DpStripCanvas />
+        )}
+
+        {algorithm === 'fibonacci' && fibMode === 'memoized' && (
+          <div className = "flex-1 flex flex-col min-h-0">
+            <div className = "flex-1 min-h-0 border-b border-white/[0.06]">
+              <DpStripCanvas />
+            </div>
+            <div className = "flex-1 min-h-0">
+              <FibCallTree />
+            </div>
+          </div>
+        )}
+
+        {algorithm === 'fibonacci' && fibMode === 'naive_recursive' && (
+          <FibCallTree />
+        )}
 
       </SimulationLayout>
     </>

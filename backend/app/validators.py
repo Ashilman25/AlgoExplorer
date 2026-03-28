@@ -265,15 +265,13 @@ def _validate_coin_change(parsed: CoinChangeInputPayload):
     if len(set(parsed.coins)) != len(parsed.coins):
         raise DomainError("Coin values must be unique")
 
-    # table size: (coins+1) * (target+1)
-    rows = len(parsed.coins) + 1
-    cols = parsed.target + 1
-    table_cells = rows * cols
+    # 1D array size: target + 1
+    array_size = parsed.target + 1
 
-    if table_cells > DP_TABLE_MAX_CELLS:
+    if array_size > DP_TABLE_MAX_CELLS:
         raise DomainError(
-            f"DP table size ({rows} x {cols} = {table_cells} cells) "
+            f"DP array size ({array_size} cells) "
             f"exceeds visualization limit of {DP_TABLE_MAX_CELLS} cells. "
-            "Reduce coin count or target amount."
+            "Reduce the target amount."
         )
 

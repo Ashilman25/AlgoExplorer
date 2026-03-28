@@ -104,33 +104,52 @@ const SORTING_SUBCATEGORY_PAYLOADS = {
   },
 }
 
-const DOMAIN_ALGORITHMS = {
-  dp: [
+const DP_SUBCATEGORY_OPTIONS = [
+  { value: 'string_dp',   label: 'String DP' },
+  { value: 'knapsack',    label: 'Knapsack' },
+  { value: 'coin_change', label: 'Coin Change' },
+  { value: 'fibonacci',   label: 'Fibonacci' },
+]
+
+const DP_SUBCATEGORY_ALGORITHMS = {
+  string_dp:   [
     { value: 'lcs',           label: 'LCS — Longest Common Subsequence' },
     { value: 'edit_distance', label: 'Edit Distance (Levenshtein)' },
   ],
+  knapsack:    [
+    { value: 'knapsack_01', label: '0/1 Knapsack' },
+  ],
+  coin_change: [
+    { value: 'coin_change', label: 'Coin Change (Min Coins)' },
+  ],
+  fibonacci:   [
+    { value: 'fibonacci', label: 'Fibonacci Variants' },
+  ],
 }
 
-const DEFAULT_INPUT_PAYLOADS = {
-  dp: {
-    string1: 'ABCDEF',
-    string2: 'ACBDFE',
-  },
+const DP_SUBCATEGORY_PAYLOADS = {
+  string_dp:   { string1: 'ABCDEF', string2: 'ACBDFE' },
+  knapsack:    { capacity: 10, items: [{ weight: 2, value: 3 }, { weight: 3, value: 4 }, { weight: 4, value: 5 }, { weight: 5, value: 7 }] },
+  coin_change: { coins: [1, 5, 10, 25], target: 41 },
+  fibonacci:   { n: 8 },
 }
 
 export default function ComparisonConfigPanel({ isRunning, onRun }) {
   const moduleType         = useComparisonStore((s) => s.moduleType)
   const graphSubCategory   = useComparisonStore((s) => s.graphSubCategory)
   const sortingSubCategory = useComparisonStore((s) => s.sortingSubCategory)
+  const dpSubCategory      = useComparisonStore((s) => s.dpSubCategory)
   const slots              = useComparisonStore((s) => s.slots)
   const maxSlots           = useComparisonStore((s) => s.maxSlots)
-  const { setModuleType, setInputPayload, setGraphSubCategory, setSortingSubCategory, addSlot, removeSlot } = useComparisonStore()
+  const { setModuleType, setInputPayload, setAlgorithmConfig, setGraphSubCategory, setSortingSubCategory, setDpSubCategory, addSlot, removeSlot } = useComparisonStore()
 
   const moduleAlgorithms = moduleType === 'graph'
     ? (GRAPH_SUBCATEGORY_ALGORITHMS[graphSubCategory] ?? [])
     : moduleType === 'sorting'
     ? (SORTING_SUBCATEGORY_ALGORITHMS[sortingSubCategory ?? 'sorting'] ?? [])
-    : (DOMAIN_ALGORITHMS[moduleType] ?? [])
+    : moduleType === 'dp'
+    ? (DP_SUBCATEGORY_ALGORITHMS[dpSubCategory ?? 'string_dp'] ?? [])
+    : []
 
   const [pendingAlg, setPendingAlg] = useState('')
 
@@ -172,8 +191,9 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
               setInputPayload(GRAPH_SUBCATEGORY_PAYLOADS.pathfinding)
             } else if (domain === 'sorting') {
               setInputPayload(SORTING_SUBCATEGORY_PAYLOADS.sorting)
-            } else {
-              setInputPayload(domain ? DEFAULT_INPUT_PAYLOADS[domain] : null)
+            } else if (domain === 'dp') {
+              setInputPayload(DP_SUBCATEGORY_PAYLOADS.string_dp)
+              setAlgorithmConfig({})
             }
             setPendingAlg('')
           }}
@@ -217,6 +237,27 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
               setPendingAlg('')
             }}
             aria-label = "Sorting sub-category"
+          />
+        </div>
+      )}
+
+      {/* DP sub-category */}
+      {moduleType === 'dp' && (
+        <div className = "space-y-2">
+          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+            Category
+          </p>
+          <Select
+            options = {DP_SUBCATEGORY_OPTIONS}
+            value = {dpSubCategory ?? 'string_dp'}
+            onChange = {(e) => {
+              const cat = e.target.value
+              setDpSubCategory(cat)
+              setInputPayload(DP_SUBCATEGORY_PAYLOADS[cat])
+              setAlgorithmConfig(cat === 'fibonacci' ? { mode: 'tabulation' } : {})
+              setPendingAlg('')
+            }}
+            aria-label = "DP sub-category"
           />
         </div>
       )}
