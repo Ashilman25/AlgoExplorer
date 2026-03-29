@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import CoinChangeInputPayload, DPEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -24,7 +25,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
         return "coin_change"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
             dp_input = CoinChangeInputPayload.model_validate(algo_input.input_payload)
@@ -67,7 +68,7 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -80,9 +81,11 @@ class CoinChangeAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.INITIALIZE,
             [HighlightedEntity(id = 0, state = "visited", label = "0")],
-            f"Initialize Coin Change array (length {size}). "
-            f"Coins: [{coins_str}]. Target: {target}. "
-            f"Base case: dp[0] = 0 — zero coins needed for amount 0.",
+            eb.build(
+                title = f"Initialize Coin Change (target={target})",
+                body = f"Coins: [{coins_str}]. dp[0] = 0. Zero coins needed for amount 0.",
+                data_snapshot = {"table": list(array), "amount": 0, "cell_value": 0, "coins_available": coins},
+            ),
             pseudocode_lines = [0, 1, 2],
         )
 
@@ -95,7 +98,11 @@ class CoinChangeAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.COMPUTE_CELL,
                 [HighlightedEntity(id = i, state = "active", label = str(i))],
-                f"Computing dp[{i}]: minimum coins to make amount {i}.",
+                eb.build(
+                    title = f"Compute dp[{i}]",
+                    body = f"Minimum coins to make amount {i}.",
+                    data_snapshot = {"amount": i, "cell_value": None, "coins_available": coins},
+                ),
                 current_index = i,
                 pseudocode_lines = [3, 4],
             )
@@ -128,7 +135,11 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.READ_DEPENDENCY,
                     dep_labels,
-                    f"Check coins against amount {i}. Dependencies: {dep_str}.",
+                    eb.build(
+                        title = f"Check coins for amount {i}",
+                        body = f"Dependencies: {dep_str}.",
+                        data_snapshot = {"amount": i, "coins_available": coins},
+                    ),
                     current_index = i,
                     dependency_indices = dep_indices,
                     pseudocode_lines = [4, 5],
@@ -146,7 +157,11 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.FILL_CELL,
                     [HighlightedEntity(id = i, state = "visited", label = str(best))],
-                    f"dp[{i}] = {best} (using coin {best_coin}).",
+                    eb.build(
+                        title = f"dp[{i}] = {best}",
+                        body = f"Using coin {best_coin}. {best} coins needed for amount {i}.",
+                        data_snapshot = {"table": list(array), "amount": i, "cell_value": best, "coin_used": best_coin, "coins_available": coins},
+                    ),
                     current_index = i,
                     pseudocode_lines = [5],
                 )
@@ -158,7 +173,11 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.FILL_CELL,
                     [HighlightedEntity(id = i, state = "visited", label = "INF")],
-                    f"dp[{i}] = INF — no coin combination reaches amount {i}.",
+                    eb.build(
+                        title = f"dp[{i}] = INF",
+                        body = f"No coin combination reaches amount {i}.",
+                        data_snapshot = {"table": list(array), "amount": i, "cell_value": None, "coins_available": coins},
+                    ),
                     current_index = i,
                     pseudocode_lines = [5],
                 )
@@ -175,7 +194,11 @@ class CoinChangeAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.TRACEBACK_START,
                 [HighlightedEntity(id = target, state = "source", label = str(array[target]))],
-                f"Begin traceback from dp[{target}] = {array[target]}.",
+                eb.build(
+                    title = f"Begin traceback from dp[{target}]",
+                    body = f"Minimum coins = {array[target]}. Tracing back to find coins used.",
+                    data_snapshot = {"amount": target, "cell_value": array[target]},
+                ),
                 current_index = target,
                 pseudocode_lines = [7],
             )
@@ -190,7 +213,11 @@ class CoinChangeAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.TRACEBACK_STEP,
                     [HighlightedEntity(id = pos, state = "success", label = str(c))],
-                    f"At dp[{pos}]: used coin {c}. Move to dp[{pos - c}].",
+                    eb.build(
+                        title = f"Traceback: use coin {c} at dp[{pos}]",
+                        body = f"Used coin {c}. Move to dp[{pos - c}].",
+                        data_snapshot = {"amount": pos, "coin_used": c, "cell_value": array[pos]},
+                    ),
                     current_index = pos,
                     traceback_path = list(tb_path),
                     pseudocode_lines = [7],
@@ -208,22 +235,22 @@ class CoinChangeAlgorithm(BaseAlgorithm):
         # COMPLETE
         if array[target] is not None:
             coins_desc = " + ".join(str(c) for c in coins_list)
-            complete_msg = (
-                f"Coin Change complete! Minimum coins for {target} = {array[target]}. "
-                f"Coins used: {coins_desc}. "
-                f"{metrics['cells_computed']} cells computed."
+            complete_explanation = eb.build(
+                title = "Coin Change complete",
+                body = f"Minimum coins for {target} = {array[target]}. Coins: {coins_desc}. {metrics['cells_computed']} cells computed.",
+                data_snapshot = {"table": list(array), "amount": target, "cell_value": array[target], "coins_available": coins},
             )
         else:
-            complete_msg = (
-                f"Coin Change complete! No solution exists for target {target} "
-                f"with coins [{coins_str}]. "
-                f"{metrics['cells_computed']} cells computed."
+            complete_explanation = eb.build(
+                title = "Coin Change complete",
+                body = f"No solution exists for target {target} with coins [{coins_str}]. {metrics['cells_computed']} cells computed.",
+                data_snapshot = {"table": list(array), "amount": target, "cell_value": None, "coins_available": coins},
             )
 
         add_step(
             DPEvents.COMPLETE,
             [HighlightedEntity(id = target, state = "success" if array[target] is not None else "target", label = str(array[target]))],
-            complete_msg,
+            complete_explanation,
             traceback_path = list(tb_path),
             pseudocode_lines = [6, 7] if array[target] is None else [7],
         )

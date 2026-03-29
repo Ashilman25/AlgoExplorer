@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import SortingInputPayload, SearchingEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -22,7 +23,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
 
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
         benchmark_mode = algo_input.execution_mode == "benchmark"
 
         # parse + validate
@@ -72,7 +73,7 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
 
@@ -81,11 +82,16 @@ class BinarySearchAlgorithm(BaseAlgorithm):
 
         # INITIALIZE
         highlighted_entities = [HighlightedEntity(id = list(range(n)), state = "default")]
-        message = (
-            f"Initialize Binary Search on {n} elements. "
-            f"Searching for target = {target}. Array must be sorted."
+        add_step(
+            SearchingEvents.INITIALIZE,
+            highlighted_entities,
+            eb.build(
+                title = "Initialize Binary Search",
+                body = f"Search for target = {target} in {n} sorted elements.",
+                data_snapshot = {"array": list(arr), "low": 0, "high": n - 1, "mid": None, "mid_value": None, "target": target, "comparisons": 0},
+            ),
+            pseudocode_lines = [0, 1],
         )
-        add_step(SearchingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0, 1])
 
 
         # binary search
@@ -116,7 +122,11 @@ class BinarySearchAlgorithm(BaseAlgorithm):
             add_step(
                 SearchingEvents.SET_RANGE,
                 highlighted,
-                f"Search range [{low}..{high}], mid = {mid}, arr[{mid}] = {arr[mid]}.",
+                eb.build(
+                    title = f"Check mid = {mid}",
+                    body = f"Range [{low}..{high}], mid = {mid}, arr[{mid}] = {arr[mid]}.",
+                    data_snapshot = {"array": list(arr), "low": low, "high": high, "mid": mid, "mid_value": arr[mid], "target": target, "comparisons": metrics["comparisons"]},
+                ),
                 search_low = low,
                 search_mid = mid,
                 search_high = high,
@@ -132,7 +142,11 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                 add_step(
                     SearchingEvents.FOUND,
                     [HighlightedEntity(id = mid, state = "success", label = str(arr[mid]))],
-                    f"Found target {target} at index {mid}!",
+                    eb.build(
+                        title = f"Found target at index {mid}",
+                        body = f"arr[{mid}] = {arr[mid]} matches target {target}. {metrics['comparisons']} comparisons.",
+                        data_snapshot = {"array": list(arr), "low": low, "high": high, "mid": mid, "mid_value": arr[mid], "target": target, "comparisons": metrics["comparisons"]},
+                    ),
                     search_low = low,
                     search_mid = mid,
                     search_high = high,
@@ -152,7 +166,11 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = list(range(low, mid + 1)), state = "visited"),
                         HighlightedEntity(id = list(range(mid + 1, high + 1)), state = "frontier"),
                     ],
-                    f"arr[{mid}] = {arr[mid]} < target {target}. Discard left half, search [{mid + 1}..{high}].",
+                    eb.build(
+                        title = f"Discard left half",
+                        body = f"arr[{mid}] = {arr[mid]} < target {target}. Search [{mid + 1}..{high}].",
+                        data_snapshot = {"array": list(arr), "low": low, "high": high, "mid": mid, "mid_value": arr[mid], "target": target, "comparisons": metrics["comparisons"]},
+                    ),
                     search_low = low,
                     search_mid = mid,
                     search_high = high,
@@ -171,7 +189,11 @@ class BinarySearchAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = list(range(low, mid)), state = "frontier"),
                         HighlightedEntity(id = list(range(mid, high + 1)), state = "visited"),
                     ],
-                    f"arr[{mid}] = {arr[mid]} > target {target}. Discard right half, search [{low}..{mid - 1}].",
+                    eb.build(
+                        title = f"Discard right half",
+                        body = f"arr[{mid}] = {arr[mid]} > target {target}. Search [{low}..{mid - 1}].",
+                        data_snapshot = {"array": list(arr), "low": low, "high": high, "mid": mid, "mid_value": arr[mid], "target": target, "comparisons": metrics["comparisons"]},
+                    ),
                     search_low = low,
                     search_mid = mid,
                     search_high = high,
@@ -191,7 +213,11 @@ class BinarySearchAlgorithm(BaseAlgorithm):
             add_step(
                 SearchingEvents.NOT_FOUND,
                 [HighlightedEntity(id = list(range(n)), state = "default")],
-                f"Target {target} not found in the array. Search exhausted.",
+                eb.build(
+                    title = "Target not found",
+                    body = f"Target {target} not found. Search exhausted after {metrics['comparisons']} comparisons.",
+                    data_snapshot = {"array": list(arr), "low": low, "high": high, "mid": None, "mid_value": None, "target": target, "comparisons": metrics["comparisons"]},
+                ),
                 pseudocode_lines = [9],
             )
 
@@ -203,16 +229,19 @@ class BinarySearchAlgorithm(BaseAlgorithm):
             elif element_states[k] != "success":
                 element_states[k] = "default"
 
-        complete_msg = (
-            f"Binary Search complete! "
-            + (f"Found {target} at index {found_idx}." if found_idx is not None else f"{target} not in array.")
+        complete_body = (
+            (f"Found {target} at index {found_idx}." if found_idx is not None else f"{target} not in array.")
             + f" {metrics['comparisons']} comparisons, {metrics['iterations']} iterations."
         )
 
         add_step(
             SearchingEvents.COMPLETE,
             [HighlightedEntity(id = list(range(n)), state = "success" if found_idx is not None else "default")],
-            complete_msg,
+            eb.build(
+                title = "Binary Search complete",
+                body = complete_body,
+                data_snapshot = {"array": list(arr), "low": 0, "high": n - 1, "mid": found_idx, "mid_value": arr[found_idx] if found_idx is not None else None, "target": target, "comparisons": metrics["comparisons"]},
+            ),
             found_index = found_idx,
             pseudocode_lines = [0],
         )

@@ -8,6 +8,7 @@ from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
+from app.simulation.explanation_builder import ExplanationBuilder
 
 
 @register("graph", "topological_sort")
@@ -21,7 +22,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
         return "topological_sort"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
             graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
@@ -74,7 +75,7 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -85,8 +86,15 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
         add_step(
             "INITIALIZE",
             [],
-            f"Initialize Kahn's algorithm. In-degrees: {degree_summary}. "
-            f"Found {len(zero_in)} node(s) with in-degree 0.",
+            eb.build(
+                title = "Initialize Kahn's algorithm",
+                body = f"In-degrees: {degree_summary}. {len(zero_in)} node(s) with in-degree 0.",
+                data_snapshot = {
+                    "result_stack": list(ordering),
+                    "visited": [],
+                    "in_progress": [],
+                },
+            ),
             pseudocode_lines = [0, 1, 2, 3],
         )
 
@@ -98,7 +106,15 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
             add_step(
                 "ENQUEUE_ZERO",
                 [HighlightedEntity(id = n, state = "frontier", label = n)],
-                f"Enqueue '{n}' (in-degree = 0).",
+                eb.build(
+                    title = f"Enqueue '{n}'",
+                    body = f"In-degree = 0. Ready for processing.",
+                    data_snapshot = {
+                        "result_stack": list(ordering),
+                        "visited": sorted([nd for nd in node_ids if node_states[nd] == "success"]),
+                        "in_progress": sorted(queue),
+                    },
+                ),
                 pseudocode_lines = [2],
             )
 
@@ -112,8 +128,15 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
             add_step(
                 "DEQUEUE",
                 [HighlightedEntity(id = current, state = "active", label = current)],
-                f"Dequeue '{current}'. Add to ordering at position {len(ordering)}. "
-                f"Processing its {len(adj[current])} outgoing edge(s).",
+                eb.build(
+                    title = f"Dequeue '{current}'",
+                    body = f"Add to ordering at position {len(ordering)}. {len(adj[current])} outgoing edge(s) to process.",
+                    data_snapshot = {
+                        "result_stack": list(ordering),
+                        "visited": sorted([n for n in node_ids if node_states[n] == "success"]),
+                        "in_progress": sorted(queue),
+                    },
+                ),
                 pseudocode_lines = [4, 5, 6],
             )
 
@@ -130,8 +153,15 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = current, state = "active", label = current),
                         HighlightedEntity(id = neighbor, state = node_states[neighbor], label = neighbor),
                     ],
-                    f"Edge {current} -> {neighbor}: "
-                    f"Decrement in-degree of '{neighbor}' to {in_degree[neighbor]}.",
+                    eb.build(
+                        title = f"Decrement in-degree of '{neighbor}'",
+                        body = f"Edge {current} -> {neighbor}: in-degree is now {in_degree[neighbor]}.",
+                        data_snapshot = {
+                            "result_stack": list(ordering),
+                            "visited": sorted([n for n in node_ids if node_states[n] == "success"]),
+                            "in_progress": sorted(queue),
+                        },
+                    ),
                     pseudocode_lines = [7, 8],
                 )
 
@@ -142,7 +172,15 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
                     add_step(
                         "ENQUEUE_ZERO",
                         [HighlightedEntity(id = neighbor, state = "frontier", label = neighbor)],
-                        f"'{neighbor}' in-degree reached 0. Enqueue it.",
+                        eb.build(
+                            title = f"Enqueue '{neighbor}'",
+                            body = f"In-degree reached 0. Ready for processing.",
+                            data_snapshot = {
+                                "result_stack": list(ordering),
+                                "visited": sorted([n for n in node_ids if node_states[n] == "success"]),
+                                "in_progress": sorted(queue),
+                            },
+                        ),
                         pseudocode_lines = [9],
                     )
 
@@ -159,8 +197,15 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
             add_step(
                 "CYCLE_DETECTED",
                 [HighlightedEntity(id = n, state = "target", label = n) for n in cycle_nodes],
-                f"Cycle detected! Only {len(ordering)} of {len(node_ids)} nodes were ordered. "
-                f"Remaining nodes form a cycle: {', '.join(cycle_nodes)}.",
+                eb.build(
+                    title = "Cycle detected",
+                    body = f"Only {len(ordering)} of {len(node_ids)} nodes ordered. Remaining nodes form a cycle: {', '.join(cycle_nodes)}.",
+                    data_snapshot = {
+                        "result_stack": list(ordering),
+                        "visited": sorted([n for n in node_ids if node_states[n] == "success"]),
+                        "in_progress": [],
+                    },
+                ),
                 cycle_detected = True,
                 cycle_nodes = cycle_nodes,
                 pseudocode_lines = [10],
@@ -170,10 +215,15 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
             add_step(
                 "COMPLETE",
                 [],
-                f"Topological sort complete. "
-                f"Ordering: {ordering_str}. "
-                f"Processed {metrics['edges_processed']} edge(s), "
-                f"{metrics['in_degree_updates']} in-degree update(s).",
+                eb.build(
+                    title = "Topological sort complete",
+                    body = f"Ordering: {ordering_str}. {metrics['edges_processed']} edge(s), {metrics['in_degree_updates']} in-degree update(s).",
+                    data_snapshot = {
+                        "result_stack": list(ordering),
+                        "visited": sorted(ordering),
+                        "in_progress": [],
+                    },
+                ),
                 pseudocode_lines = [11],
             )
 

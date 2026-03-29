@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import DPStringInputPayload, DPEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -22,7 +23,7 @@ class LCSAlgorithm(BaseAlgorithm):
 
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         # parse + validate
         try:
@@ -71,7 +72,7 @@ class LCSAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
 
@@ -91,9 +92,11 @@ class LCSAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.INITIALIZE,
             [HighlightedEntity(id = [0, 0], state = "visited", label = "Base cases")],
-            f"Initialize LCS table ({rows} × {cols}). "
-            f'String A = "{s1}" (length {m}), String B = "{s2}" (length {n}). '
-            f"Base row and column filled with 0 — an empty string has LCS length 0 with anything.",
+            eb.build(
+                title = f"Initialize LCS table ({rows} x {cols})",
+                body = f'String A = "{s1}" (length {m}), String B = "{s2}" (length {n}). Base row and column filled with 0.',
+                data_snapshot = {"table": [list(row) for row in table], "cell": [0, 0]},
+            ),
             pseudocode_lines = [0, 1, 2, 3],
         )
 
@@ -112,7 +115,11 @@ class LCSAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.COMPUTE_CELL,
                     [HighlightedEntity(id = [i, j], state = "active", label = f"({i},{j})")],
-                    f"Computing cell ({i}, {j}): comparing A[{i - 1}] = '{char_a}' with B[{j - 1}] = '{char_b}'.",
+                    eb.build(
+                        title = f"Compute cell ({i}, {j})",
+                        body = f"Comparing A[{i - 1}] = '{char_a}' with B[{j - 1}] = '{char_b}'.",
+                        data_snapshot = {"cell": [i, j], "cell_value": None},
+                    ),
                     current_cell = [i, j],
                     pseudocode_lines = [4, 5],
                 )
@@ -131,8 +138,11 @@ class LCSAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = [i, j], state = "active", label = f"({i},{j})"),
                             HighlightedEntity(id = [i - 1, j - 1], state = "frontier", label = str(diag_val)),
                         ],
-                        f"Characters match: '{char_a}' == '{char_b}'. "
-                        f"Read diagonal cell ({i - 1}, {j - 1}) = {diag_val}.",
+                        eb.build(
+                            title = f"Match at ({i}, {j})",
+                            body = f"Characters match: '{char_a}' == '{char_b}'. Read diagonal ({i - 1}, {j - 1}) = {diag_val}.",
+                            data_snapshot = {"cell": [i, j], "recurrence": "match", "dependencies": {"diagonal": [i - 1, j - 1, diag_val]}},
+                        ),
                         current_cell = [i, j],
                         dependency_cells = [[i - 1, j - 1]],
                         pseudocode_lines = [6, 7],
@@ -148,7 +158,11 @@ class LCSAlgorithm(BaseAlgorithm):
                     add_step(
                         DPEvents.FILL_CELL,
                         [HighlightedEntity(id = [i, j], state = "visited", label = str(new_val))],
-                        f"Match! table[{i}][{j}] = table[{i - 1}][{j - 1}] + 1 = {diag_val} + 1 = {new_val}.",
+                        eb.build(
+                            title = f"Fill cell ({i}, {j}) = {new_val}",
+                            body = f"Match! table[{i}][{j}] = table[{i - 1}][{j - 1}] + 1 = {diag_val} + 1 = {new_val}.",
+                            data_snapshot = {"cell": [i, j], "cell_value": new_val, "recurrence": "match"},
+                        ),
                         current_cell = [i, j],
                         pseudocode_lines = [7],
                     )
@@ -169,8 +183,11 @@ class LCSAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = [i - 1, j], state = "frontier", label = str(up_val)),
                             HighlightedEntity(id = [i, j - 1], state = "frontier", label = str(left_val)),
                         ],
-                        f"No match: '{char_a}' ≠ '{char_b}'. "
-                        f"Read up ({i - 1}, {j}) = {up_val} and left ({i}, {j - 1}) = {left_val}.",
+                        eb.build(
+                            title = f"No match at ({i}, {j})",
+                            body = f"'{char_a}' != '{char_b}'. Read up ({i - 1}, {j}) = {up_val} and left ({i}, {j - 1}) = {left_val}.",
+                            data_snapshot = {"cell": [i, j], "recurrence": "max(up, left)", "dependencies": {"up": [i - 1, j, up_val], "left": [i, j - 1, left_val]}},
+                        ),
                         current_cell = [i, j],
                         dependency_cells = [[i - 1, j], [i, j - 1]],
                         pseudocode_lines = [8, 9],
@@ -193,7 +210,11 @@ class LCSAlgorithm(BaseAlgorithm):
                     add_step(
                         DPEvents.FILL_CELL,
                         [HighlightedEntity(id = [i, j], state = "visited", label = str(new_val))],
-                        f"No match. table[{i}][{j}] = max(up={up_val}, left={left_val}) = {new_val} (chose {branch}).",
+                        eb.build(
+                            title = f"Fill cell ({i}, {j}) = {new_val}",
+                            body = f"No match. max(up={up_val}, left={left_val}) = {new_val} (chose {branch}).",
+                            data_snapshot = {"cell": [i, j], "cell_value": new_val, "recurrence": "max(up, left)"},
+                        ),
                         current_cell = [i, j],
                         pseudocode_lines = [9],
                     )
@@ -205,7 +226,11 @@ class LCSAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.ROW_COMPLETE,
                 [HighlightedEntity(id = [i, 0], state = "visited", label = f"Row {i}")],
-                f"Row {i} complete (A[{i - 1}] = '{s1[i - 1]}'): [{row_vals}].",
+                eb.build(
+                    title = f"Row {i} complete",
+                    body = f"Row {i} complete (A[{i - 1}] = '{s1[i - 1]}'). {metrics['cells_computed']} cells computed.",
+                    data_snapshot = {"table": [list(row) for row in table]},
+                ),
                 pseudocode_lines = [4],
             )
 
@@ -224,7 +249,11 @@ class LCSAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.TRACEBACK_START,
             [HighlightedEntity(id = [i, j], state = "source", label = str(table[i][j]))],
-            f"Begin traceback from cell ({i}, {j}) with LCS length = {table[m][n]}.",
+            eb.build(
+                title = f"Begin traceback from ({i}, {j})",
+                body = f"LCS length = {table[m][n]}. Tracing back to reconstruct the subsequence.",
+                data_snapshot = {"cell": [i, j], "cell_value": table[m][n]},
+            ),
             current_cell = [i, j],
             pseudocode_lines = [10],
         )
@@ -240,8 +269,11 @@ class LCSAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.TRACEBACK_STEP,
                     [HighlightedEntity(id = [i, j], state = "success", label = s1[i - 1])],
-                    f"A[{i - 1}] = '{s1[i - 1]}' == B[{j - 1}] = '{s2[j - 1]}' — "
-                    f"character '{s1[i - 1]}' is in the LCS. Move diagonal to ({i - 1}, {j - 1}).",
+                    eb.build(
+                        title = f"Traceback: match '{s1[i - 1]}' at ({i}, {j})",
+                        body = f"A[{i - 1}] == B[{j - 1}] = '{s1[i - 1]}'. Character is in the LCS. Move diagonal to ({i - 1}, {j - 1}).",
+                        data_snapshot = {"cell": [i, j], "direction": "diagonal", "lcs_so_far": "".join(reversed(lcs_chars))},
+                    ),
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
                     pseudocode_lines = [10],
@@ -258,8 +290,11 @@ class LCSAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.TRACEBACK_STEP,
                     [HighlightedEntity(id = [i, j], state = "source", label = str(table[i][j]))],
-                    f"table[{i - 1}][{j}] = {table[i - 1][j]} ≥ table[{i}][{j - 1}] = {table[i][j - 1]}. "
-                    f"Move up to ({i - 1}, {j}).",
+                    eb.build(
+                        title = f"Traceback: move up from ({i}, {j})",
+                        body = f"table[{i - 1}][{j}] = {table[i - 1][j]} >= table[{i}][{j - 1}] = {table[i][j - 1]}. Move up.",
+                        data_snapshot = {"cell": [i, j], "direction": "up"},
+                    ),
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
                     pseudocode_lines = [10],
@@ -275,8 +310,11 @@ class LCSAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.TRACEBACK_STEP,
                     [HighlightedEntity(id = [i, j], state = "source", label = str(table[i][j]))],
-                    f"table[{i - 1}][{j}] = {table[i - 1][j]} < table[{i}][{j - 1}] = {table[i][j - 1]}. "
-                    f"Move left to ({i}, {j - 1}).",
+                    eb.build(
+                        title = f"Traceback: move left from ({i}, {j})",
+                        body = f"table[{i - 1}][{j}] = {table[i - 1][j]} < table[{i}][{j - 1}] = {table[i][j - 1]}. Move left.",
+                        data_snapshot = {"cell": [i, j], "direction": "left"},
+                    ),
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
                     pseudocode_lines = [10],
@@ -294,9 +332,11 @@ class LCSAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.COMPLETE,
             [HighlightedEntity(id = [m, n], state = "success", label = str(table[m][n]))],
-            f'LCS complete! The longest common subsequence of "{s1}" and "{s2}" is '
-            f'"{lcs_string}" (length {len(lcs_string)}). '
-            f"{metrics['cells_computed']} cells computed in a {rows} × {cols} table.",
+            eb.build(
+                title = "LCS complete",
+                body = f'LCS of "{s1}" and "{s2}" is "{lcs_string}" (length {len(lcs_string)}). {metrics["cells_computed"]} cells computed.',
+                data_snapshot = {"table": [list(row) for row in table], "lcs_so_far": lcs_string, "cell_value": table[m][n]},
+            ),
             traceback_path = list(tb_path),
             pseudocode_lines = [10],
         )

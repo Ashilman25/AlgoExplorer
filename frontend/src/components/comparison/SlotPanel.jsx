@@ -60,7 +60,8 @@ export default function SlotPanel({ slot, stepIndex, maxSteps, moduleType, input
 
 function StepContent({ step }) {
   const eventType = step.event_type ?? step.eventType ?? 'STEP'
-  const explanation = step.explanation?.text ?? step.explanation ?? null
+  const rawExp = step.explanation
+  const explanation = typeof rawExp === 'string' ? rawExp : rawExp?.body ?? rawExp?.text ?? rawExp?.title ?? null
   const entities = step.highlighted_entities ?? step.highlightedEntities ?? []
 
   const ENTITY_STATE_CLASSES = {

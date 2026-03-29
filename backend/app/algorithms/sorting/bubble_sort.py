@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import SortingInputPayload, SortingEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -22,7 +23,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
 
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
         benchmark_mode = algo_input.execution_mode == "benchmark"
 
         # parse + validate
@@ -67,7 +68,7 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
 
@@ -76,11 +77,16 @@ class BubbleSortAlgorithm(BaseAlgorithm):
 
         # INITIALIZE
         highlighted_entities = [HighlightedEntity(id = list(range(n)), state = "default")]
-        message = (
-            f"Initialize Bubble Sort on {n} elements. "
-            f"Repeatedly compare adjacent pairs, bubbling the largest to the end."
+        add_step(
+            SortingEvents.INITIALIZE,
+            highlighted_entities,
+            eb.build(
+                title = "Initialize Bubble Sort",
+                body = f"Begin Bubble Sort on {n} elements. Compare adjacent pairs, bubble largest to end.",
+                data_snapshot = {"array": list(arr), "comparisons": 0, "swaps": 0, "pass_number": 0, "sorted_boundary": n},
+            ),
+            pseudocode_lines = [0, 1],
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0, 1])
 
 
         # run the sort
@@ -105,7 +111,11 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = j, state = "frontier", label = str(arr[j])),
                             HighlightedEntity(id = j + 1, state = "frontier", label = str(arr[j + 1])),
                         ],
-                        f"Compare arr[{j}] = {arr[j]} > arr[{j + 1}] = {arr[j + 1]}. Swap needed.",
+                        eb.build(
+                            title = f"Compare arr[{j}] and arr[{j + 1}]",
+                            body = f"{arr[j]} > {arr[j + 1]}, swap needed. {metrics['comparisons']} comparisons so far.",
+                            data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "pass_number": metrics["passes"], "comparing": [j, j + 1], "sorted_boundary": i},
+                        ),
                         comparing = [j, j + 1],
                         pseudocode_lines = [4, 5],
                     )
@@ -124,7 +134,11 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = j, state = "swap", label = str(arr[j])),
                             HighlightedEntity(id = j + 1, state = "swap", label = str(arr[j + 1])),
                         ],
-                        f"Swap arr[{j}] ↔ arr[{j + 1}].",
+                        eb.build(
+                            title = f"Swap arr[{j}] and arr[{j + 1}]",
+                            body = f"Swap {arr[j]} with {arr[j + 1]}. {metrics['swaps']} swaps so far.",
+                            data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "pass_number": metrics["passes"], "comparing": [j, j + 1], "sorted_boundary": i},
+                        ),
                         swapping = [j, j + 1],
                         pseudocode_lines = [6, 7],
                     )
@@ -140,7 +154,11 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = j, state = "frontier", label = str(arr[j])),
                             HighlightedEntity(id = j + 1, state = "frontier", label = str(arr[j + 1])),
                         ],
-                        f"Compare arr[{j}] = {arr[j]} ≤ arr[{j + 1}] = {arr[j + 1]}. No swap needed.",
+                        eb.build(
+                            title = f"Compare arr[{j}] and arr[{j + 1}]",
+                            body = f"{arr[j]} <= {arr[j + 1]}, no swap needed. {metrics['comparisons']} comparisons so far.",
+                            data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "pass_number": metrics["passes"], "comparing": [j, j + 1], "sorted_boundary": i},
+                        ),
                         comparing = [j, j + 1],
                         pseudocode_lines = [4, 5],
                     )
@@ -154,7 +172,11 @@ class BubbleSortAlgorithm(BaseAlgorithm):
             add_step(
                 SortingEvents.MARK_SORTED,
                 [HighlightedEntity(id = i, state = "success", label = str(arr[i]))],
-                f"Pass {metrics['passes']} complete. arr[{i}] = {arr[i]} is in its sorted position.",
+                eb.build(
+                    title = f"Pass {metrics['passes']} complete",
+                    body = f"arr[{i}] = {arr[i]} is in its sorted position.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "pass_number": metrics["passes"], "comparing": [], "sorted_boundary": i},
+                ),
                 sorted_boundary = i,
                 pseudocode_lines = [2],
             )
@@ -167,7 +189,11 @@ class BubbleSortAlgorithm(BaseAlgorithm):
                 add_step(
                     SortingEvents.MARK_SORTED,
                     [HighlightedEntity(id = list(range(0, i)), state = "success")],
-                    f"No swaps in pass {metrics['passes']}. Array is sorted early — remaining elements are in place.",
+                    eb.build(
+                        title = "Early termination",
+                        body = f"No swaps in pass {metrics['passes']}. Array is sorted early.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "pass_number": metrics["passes"], "comparing": [], "sorted_boundary": 0},
+                    ),
                     sorted_boundary = 0,
                     pseudocode_lines = [8],
                 )
@@ -188,9 +214,11 @@ class BubbleSortAlgorithm(BaseAlgorithm):
         add_step(
             SortingEvents.COMPLETE,
             [HighlightedEntity(id = list(range(n)), state = "success")],
-            f"Bubble Sort complete! Sorted: [{sorted_vals}]. "
-            f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps, "
-            f"{metrics['passes']} passes.",
+            eb.build(
+                title = "Bubble Sort complete",
+                body = f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps, {metrics['passes']} passes.",
+                data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "pass_number": metrics["passes"], "comparing": [], "sorted_boundary": 0},
+            ),
             pseudocode_lines = [9],
         )
 

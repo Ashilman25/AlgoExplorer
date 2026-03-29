@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import KnapsackInputPayload, DPEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -21,7 +22,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
         return "knapsack_01"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
             dp_input = KnapsackInputPayload.model_validate(algo_input.input_payload)
@@ -67,7 +68,7 @@ class KnapsackAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -85,9 +86,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.INITIALIZE,
             [HighlightedEntity(id = [0, 0], state = "visited", label = "Base cases")],
-            f"Initialize 0/1 Knapsack table ({rows} x {cols}). "
-            f"Capacity = {W}. Items: {items_desc}. "
-            f"Base row and column filled with 0 — zero items or zero capacity means zero value.",
+            eb.build(
+                title = f"Initialize Knapsack table ({rows} x {cols})",
+                body = f"Capacity = {W}. {n} items. Base row and column filled with 0.",
+                data_snapshot = {"table": [list(row) for row in table], "cell": [0, 0]},
+            ),
             pseudocode_lines = [0, 1, 2, 3],
         )
 
@@ -105,7 +108,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.COMPUTE_CELL,
                     [HighlightedEntity(id = [i, j], state = "active", label = f"({i},{j})")],
-                    f"Computing cell ({i}, {j}): Item {i} (w={w_i}, v={v_i}), capacity {j}.",
+                    eb.build(
+                        title = f"Compute cell ({i}, {j})",
+                        body = f"Item {i} (w={w_i}, v={v_i}), capacity {j}.",
+                        data_snapshot = {"cell": [i, j], "cell_value": None, "item_weight": w_i, "item_value": v_i, "remaining_capacity": j},
+                    ),
                     current_cell = [i, j],
                     pseudocode_lines = [4, 5],
                 )
@@ -129,9 +136,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = [i - 1, j], state = "frontier", label = str(exclude_val)),
                             HighlightedEntity(id = [i - 1, j - w_i], state = "frontier", label = str(include_val - v_i)),
                         ],
-                        f"Item {i} fits (w={w_i} <= cap={j}). "
-                        f"Exclude: dp[{i - 1}][{j}] = {exclude_val}. "
-                        f"Include: dp[{i - 1}][{j - w_i}] + {v_i} = {include_val}.",
+                        eb.build(
+                            title = f"Item {i} fits (w={w_i} <= {j})",
+                            body = f"Exclude = {exclude_val}. Include = dp[{i - 1}][{j - w_i}] + {v_i} = {include_val}.",
+                            data_snapshot = {"cell": [i, j], "recurrence": "include" if include_val > exclude_val else "exclude", "item_weight": w_i, "item_value": v_i, "remaining_capacity": j - w_i},
+                        ),
                         current_cell = [i, j],
                         dependency_cells = dep_cells,
                         pseudocode_lines = [6, 7],
@@ -153,8 +162,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = [i, j], state = "active", label = f"({i},{j})"),
                             HighlightedEntity(id = [i - 1, j], state = "frontier", label = str(exclude_val)),
                         ],
-                        f"Item {i} too heavy (w={w_i} > cap={j}). Must exclude. "
-                        f"dp[{i - 1}][{j}] = {exclude_val}.",
+                        eb.build(
+                            title = f"Item {i} too heavy (w={w_i} > {j})",
+                            body = f"Must exclude. dp[{i - 1}][{j}] = {exclude_val}.",
+                            data_snapshot = {"cell": [i, j], "recurrence": "exclude", "item_weight": w_i, "item_value": v_i, "remaining_capacity": j},
+                        ),
                         current_cell = [i, j],
                         dependency_cells = [[i - 1, j]],
                         pseudocode_lines = [8, 9],
@@ -173,7 +185,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.FILL_CELL,
                     [HighlightedEntity(id = [i, j], state = "visited", label = str(new_val))],
-                    f"dp[{i}][{j}] = {new_val} (chose {choice}).",
+                    eb.build(
+                        title = f"Fill cell ({i}, {j}) = {new_val}",
+                        body = f"dp[{i}][{j}] = {new_val} (chose {choice}).",
+                        data_snapshot = {"cell": [i, j], "cell_value": new_val, "recurrence": "include" if "include" in choice else "exclude"},
+                    ),
                     current_cell = [i, j],
                     pseudocode_lines = fill_pseudocode,
                 )
@@ -182,7 +198,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.ROW_COMPLETE,
                 [HighlightedEntity(id = [i, 0], state = "visited", label = f"Row {i}")],
-                f"Row {i} complete (Item {i}: w={items[i - 1].weight}, v={items[i - 1].value}): [{row_vals}].",
+                eb.build(
+                    title = f"Row {i} complete",
+                    body = f"Item {i} (w={items[i - 1].weight}, v={items[i - 1].value}). {metrics['cells_computed']} cells computed.",
+                    data_snapshot = {"table": [list(row) for row in table]},
+                ),
                 pseudocode_lines = [4],
             )
 
@@ -198,7 +218,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.TRACEBACK_START,
             [HighlightedEntity(id = [i, j], state = "source", label = str(table[i][j]))],
-            f"Begin traceback from cell ({i}, {j}) with optimal value = {table[n][W]}.",
+            eb.build(
+                title = f"Begin traceback from ({i}, {j})",
+                body = f"Optimal value = {table[n][W]}. Tracing back to find selected items.",
+                data_snapshot = {"cell": [i, j], "cell_value": table[n][W]},
+            ),
             current_cell = [i, j],
             pseudocode_lines = [10],
         )
@@ -213,9 +237,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.TRACEBACK_STEP,
                     [HighlightedEntity(id = [i, j], state = "success", label = f"Item {i}")],
-                    f"dp[{i}][{j}] = {table[i][j]} != dp[{i - 1}][{j}] = {table[i - 1][j]} — "
-                    f"Item {i} (w={items[i - 1].weight}, v={items[i - 1].value}) was selected. "
-                    f"Move to ({i - 1}, {j - items[i - 1].weight}).",
+                    eb.build(
+                        title = f"Traceback: select Item {i}",
+                        body = f"Item {i} (w={items[i - 1].weight}, v={items[i - 1].value}) was selected. Move to ({i - 1}, {j - items[i - 1].weight}).",
+                        data_snapshot = {"cell": [i, j], "cell_value": table[i][j], "item_weight": items[i - 1].weight, "item_value": items[i - 1].value},
+                    ),
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
                     pseudocode_lines = [10],
@@ -229,8 +255,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.TRACEBACK_STEP,
                     [HighlightedEntity(id = [i, j], state = "source", label = str(table[i][j]))],
-                    f"dp[{i}][{j}] = {table[i][j]} == dp[{i - 1}][{j}] = {table[i - 1][j]} — "
-                    f"Item {i} was NOT selected. Move up to ({i - 1}, {j}).",
+                    eb.build(
+                        title = f"Traceback: skip Item {i}",
+                        body = f"Item {i} was NOT selected. Move up to ({i - 1}, {j}).",
+                        data_snapshot = {"cell": [i, j], "cell_value": table[i][j]},
+                    ),
                     current_cell = [i, j],
                     traceback_path = list(tb_path),
                     pseudocode_lines = [10],
@@ -250,9 +279,11 @@ class KnapsackAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.COMPLETE,
             [HighlightedEntity(id = [n, W], state = "success", label = str(total_value))],
-            f"Knapsack complete! Optimal value = {total_value}, weight = {total_weight}/{W}. "
-            f"Selected: {selected_desc if selected_desc else 'none'}. "
-            f"{metrics['cells_computed']} cells computed in a {rows} x {cols} table.",
+            eb.build(
+                title = "Knapsack complete",
+                body = f"Optimal value = {total_value}, weight = {total_weight}/{W}. {metrics['cells_computed']} cells computed.",
+                data_snapshot = {"table": [list(row) for row in table], "cell_value": total_value},
+            ),
             traceback_path = list(tb_path),
             pseudocode_lines = [10],
         )

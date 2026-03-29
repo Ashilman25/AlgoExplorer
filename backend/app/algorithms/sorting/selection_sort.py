@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import SortingInputPayload, SortingEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -22,7 +23,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
 
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
         benchmark_mode = algo_input.execution_mode == "benchmark"
 
         # parse + validate
@@ -66,7 +67,7 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
 
@@ -75,11 +76,16 @@ class SelectionSortAlgorithm(BaseAlgorithm):
 
         # INITIALIZE
         highlighted_entities = [HighlightedEntity(id = list(range(n)), state = "default")]
-        message = (
-            f"Initialize Selection Sort on {n} elements. "
-            f"Repeatedly finds the minimum of the unsorted portion and places it at the front."
+        add_step(
+            SortingEvents.INITIALIZE,
+            highlighted_entities,
+            eb.build(
+                title = "Initialize Selection Sort",
+                body = f"Begin Selection Sort on {n} elements. Find minimum of unsorted portion each pass.",
+                data_snapshot = {"array": list(arr), "comparisons": 0, "swaps": 0, "current_min_index": None, "current_min_value": None, "scan_range": [0, n - 1]},
+            ),
+            pseudocode_lines = [0],
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0])
 
 
         # run the sort
@@ -92,7 +98,11 @@ class SelectionSortAlgorithm(BaseAlgorithm):
             add_step(
                 SortingEvents.COMPARE,
                 [HighlightedEntity(id = i, state = "source", label = str(arr[i]))],
-                f"Pass {i + 1}: Start scan from index {i}. Current minimum candidate: arr[{i}] = {arr[i]}.",
+                eb.build(
+                    title = f"Pass {i + 1}: scan from index {i}",
+                    body = f"Current minimum candidate: arr[{i}] = {arr[i]}.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "current_min_index": i, "current_min_value": arr[i], "scan_range": [i, n - 1]},
+                ),
                 comparing = [i],
                 sorted_boundary = i,
                 pseudocode_lines = [1, 2],
@@ -121,7 +131,11 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = j, state = "source", label = str(arr[j])),
                             HighlightedEntity(id = old_min_idx, state = "default", label = str(arr[old_min_idx])),
                         ],
-                        f"arr[{j}] = {arr[j]} < current min arr[{old_min_idx}] = {arr[old_min_idx]}. New minimum at index {j}.",
+                        eb.build(
+                            title = f"New min at arr[{j}] = {arr[j]}",
+                            body = f"arr[{j}] = {arr[j]} < old min arr[{old_min_idx}] = {arr[old_min_idx]}. {metrics['comparisons']} comparisons.",
+                            data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "current_min_index": j, "current_min_value": arr[j], "scan_range": [i, n - 1]},
+                        ),
                         comparing = [j, old_min_idx],
                         sorted_boundary = i,
                         pseudocode_lines = [3, 4, 5],
@@ -134,7 +148,11 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = j, state = "frontier", label = str(arr[j])),
                             HighlightedEntity(id = min_idx, state = "source", label = str(arr[min_idx])),
                         ],
-                        f"arr[{j}] = {arr[j]} >= current min arr[{min_idx}] = {arr[min_idx]}. Minimum unchanged.",
+                        eb.build(
+                            title = f"Compare arr[{j}] and min",
+                            body = f"arr[{j}] = {arr[j]} >= min arr[{min_idx}] = {arr[min_idx]}. Minimum unchanged.",
+                            data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "current_min_index": min_idx, "current_min_value": arr[min_idx], "scan_range": [i, n - 1]},
+                        ),
                         comparing = [j, min_idx],
                         sorted_boundary = i,
                         pseudocode_lines = [3, 4],
@@ -157,7 +175,11 @@ class SelectionSortAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = i, state = "swap", label = str(arr[i])),
                         HighlightedEntity(id = min_idx, state = "swap", label = str(arr[min_idx])),
                     ],
-                    f"Swap arr[{i}] = {arr[i]} into sorted position {i} (was arr[{min_idx}]).",
+                    eb.build(
+                        title = f"Swap arr[{i}] and arr[{min_idx}]",
+                        body = f"Place minimum {arr[i]} into sorted position {i}. {metrics['swaps']} swaps so far.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "current_min_index": min_idx, "current_min_value": arr[min_idx], "scan_range": [i, n - 1]},
+                    ),
                     swapping = [i, min_idx],
                     sorted_boundary = i,
                     pseudocode_lines = [6],
@@ -173,7 +195,11 @@ class SelectionSortAlgorithm(BaseAlgorithm):
             add_step(
                 SortingEvents.MARK_SORTED,
                 [HighlightedEntity(id = i, state = "success", label = str(arr[i]))],
-                f"arr[{i}] = {arr[i]} is now in its final sorted position.",
+                eb.build(
+                    title = f"Mark arr[{i}] sorted",
+                    body = f"arr[{i}] = {arr[i]} is in its final sorted position.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "current_min_index": i, "current_min_value": arr[i], "scan_range": [i + 1, n - 1]},
+                ),
                 sorted_boundary = i + 1,
                 pseudocode_lines = [1],
             )
@@ -191,8 +217,11 @@ class SelectionSortAlgorithm(BaseAlgorithm):
         add_step(
             SortingEvents.COMPLETE,
             [HighlightedEntity(id = list(range(n)), state = "success")],
-            f"Selection Sort complete! Sorted: [{sorted_vals}]. "
-            f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps.",
+            eb.build(
+                title = "Selection Sort complete",
+                body = f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps.",
+                data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "current_min_index": None, "current_min_value": None, "scan_range": [n - 1, n - 1]},
+            ),
             pseudocode_lines = [7],
         )
 

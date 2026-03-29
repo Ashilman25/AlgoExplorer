@@ -6,6 +6,7 @@ from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
+from app.simulation.explanation_builder import ExplanationBuilder
 
 
 @register("graph", "dfs")
@@ -19,7 +20,7 @@ class DFSAlgorithm(BaseAlgorithm):
         return "dfs"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
             graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
@@ -71,7 +72,7 @@ class DFSAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -90,7 +91,14 @@ class DFSAlgorithm(BaseAlgorithm):
         add_step(
             "INITIALIZE",
             [HighlightedEntity(id = source, state = "source", label = source)],
-            f"Initialize DFS from '{source}'. Push onto stack. {target_message}",
+            eb.build(
+                title = f"Initialize DFS from '{source}'",
+                body = f"Push '{source}' onto stack. {target_message}",
+                data_snapshot = {
+                    "stack": list(stack),
+                    "visited": sorted(visited),
+                },
+            ),
             frontier = list(stack),
             pseudocode_lines = [0, 1, 2, 3],
         )
@@ -110,9 +118,15 @@ class DFSAlgorithm(BaseAlgorithm):
             add_step(
                 "POP",
                 [HighlightedEntity(id = current, state = node_states[current], label = current)],
-                f"Pop '{current}' from the stack. "
-                f"Exploring its {neighbors_count} neighbor(s). "
-                f"({metrics['nodes_visited']} node(s) visited so far.)",
+                eb.build(
+                    title = f"Pop '{current}' from stack",
+                    body = f"{neighbors_count} neighbor(s) to explore. {metrics['nodes_visited']} node(s) visited so far.",
+                    data_snapshot = {
+                        "stack": list(stack),
+                        "visited": sorted(visited),
+                        "current_neighbors": list(adj[current]),
+                    },
+                ),
                 frontier = list(stack),
                 pseudocode_lines = [4, 5, 6, 7],
             )
@@ -140,8 +154,14 @@ class DFSAlgorithm(BaseAlgorithm):
                 add_step(
                     "PATH_FOUND",
                     highlighted_path,
-                    f"Target '{target}' found! Path: {path_string} ({hops} hop(s)). "
-                    f"Note: DFS does not guarantee the shortest path.",
+                    eb.build(
+                        title = f"Target '{target}' found",
+                        body = f"Path: {path_string} ({hops} hop(s)). DFS does not guarantee the shortest path.",
+                        data_snapshot = {
+                            "stack": list(stack),
+                            "visited": sorted(visited),
+                        },
+                    ),
                     frontier = list(stack),
                     path = path,
                     pseudocode_lines = [8],
@@ -172,8 +192,15 @@ class DFSAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = current, state = node_states[current], label = current),
                             HighlightedEntity(id = neighbor, state = "frontier", label = neighbor),
                         ],
-                        f"Edge {current} -> {neighbor}: '{neighbor}' is unvisited. "
-                        f"Push onto stack. Stack size is now {len(stack)}.",
+                        eb.build(
+                            title = f"Push '{neighbor}' onto stack",
+                            body = f"Edge {current} -> {neighbor}: '{neighbor}' is unvisited. Stack size is now {len(stack)}.",
+                            data_snapshot = {
+                                "stack": list(stack),
+                                "visited": sorted(visited),
+                                "current_neighbors": list(adj[current]),
+                            },
+                        ),
                         frontier = list(stack),
                         pseudocode_lines = [9, 10, 11],
                     )
@@ -184,7 +211,14 @@ class DFSAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = current, state = node_states[current], label = current),
                             HighlightedEntity(id = neighbor, state = node_states[neighbor], label = neighbor),
                         ],
-                        f"Edge {current} -> {neighbor}: '{neighbor}' already visited. Skip.",
+                        eb.build(
+                            title = f"Skip '{neighbor}'",
+                            body = f"Edge {current} -> {neighbor}: '{neighbor}' already visited.",
+                            data_snapshot = {
+                                "stack": list(stack),
+                                "visited": sorted(visited),
+                            },
+                        ),
                         frontier = list(stack),
                         pseudocode_lines = [9, 10],
                     )
@@ -200,8 +234,14 @@ class DFSAlgorithm(BaseAlgorithm):
             add_step(
                 "COMPLETE",
                 [],
-                f"DFS complete. Visited {visited_nodes} node(s), "
-                f"explored {explored_edges} edge(s). {result_message}",
+                eb.build(
+                    title = "DFS complete",
+                    body = f"Visited {visited_nodes} node(s), explored {explored_edges} edge(s). {result_message}",
+                    data_snapshot = {
+                        "stack": list(stack),
+                        "visited": sorted(visited),
+                    },
+                ),
                 frontier = [],
                 pseudocode_lines = [12],
             )

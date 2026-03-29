@@ -453,7 +453,8 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
   const cellStates    = currentStep?.state_payload?.cell_states ?? null
   const currentCell   = currentStep?.state_payload?.current_cell ?? null
   const tracebackPath = currentStep?.state_payload?.traceback_path ?? []
-  const explanation   = currentStep?.explanation ?? null
+  const rawExp        = currentStep?.explanation ?? null
+  const explanation   = typeof rawExp === 'string' ? rawExp : rawExp?.body ?? rawExp?.text ?? rawExp?.title ?? null
   const eventType     = currentStep?.event_type ?? currentStep?.eventType ?? null
 
   const hasTimeline = totalSteps > 0

@@ -33,7 +33,8 @@ export default function DpStripCanvas({ showCoinUsed = false }) {
   const dependencyIdx   = currentStep?.state_payload?.dependency_indices ?? []
   const coinsUsed       = currentStep?.state_payload?.coins_used ?? []
   const tracebackPath   = currentStep?.state_payload?.traceback_path ?? []
-  const explanation      = currentStep?.explanation ?? null
+  const rawExp           = currentStep?.explanation ?? null
+  const explanation      = typeof rawExp === 'string' ? rawExp : rawExp?.body ?? rawExp?.text ?? rawExp?.title ?? null
   const eventType        = currentStep?.event_type ?? null
 
   const hasTimeline = totalSteps > 0

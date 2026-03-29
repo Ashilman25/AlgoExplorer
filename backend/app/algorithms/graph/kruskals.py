@@ -6,6 +6,7 @@ from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
+from app.simulation.explanation_builder import ExplanationBuilder
 
 
 class UnionFind:
@@ -44,7 +45,7 @@ class KruskalsAlgorithm(BaseAlgorithm):
         return "kruskals"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
             graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
@@ -100,7 +101,7 @@ class KruskalsAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -109,9 +110,15 @@ class KruskalsAlgorithm(BaseAlgorithm):
         add_step(
             "INITIALIZE",
             [],
-            f"Initialize Kruskal's MST. "
-            f"{len(sorted_edges)} edge(s) sorted by weight. "
-            f"{len(node_ids)} component(s) initially.",
+            eb.build(
+                title = "Initialize Kruskal's MST",
+                body = f"{len(sorted_edges)} edge(s) sorted by weight. {len(node_ids)} component(s) initially.",
+                data_snapshot = {
+                    "mst_edges": [],
+                    "mst_cost": 0,
+                    "components": len(node_ids),
+                },
+            ),
             pseudocode_lines = [0, 1, 2, 3],
         )
 
@@ -132,8 +139,16 @@ class KruskalsAlgorithm(BaseAlgorithm):
                     HighlightedEntity(id = u, state = node_states[u], label = u),
                     HighlightedEntity(id = v, state = node_states[v], label = v),
                 ],
-                f"Consider edge {u} - {v} (w={weight}). "
-                f"Check if adding it creates a cycle.",
+                eb.build(
+                    title = f"Consider edge {u}-{v} (w={weight})",
+                    body = f"Check if adding it creates a cycle.",
+                    data_snapshot = {
+                        "mst_edges": [[e["source"], e["target"], e["weight"]] for e in mst_edges],
+                        "mst_cost": mst_total_weight,
+                        "components": uf.num_components,
+                        "edge": [u, v, weight],
+                    },
+                ),
                 pseudocode_lines = [4, 5],
             )
 
@@ -156,9 +171,16 @@ class KruskalsAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = u, state = "success", label = u),
                         HighlightedEntity(id = v, state = "success", label = v),
                     ],
-                    f"Accept edge {u} - {v} (w={weight}). "
-                    f"No cycle formed. MST weight: {mst_total_weight}. "
-                    f"{uf.num_components} component(s) remaining.",
+                    eb.build(
+                        title = f"Add edge {u}-{v} to MST",
+                        body = f"No cycle formed. MST weight: {mst_total_weight}. {uf.num_components} component(s) remaining.",
+                        data_snapshot = {
+                            "mst_edges": [[e["source"], e["target"], e["weight"]] for e in mst_edges],
+                            "mst_cost": mst_total_weight,
+                            "components": uf.num_components,
+                            "edge": [u, v, weight],
+                        },
+                    ),
                     pseudocode_lines = [5, 6, 7, 8],
                 )
             else:
@@ -172,8 +194,16 @@ class KruskalsAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = u, state = node_states[u], label = u),
                         HighlightedEntity(id = v, state = node_states[v], label = v),
                     ],
-                    f"Reject edge {u} - {v} (w={weight}). "
-                    f"Would create a cycle (both in same component).",
+                    eb.build(
+                        title = f"Reject edge {u}-{v}",
+                        body = f"Would create a cycle (both in same component). w={weight}.",
+                        data_snapshot = {
+                            "mst_edges": [[e["source"], e["target"], e["weight"]] for e in mst_edges],
+                            "mst_cost": mst_total_weight,
+                            "components": uf.num_components,
+                            "edge": [u, v, weight],
+                        },
+                    ),
                     pseudocode_lines = [5],
                 )
 
@@ -186,10 +216,15 @@ class KruskalsAlgorithm(BaseAlgorithm):
         add_step(
             "COMPLETE",
             [],
-            f"Kruskal's complete. MST has {len(mst_edges)} edge(s), "
-            f"total weight {mst_total_weight}. "
-            f"Considered {metrics['edges_considered']} of {len(sorted_edges)} edge(s). "
-            f"{uf.num_components} component(s) in final forest.",
+            eb.build(
+                title = "Kruskal's complete",
+                body = f"MST has {len(mst_edges)} edge(s), total weight {mst_total_weight}. Considered {metrics['edges_considered']} of {len(sorted_edges)} edge(s). {uf.num_components} component(s) in final forest.",
+                data_snapshot = {
+                    "mst_edges": [[e["source"], e["target"], e["weight"]] for e in mst_edges],
+                    "mst_cost": mst_total_weight,
+                    "components": uf.num_components,
+                },
+            ),
             pseudocode_lines = [9],
         )
 

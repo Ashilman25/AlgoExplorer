@@ -8,6 +8,7 @@ from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
+from app.simulation.explanation_builder import ExplanationBuilder
 
 
 @register("graph", "bellman_ford")
@@ -21,7 +22,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
         return "bellman_ford"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
             graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
@@ -85,7 +86,7 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -100,9 +101,16 @@ class BellmanFordAlgorithm(BaseAlgorithm):
         add_step(
             "INITIALIZE",
             [HighlightedEntity(id = source, state = "source", label = source)],
-            f"Initialize Bellman-Ford from '{source}'. "
-            f"Set dist[{source}] = 0, all others = inf. "
-            f"Will perform {V - 1} relaxation pass(es) over {len(all_edges)} edge(s).",
+            eb.build(
+                title = f"Initialize Bellman-Ford from '{source}'",
+                body = f"dist[{source}]=0, all others=inf. {V - 1} relaxation pass(es) over {len(all_edges)} edge(s).",
+                data_snapshot = {
+                    "distances": dist_display(),
+                    "iteration_number": 0,
+                    "total_iterations": V - 1,
+                    "negative_cycle_detected": False,
+                },
+            ),
             pseudocode_lines = [0, 1, 2],
         )
 
@@ -112,7 +120,16 @@ class BellmanFordAlgorithm(BaseAlgorithm):
             add_step(
                 "START_PASS",
                 [],
-                f"Pass {pass_num}/{V - 1}: Relaxing all {len(all_edges)} edges.",
+                eb.build(
+                    title = f"Start pass {pass_num}/{V - 1}",
+                    body = f"Relaxing all {len(all_edges)} edges.",
+                    data_snapshot = {
+                        "distances": dist_display(),
+                        "iteration_number": pass_num,
+                        "total_iterations": V - 1,
+                        "negative_cycle_detected": False,
+                    },
+                ),
                 pseudocode_lines = [3, 4],
             )
 
@@ -141,8 +158,17 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = u, state = node_states[u], label = u),
                             HighlightedEntity(id = v, state = node_states[v], label = v),
                         ],
-                        f"Edge {u} -> {v} (w={w}): "
-                        f"Relax dist[{v}] from {old_label} to {round(new_dist, 2)}.",
+                        eb.build(
+                            title = f"Relax edge {u} -> {v}",
+                            body = f"dist[{v}]: {old_label} -> {round(new_dist, 2)}.",
+                            data_snapshot = {
+                                "distances": dist_display(),
+                                "iteration_number": pass_num,
+                                "total_iterations": V - 1,
+                                "edge": [u, v],
+                                "negative_cycle_detected": False,
+                            },
+                        ),
                         pseudocode_lines = [4, 5, 6],
                     )
                 else:
@@ -152,8 +178,17 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = u, state = node_states[u], label = u),
                             HighlightedEntity(id = v, state = node_states[v], label = v),
                         ],
-                        f"Edge {u} -> {v} (w={w}): "
-                        f"dist[{v}] = {round(dist[v], 2)} <= {round(new_dist, 2)}. No improvement.",
+                        eb.build(
+                            title = f"No improvement for '{v}'",
+                            body = f"Edge {u} -> {v} (w={w}): dist[{v}]={round(dist[v], 2)} <= {round(new_dist, 2)}.",
+                            data_snapshot = {
+                                "distances": dist_display(),
+                                "iteration_number": pass_num,
+                                "total_iterations": V - 1,
+                                "edge": [u, v],
+                                "negative_cycle_detected": False,
+                            },
+                        ),
                         pseudocode_lines = [4, 5],
                     )
 
@@ -164,8 +199,16 @@ class BellmanFordAlgorithm(BaseAlgorithm):
         add_step(
             "START_PASS",
             [],
-            f"Detection pass: checking for negative cycles. "
-            f"If any edge can still be relaxed, a negative cycle exists.",
+            eb.build(
+                title = "Negative cycle detection pass",
+                body = "If any edge can still be relaxed, a negative cycle exists.",
+                data_snapshot = {
+                    "distances": dist_display(),
+                    "iteration_number": V,
+                    "total_iterations": V - 1,
+                    "negative_cycle_detected": False,
+                },
+            ),
             pseudocode_lines = [7],
         )
 
@@ -199,8 +242,16 @@ class BellmanFordAlgorithm(BaseAlgorithm):
                 add_step(
                     "NEGATIVE_CYCLE_DETECTED",
                     highlighted_cycle,
-                    f"Negative cycle detected! Cycle: {cycle_str}. "
-                    f"Shortest paths are undefined when a negative cycle is reachable.",
+                    eb.build(
+                        title = "Negative cycle detected",
+                        body = f"Cycle: {cycle_str}. Shortest paths are undefined when a negative cycle is reachable.",
+                        data_snapshot = {
+                            "distances": dist_display(),
+                            "iteration_number": V,
+                            "total_iterations": V - 1,
+                            "negative_cycle_detected": True,
+                        },
+                    ),
                     negative_cycle = cycle_nodes,
                     pseudocode_lines = [7, 8, 9],
                 )
@@ -230,8 +281,16 @@ class BellmanFordAlgorithm(BaseAlgorithm):
             add_step(
                 "PATH_FOUND",
                 highlighted_path,
-                f"Shortest path to '{target}': {path_string} (cost {round(dist[target], 2)}). "
-                f"Bellman-Ford handles negative edge weights correctly.",
+                eb.build(
+                    title = f"Shortest path to '{target}' found",
+                    body = f"Path: {path_string} (cost {round(dist[target], 2)}). Bellman-Ford handles negative edge weights correctly.",
+                    data_snapshot = {
+                        "distances": dist_display(),
+                        "iteration_number": V - 1,
+                        "total_iterations": V - 1,
+                        "negative_cycle_detected": False,
+                    },
+                ),
                 path = path,
                 pseudocode_lines = [10],
             )
@@ -241,10 +300,16 @@ class BellmanFordAlgorithm(BaseAlgorithm):
             add_step(
                 "COMPLETE",
                 [],
-                f"Bellman-Ford complete. "
-                f"Processed {metrics['edges_processed']} edge checks, "
-                f"{metrics['relaxation_count']} relaxation(s) over {metrics['passes_completed']} pass(es). "
-                f"{result_message}",
+                eb.build(
+                    title = "Bellman-Ford complete",
+                    body = f"{metrics['edges_processed']} edge checks, {metrics['relaxation_count']} relaxation(s) over {metrics['passes_completed']} pass(es). {result_message}",
+                    data_snapshot = {
+                        "distances": dist_display(),
+                        "iteration_number": V - 1,
+                        "total_iterations": V - 1,
+                        "negative_cycle_detected": False,
+                    },
+                ),
                 pseudocode_lines = [10],
             )
 

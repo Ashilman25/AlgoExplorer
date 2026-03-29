@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import FibonacciInputPayload, DPEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -57,7 +58,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
 
     # Mode 1 — Tabulation (bottom-up, 1D array)                          
     def _run_tabulation(self, n: int, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         # Array indices 1..n (index 0 unused; we use 1-based Fibonacci)
         array = [None] * (n + 1)
@@ -88,7 +89,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -108,8 +109,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 [HighlightedEntity(id = 2, state = "visited", label = "F(2)=1")]
                 if n >= 2 else []
             ),
-            f"Initialize Fibonacci tabulation (n={n}). "
-            f"Base cases: F(1) = 1" + (", F(2) = 1." if n >= 2 else "."),
+            eb.build(
+                title = f"Initialize Fibonacci tabulation (n={n})",
+                body = "Base cases: F(1) = 1" + (", F(2) = 1." if n >= 2 else "."),
+                data_snapshot = {"table": list(array), "index": 1, "value": 1},
+            ),
             pseudocode_lines = [0, 2, 3, 4],
         )
 
@@ -119,7 +123,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.COMPLETE,
                 [HighlightedEntity(id = n, state = "success", label = f"F({n})={array[n]}")],
-                f"Fibonacci({n}) = {array[n]} (base case).",
+                eb.build(
+                    title = f"Fibonacci({n}) = {array[n]}",
+                    body = f"F({n}) = {array[n]} (base case).",
+                    data_snapshot = {"table": list(array), "index": n, "value": array[n]},
+                ),
                 pseudocode_lines = [1],
             )
             final_result = {
@@ -148,7 +156,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.COMPUTE_CELL,
                 [HighlightedEntity(id = i, state = "active", label = f"F({i})")],
-                f"Computing F({i}) = F({i - 1}) + F({i - 2}).",
+                eb.build(
+                    title = f"Compute F({i})",
+                    body = f"Computing F({i}) = F({i - 1}) + F({i - 2}).",
+                    data_snapshot = {"index": i, "value": None},
+                ),
                 current_index = i,
                 pseudocode_lines = [5],
             )
@@ -164,7 +176,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
                     HighlightedEntity(id = i - 1, state = "frontier", label = f"F({i - 1})={array[i - 1]}"),
                     HighlightedEntity(id = i - 2, state = "frontier", label = f"F({i - 2})={array[i - 2]}"),
                 ],
-                f"F({i}) reads F({i - 1}) = {array[i - 1]} and F({i - 2}) = {array[i - 2]}.",
+                eb.build(
+                    title = f"Read F({i - 1}) and F({i - 2})",
+                    body = f"F({i - 1}) = {array[i - 1]}, F({i - 2}) = {array[i - 2]}.",
+                    data_snapshot = {"index": i, "dependencies": [array[i - 1], array[i - 2]]},
+                ),
                 current_index = i,
                 dependency_indices = dep_indices,
                 pseudocode_lines = [6],
@@ -179,7 +195,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.FILL_CELL,
                 [HighlightedEntity(id = i, state = "visited", label = f"F({i})={array[i]}")],
-                f"F({i}) = {array[i - 1]} + {array[i - 2]} = {array[i]}.",
+                eb.build(
+                    title = f"F({i}) = {array[i]}",
+                    body = f"F({i}) = {array[i - 1]} + {array[i - 2]} = {array[i]}.",
+                    data_snapshot = {"table": list(array), "index": i, "value": array[i], "dependencies": [array[i - 1], array[i - 2]]},
+                ),
                 current_index = i,
                 pseudocode_lines = [6],
             )
@@ -191,8 +211,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.COMPLETE,
             [HighlightedEntity(id = n, state = "success", label = f"F({n})={array[n]}")],
-            f"Fibonacci tabulation complete! F({n}) = {array[n]}. "
-            f"{metrics['total_calls']} cells computed after base cases.",
+            eb.build(
+                title = f"Fibonacci tabulation complete: F({n}) = {array[n]}",
+                body = f"{metrics['total_calls']} cells computed after base cases.",
+                data_snapshot = {"table": list(array), "index": n, "value": array[n]},
+            ),
             pseudocode_lines = [7],
         )
 
@@ -218,7 +241,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
 
     # Mode 2 — Memoized (top-down recursion with memo table)             
     def _run_memoized(self, n: int, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         # array: index 1..n; None = not yet computed
         array = [None] * (n + 1)
@@ -261,7 +284,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -269,8 +292,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.INITIALIZE,
             [HighlightedEntity(id = n, state = "active", label = f"F({n})")],
-            f"Initialize Fibonacci memoized (n={n}). "
-            f"Top-down recursion with memo table. Each sub-problem computed at most once.",
+            eb.build(
+                title = f"Initialize Fibonacci memoized (n={n})",
+                body = "Top-down recursion with memo table. Each sub-problem computed at most once.",
+                data_snapshot = {"index": n, "value": None},
+            ),
             pseudocode_lines = [0],
         )
 
@@ -296,7 +322,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.COMPUTE_CELL,
                 [HighlightedEntity(id = k, state = "active", label = f"F({k})")],
-                f"Call F({k}) at depth {depth}.",
+                eb.build(
+                    title = f"Call F({k}) at depth {depth}",
+                    body = f"Computing F({k}) via memoized recursion.",
+                    data_snapshot = {"index": k, "value": None},
+                ),
                 current_index = k,
                 pseudocode_lines = [5],
             )
@@ -314,7 +344,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.FILL_CELL,
                     [HighlightedEntity(id = k, state = "source", label = f"F({k})={result} (memo)")],
-                    f"F({k}) = {result} (memo hit — already computed).",
+                    eb.build(
+                        title = f"F({k}) = {result} (memo hit)",
+                        body = f"F({k}) already computed. Retrieved from memo table.",
+                        data_snapshot = {"index": k, "value": result},
+                    ),
                     current_index = k,
                     pseudocode_lines = [6],
                 )
@@ -334,7 +368,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.FILL_CELL,
                     [HighlightedEntity(id = k, state = "visited", label = f"F({k})={result} (base)")],
-                    f"F({k}) = {result} (base case).",
+                    eb.build(
+                        title = f"F({k}) = {result} (base case)",
+                        body = f"F({k}) = {result}. Base case stored in memo.",
+                        data_snapshot = {"index": k, "value": result},
+                    ),
                     current_index = k,
                     pseudocode_lines = [1],
                 )
@@ -345,7 +383,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.READ_DEPENDENCY,
                 [HighlightedEntity(id = k, state = "active", label = f"F({k})")],
-                f"F({k}) will recurse into F({k - 1}) and F({k - 2}).",
+                eb.build(
+                    title = f"Recurse F({k - 1}) and F({k - 2})",
+                    body = f"F({k}) will recurse into F({k - 1}) and F({k - 2}).",
+                    data_snapshot = {"index": k, "dependencies": [k - 1, k - 2]},
+                ),
                 current_index = k,
                 dependency_indices = dep_indices,
                 pseudocode_lines = [6],
@@ -367,7 +409,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.FILL_CELL,
                 [HighlightedEntity(id = k, state = "visited", label = f"F({k})={result}")],
-                f"F({k}) = F({k - 1}) + F({k - 2}) = {left} + {right} = {result}. Cached in memo.",
+                eb.build(
+                    title = f"F({k}) = {result}",
+                    body = f"F({k}) = {left} + {right} = {result}. Cached in memo.",
+                    data_snapshot = {"table": list(array), "index": k, "value": result, "dependencies": [left, right]},
+                ),
                 current_index = k,
                 pseudocode_lines = [6],
             )
@@ -382,9 +428,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.COMPLETE,
             [HighlightedEntity(id = n, state = "success", label = f"F({n})={result}")],
-            f"Fibonacci memoized complete! F({n}) = {result}. "
-            f"{metrics['total_calls']} calls, {metrics['redundant_calls']} redundant (memo prevented recomputation), "
-            f"max depth {metrics['max_depth']}.",
+            eb.build(
+                title = f"Fibonacci memoized complete: F({n}) = {result}",
+                body = f"{metrics['total_calls']} calls, {metrics['redundant_calls']} redundant. Max depth {metrics['max_depth']}.",
+                data_snapshot = {"table": list(array), "index": n, "value": result},
+            ),
             pseudocode_lines = [7],
         )
 
@@ -409,7 +457,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
 
     # Mode 3 — Naive recursive (pure recursion, no memo, exponential)    
     def _run_naive(self, n: int, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         steps: list[TimelineStep] = []
         metrics = {
@@ -447,7 +495,7 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -455,9 +503,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.INITIALIZE,
             [HighlightedEntity(id = 0, state = "active", label = f"F({n})")],
-            f"Initialize Fibonacci naive recursive (n={n}). "
-            f"No memoization — every sub-problem recomputed from scratch. "
-            f"Exponential time complexity O(2^n).",
+            eb.build(
+                title = f"Initialize Fibonacci naive recursive (n={n})",
+                body = "No memoization. Every sub-problem recomputed from scratch. O(2^n) time.",
+                data_snapshot = {"index": n, "value": None},
+            ),
             pseudocode_lines = [0],
         )
 
@@ -483,12 +533,14 @@ class FibonacciAlgorithm(BaseAlgorithm):
             if k in _computed:
                 metrics["redundant_calls"] += 1
 
+            is_redundant = k in _computed
             add_step(
                 DPEvents.COMPUTE_CELL,
                 [HighlightedEntity(id = node_id, state = "active", label = f"F({k})")],
-                f"Call F({k}) at depth {depth}" + (
-                    f" (REDUNDANT — F({k}) already computed {_computed[k]} time(s))."
-                    if k in _computed else "."
+                eb.build(
+                    title = f"Call F({k}) at depth {depth}" + (" (REDUNDANT)" if is_redundant else ""),
+                    body = f"F({k}) already computed {_computed[k]} time(s)." if is_redundant else f"Computing F({k}) via naive recursion.",
+                    data_snapshot = {"index": k, "value": None},
                 ),
                 pseudocode_lines = [5],
             )
@@ -506,7 +558,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
                 add_step(
                     DPEvents.FILL_CELL,
                     [HighlightedEntity(id = node_id, state = "visited", label = f"F({k})={result}")],
-                    f"F({k}) = {result} (base case).",
+                    eb.build(
+                        title = f"F({k}) = {result} (base case)",
+                        body = f"F({k}) = {result}. Base case.",
+                        data_snapshot = {"index": k, "value": result},
+                    ),
                     pseudocode_lines = [1],
                 )
                 return result
@@ -525,7 +581,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
             add_step(
                 DPEvents.FILL_CELL,
                 [HighlightedEntity(id = node_id, state = "visited", label = f"F({k})={result}")],
-                f"F({k}) = F({k - 1}) + F({k - 2}) = {left} + {right} = {result}.",
+                eb.build(
+                    title = f"F({k}) = {result}",
+                    body = f"F({k}) = {left} + {right} = {result}.",
+                    data_snapshot = {"index": k, "value": result, "dependencies": [left, right]},
+                ),
                 pseudocode_lines = [6],
             )
             return result
@@ -539,9 +599,11 @@ class FibonacciAlgorithm(BaseAlgorithm):
         add_step(
             DPEvents.COMPLETE,
             [HighlightedEntity(id = 0, state = "success", label = f"F({n})={result}")],
-            f"Fibonacci naive recursive complete! F({n}) = {result}. "
-            f"{metrics['total_calls']} total calls, {metrics['redundant_calls']} redundant. "
-            f"Max recursion depth: {metrics['max_depth']}.",
+            eb.build(
+                title = f"Fibonacci naive complete: F({n}) = {result}",
+                body = f"{metrics['total_calls']} total calls, {metrics['redundant_calls']} redundant. Max depth {metrics['max_depth']}.",
+                data_snapshot = {"index": n, "value": result},
+            ),
             pseudocode_lines = [7],
         )
 

@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import SortingInputPayload, SortingEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -22,7 +23,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
 
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
         benchmark_mode = algo_input.execution_mode == "benchmark"
 
         # parse + validate
@@ -69,7 +70,7 @@ class MergeSortAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
 
@@ -81,11 +82,16 @@ class MergeSortAlgorithm(BaseAlgorithm):
 
         #initial step info
         highlighted_entities = [HighlightedEntity(id = list(range(n)), state = "default")]
-        message = (
-            f"Initialize Merge Sort on {n} elements. "
-            f"Top-down divide-and-conquer: split, sort halves, merge."
+        add_step(
+            SortingEvents.INITIALIZE,
+            highlighted_entities,
+            eb.build(
+                title = "Initialize Merge Sort",
+                body = f"Begin Merge Sort on {n} elements. Top-down divide-and-conquer approach.",
+                data_snapshot = {"array": list(arr), "comparisons": 0, "writes": 0, "range": [0, n - 1], "depth": 0},
+            ),
+            pseudocode_lines = [0],
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0])
 
 
         def mergesort(low, high, depth):
@@ -101,7 +107,11 @@ class MergeSortAlgorithm(BaseAlgorithm):
                 add_step(
                     SortingEvents.MARK_SORTED,
                     [HighlightedEntity(id = low, state = "visited", label = str(arr[low]))],
-                    f"Single element arr[{low}] = {arr[low]} is trivially sorted.",
+                    eb.build(
+                        title = f"Mark arr[{low}] sorted",
+                        body = f"Single element arr[{low}] = {arr[low]} is trivially sorted.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "writes": metrics["writes"], "range": [low, low], "depth": depth},
+                    ),
                     pseudocode_lines = [1],
                 )
                 return
@@ -122,11 +132,16 @@ class MergeSortAlgorithm(BaseAlgorithm):
             right_range = f"[{mid + 1}..{high}]"
 
             highlighted_entities = [HighlightedEntity(id = list(range(low, high + 1)), state = "active")]
-            message = (
-                f"Split [{low}..{high}]: [{subarray_vals}] "
-                f"into {left_range} and {right_range} (depth {depth})."
+            add_step(
+                SortingEvents.PARTITION_START,
+                highlighted_entities,
+                eb.build(
+                    title = f"Split [{low}..{high}]",
+                    body = f"Divide into {left_range} and {right_range} at depth {depth}.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "writes": metrics["writes"], "range": [low, high], "depth": depth},
+                ),
+                pseudocode_lines = [2, 3, 4],
             )
-            add_step(SortingEvents.PARTITION_START, highlighted_entities, message, pseudocode_lines = [2, 3, 4])
 
             # reset before recursing so children manage their own states
             for k in range(low, high + 1):
@@ -159,17 +174,11 @@ class MergeSortAlgorithm(BaseAlgorithm):
 
                 if left_val <= right_val:
                     winner = left_val
-                    message = (
-                        f"Compare left {left_val} ≤ right {right_val}. "
-                        f"Take {left_val} from left half."
-                    )
+                    compare_body = f"Left {left_val} <= right {right_val}. Take {left_val} from left half."
                     i += 1
                 else:
                     winner = right_val
-                    message = (
-                        f"Compare left {left_val} > right {right_val}. "
-                        f"Take {right_val} from right half."
-                    )
+                    compare_body = f"Left {left_val} > right {right_val}. Take {right_val} from right half."
                     j += 1
 
                 highlighted_entities = [
@@ -179,7 +188,11 @@ class MergeSortAlgorithm(BaseAlgorithm):
                 add_step(
                     SortingEvents.COMPARE,
                     highlighted_entities,
-                    message,
+                    eb.build(
+                        title = f"Compare left[{left_idx}] and right[{right_idx}]",
+                        body = compare_body,
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "writes": metrics["writes"], "range": [low, high], "depth": depth, "left_value": left_val, "right_value": right_val},
+                    ),
                     comparing = [left_idx, right_idx],
                     pseudocode_lines = [10, 11],
                 )
@@ -194,7 +207,11 @@ class MergeSortAlgorithm(BaseAlgorithm):
                 add_step(
                     SortingEvents.MERGE,
                     [HighlightedEntity(id = k, state = "swap", label = str(winner))],
-                    f"Write {winner} to arr[{k}].",
+                    eb.build(
+                        title = f"Write {winner} to arr[{k}]",
+                        body = f"Place {winner} at position {k}. {metrics['writes']} writes so far.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "writes": metrics["writes"], "range": [low, high], "depth": depth},
+                    ),
                     swapping = [k],
                     pseudocode_lines = [11],
                 )
@@ -213,7 +230,11 @@ class MergeSortAlgorithm(BaseAlgorithm):
                 add_step(
                     SortingEvents.MERGE,
                     [HighlightedEntity(id = k, state = "swap", label = str(write_val))],
-                    f"Copy remaining left value {write_val} to arr[{k}].",
+                    eb.build(
+                        title = f"Copy left {write_val} to arr[{k}]",
+                        body = f"Copy remaining left value {write_val} to position {k}. {metrics['writes']} writes so far.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "writes": metrics["writes"], "range": [low, high], "depth": depth},
+                    ),
                     swapping = [k],
                     pseudocode_lines = [12],
                 )
@@ -233,7 +254,11 @@ class MergeSortAlgorithm(BaseAlgorithm):
                 add_step(
                     SortingEvents.MERGE,
                     [HighlightedEntity(id = k, state = "swap", label = str(write_val))],
-                    f"Copy remaining right value {write_val} to arr[{k}].",
+                    eb.build(
+                        title = f"Copy right {write_val} to arr[{k}]",
+                        body = f"Copy remaining right value {write_val} to position {k}. {metrics['writes']} writes so far.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "writes": metrics["writes"], "range": [low, high], "depth": depth},
+                    ),
                     swapping = [k],
                     pseudocode_lines = [13],
                 )
@@ -252,11 +277,16 @@ class MergeSortAlgorithm(BaseAlgorithm):
             merged_vals = ", ".join(merged_values)
 
             highlighted_entities = [HighlightedEntity(id = list(range(low, high + 1)), state = "visited")]
-            message = (
-                f"Merge complete [{low}..{high}]: [{merged_vals}]. "
-                f"{high - low + 1} elements sorted in this range."
+            add_step(
+                SortingEvents.PARTITION_END,
+                highlighted_entities,
+                eb.build(
+                    title = f"Merge complete [{low}..{high}]",
+                    body = f"{high - low + 1} elements sorted in this range.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "writes": metrics["writes"], "range": [low, high], "depth": depth, "merged_values": [arr[k] for k in range(low, high + 1)]},
+                ),
+                pseudocode_lines = [5, 7],
             )
-            add_step(SortingEvents.PARTITION_END, highlighted_entities, message, pseudocode_lines = [5, 7])
 
 
 
@@ -278,9 +308,11 @@ class MergeSortAlgorithm(BaseAlgorithm):
         add_step(
             SortingEvents.COMPLETE,
             [HighlightedEntity(id = list(range(n)), state = "success")],
-            f"Merge Sort complete! Sorted: [{sorted_vals}]. "
-            f"{metrics['comparisons']} comparisons, {metrics['writes']} writes, "
-            f"max depth {metrics['max_recursion_depth']}.",
+            eb.build(
+                title = "Merge Sort complete",
+                body = f"{metrics['comparisons']} comparisons, {metrics['writes']} writes, max depth {metrics['max_recursion_depth']}.",
+                data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "writes": metrics["writes"], "range": [0, n - 1], "depth": 0},
+            ),
             pseudocode_lines = [0],
         )
 
