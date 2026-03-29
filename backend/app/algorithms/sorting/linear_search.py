@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import SortingInputPayload, SearchingEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -22,7 +23,7 @@ class LinearSearchAlgorithm(BaseAlgorithm):
 
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
         benchmark_mode = algo_input.execution_mode == "benchmark"
 
         # parse + validate
@@ -71,7 +72,7 @@ class LinearSearchAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
 
@@ -80,11 +81,16 @@ class LinearSearchAlgorithm(BaseAlgorithm):
 
         # INITIALIZE
         highlighted_entities = [HighlightedEntity(id = list(range(n)), state = "default")]
-        message = (
-            f"Initialize Linear Search on {n} elements. "
-            f"Searching for target = {target}."
+        add_step(
+            SearchingEvents.INITIALIZE,
+            highlighted_entities,
+            eb.build(
+                title = "Initialize Linear Search",
+                body = f"Search for target = {target} in {n} elements.",
+                data_snapshot = {"array": list(arr), "current_index": None, "current_value": None, "target": target, "comparisons": 0},
+            ),
+            pseudocode_lines = [0],
         )
-        add_step(SearchingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0])
 
 
         # run the search
@@ -99,7 +105,11 @@ class LinearSearchAlgorithm(BaseAlgorithm):
             add_step(
                 SearchingEvents.SCAN,
                 [HighlightedEntity(id = i, state = "active", label = str(arr[i]))],
-                f"Check arr[{i}] = {arr[i]}. Target = {target}.",
+                eb.build(
+                    title = f"Check arr[{i}] = {arr[i]}",
+                    body = f"Compare arr[{i}] = {arr[i]} with target {target}. {metrics['comparisons']} comparisons.",
+                    data_snapshot = {"array": list(arr), "current_index": i, "current_value": arr[i], "target": target, "comparisons": metrics["comparisons"]},
+                ),
                 pseudocode_lines = [1, 2],
             )
 
@@ -110,7 +120,11 @@ class LinearSearchAlgorithm(BaseAlgorithm):
                 add_step(
                     SearchingEvents.FOUND,
                     [HighlightedEntity(id = i, state = "success", label = str(arr[i]))],
-                    f"Found target {target} at index {i}!",
+                    eb.build(
+                        title = f"Found target at index {i}",
+                        body = f"arr[{i}] = {arr[i]} matches target {target}. {metrics['comparisons']} comparisons.",
+                        data_snapshot = {"array": list(arr), "current_index": i, "current_value": arr[i], "target": target, "comparisons": metrics["comparisons"]},
+                    ),
                     found_index = i,
                     pseudocode_lines = [2, 3],
                 )
@@ -125,18 +139,28 @@ class LinearSearchAlgorithm(BaseAlgorithm):
             add_step(
                 SearchingEvents.NOT_FOUND,
                 [HighlightedEntity(id = list(range(n)), state = "visited")],
-                f"Target {target} not found in the array after {metrics['comparisons']} comparisons.",
+                eb.build(
+                    title = "Target not found",
+                    body = f"Target {target} not found after {metrics['comparisons']} comparisons.",
+                    data_snapshot = {"array": list(arr), "current_index": n - 1, "current_value": arr[n - 1] if n > 0 else None, "target": target, "comparisons": metrics["comparisons"]},
+                ),
                 pseudocode_lines = [4],
             )
 
 
         # COMPLETE
+        complete_body = (
+            (f"Target {target} found at index {found_idx}." if found_idx is not None else f"Target {target} not found.")
+            + f" {metrics['comparisons']} comparisons."
+        )
         add_step(
             SearchingEvents.COMPLETE,
             [HighlightedEntity(id = list(range(n)), state = "success" if found_idx is not None else "visited")],
-            f"Linear Search complete. "
-            + (f"Target {target} found at index {found_idx}." if found_idx is not None else f"Target {target} not found.")
-            + f" {metrics['comparisons']} comparisons.",
+            eb.build(
+                title = "Linear Search complete",
+                body = complete_body,
+                data_snapshot = {"array": list(arr), "current_index": found_idx, "current_value": arr[found_idx] if found_idx is not None else None, "target": target, "comparisons": metrics["comparisons"]},
+            ),
             found_index = found_idx,
             pseudocode_lines = [0],
         )

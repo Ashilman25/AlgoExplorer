@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import SortingInputPayload, SortingEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -22,7 +23,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
 
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
         benchmark_mode = algo_input.execution_mode == "benchmark"
 
         # parse + validate
@@ -67,7 +68,7 @@ class HeapSortAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
 
@@ -104,7 +105,11 @@ class HeapSortAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = root, state = "frontier", label = str(arr[root])),
                         HighlightedEntity(id = largest, state = "frontier", label = str(arr[largest])),
                     ],
-                    f"arr[{root}] = {arr[root]} < arr[{largest}] = {arr[largest]}. Swap to restore heap property.",
+                    eb.build(
+                        title = f"Compare arr[{root}] and arr[{largest}]",
+                        body = f"arr[{root}] = {arr[root]} < arr[{largest}] = {arr[largest]}. Swap to restore heap.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "heap_size": heap_size, "heapifying_index": root},
+                    ),
                     comparing = [root, largest],
                     sorted_boundary = sorted_boundary,
                     pseudocode_lines = [6, 7, 8, 9, 10, 11, 12],
@@ -123,7 +128,11 @@ class HeapSortAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = root, state = "swap", label = str(arr[root])),
                         HighlightedEntity(id = largest, state = "swap", label = str(arr[largest])),
                     ],
-                    f"Swap arr[{root}] ↔ arr[{largest}].",
+                    eb.build(
+                        title = f"Swap arr[{root}] and arr[{largest}]",
+                        body = f"Swap {arr[root]} with {arr[largest]}. {metrics['swaps']} swaps so far.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "heap_size": heap_size, "heapifying_index": root},
+                    ),
                     swapping = [root, largest],
                     sorted_boundary = sorted_boundary,
                     pseudocode_lines = [13],
@@ -139,11 +148,16 @@ class HeapSortAlgorithm(BaseAlgorithm):
 
         # INITIALIZE
         highlighted_entities = [HighlightedEntity(id = list(range(n)), state = "default")]
-        message = (
-            f"Initialize Heap Sort on {n} elements. "
-            f"Phase 1: build a max-heap. Phase 2: repeatedly extract the max."
+        add_step(
+            SortingEvents.INITIALIZE,
+            highlighted_entities,
+            eb.build(
+                title = "Initialize Heap Sort",
+                body = f"Begin Heap Sort on {n} elements. Phase 1: build max-heap. Phase 2: extract max.",
+                data_snapshot = {"array": list(arr), "comparisons": 0, "swaps": 0, "heap_size": n, "heapifying_index": None},
+            ),
+            pseudocode_lines = [0, 1],
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0, 1])
 
 
         t_start = time.perf_counter()
@@ -167,7 +181,11 @@ class HeapSortAlgorithm(BaseAlgorithm):
                     HighlightedEntity(id = 0, state = "swap", label = str(arr[0])),
                     HighlightedEntity(id = i, state = "swap", label = str(arr[i])),
                 ],
-                f"Extract max {arr[i]}: swap arr[0] ↔ arr[{i}].",
+                eb.build(
+                    title = f"Extract max {arr[i]}",
+                    body = f"Swap root with arr[{i}]. Max value {arr[i]} placed at end.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "heap_size": i, "heapifying_index": 0},
+                ),
                 swapping = [0, i],
                 sorted_boundary = i,
                 pseudocode_lines = [2, 3],
@@ -180,7 +198,11 @@ class HeapSortAlgorithm(BaseAlgorithm):
             add_step(
                 SortingEvents.MARK_SORTED,
                 [HighlightedEntity(id = i, state = "success", label = str(arr[i]))],
-                f"arr[{i}] = {arr[i]} is now in its final sorted position.",
+                eb.build(
+                    title = f"Mark arr[{i}] sorted",
+                    body = f"arr[{i}] = {arr[i]} is in its final sorted position.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "heap_size": i, "heapifying_index": None},
+                ),
                 sorted_boundary = i,
                 pseudocode_lines = [4],
             )
@@ -203,9 +225,11 @@ class HeapSortAlgorithm(BaseAlgorithm):
         add_step(
             SortingEvents.COMPLETE,
             [HighlightedEntity(id = list(range(n)), state = "success")],
-            f"Heap Sort complete! Sorted: [{sorted_vals}]. "
-            f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps, "
-            f"{metrics['heapify_ops']} heapify operations.",
+            eb.build(
+                title = "Heap Sort complete",
+                body = f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps, {metrics['heapify_ops']} heapify ops.",
+                data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "heap_size": 0, "heapifying_index": None},
+            ),
             pseudocode_lines = [0],
         )
 

@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import SortingInputPayload, SortingEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -22,7 +23,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
 
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
         benchmark_mode = algo_input.execution_mode == "benchmark"
 
         # parse + validate
@@ -69,7 +70,7 @@ class QuickSortAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
 
@@ -81,11 +82,16 @@ class QuickSortAlgorithm(BaseAlgorithm):
         
         #initial step info
         highlighted_entities = [HighlightedEntity(id = list(range(n)), state = "default")]
-        message = (
-            f"Initialize Quick Sort on {n} elements. "
-            f"Using Lomuto partition (last element as pivot)."
+        add_step(
+            SortingEvents.INITIALIZE,
+            highlighted_entities,
+            eb.build(
+                title = "Initialize Quick Sort",
+                body = f"Begin Quick Sort on {n} elements. Using Lomuto partition (last element as pivot).",
+                data_snapshot = {"array": list(arr), "comparisons": 0, "swaps": 0},
+            ),
+            pseudocode_lines = [0],
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, pseudocode_lines = [0])
         
 
         def quicksort(low, high, depth):
@@ -101,7 +107,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
                 add_step(
                     SortingEvents.MARK_SORTED,
                     [HighlightedEntity(id = low, state = "success", label = str(arr[low]))],
-                    f"Single element arr[{low}] = {arr[low]} is in its sorted position.",
+                    eb.build(
+                        title = f"Mark arr[{low}] sorted",
+                        body = f"Single element arr[{low}] = {arr[low]} is in its sorted position.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [low, low], "pivot_value": None, "pivot_index": None, "depth": depth},
+                    ),
                     pseudocode_lines = [1],
                 )
                 return
@@ -119,11 +129,16 @@ class QuickSortAlgorithm(BaseAlgorithm):
                 
             subarray_vals = ", ".join(values)
             highlighted_entities = [HighlightedEntity(id = list(range(low, high + 1)), state = "active")]
-            message = (
-                f"Partition [{low}..{high}]: [{subarray_vals}] "
-                f"({high - low + 1} elements, depth {depth})."
+            add_step(
+                SortingEvents.PARTITION_START,
+                highlighted_entities,
+                eb.build(
+                    title = f"Partition [{low}..{high}]",
+                    body = f"Begin partitioning {high - low + 1} elements at depth {depth}.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [low, high], "pivot_value": None, "pivot_index": None, "depth": depth},
+                ),
+                pseudocode_lines = [2, 6],
             )
-            add_step(SortingEvents.PARTITION_START, highlighted_entities, message, pseudocode_lines = [2, 6])
 
 
             # SET_PIVOT
@@ -135,7 +150,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
             add_step(
                 SortingEvents.SET_PIVOT,
                 [HighlightedEntity(id = pivot_pos, state = "source", label = str(pivot_val))],
-                f"Choose pivot = arr[{pivot_pos}] = {pivot_val}.",
+                eb.build(
+                    title = f"Set pivot arr[{pivot_pos}] = {pivot_val}",
+                    body = f"Choose last element as pivot. Pivot value is {pivot_val}.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [low, high], "pivot_value": pivot_val, "pivot_index": pivot_pos, "depth": depth},
+                ),
                 pivot_index = pivot_pos,
                 pseudocode_lines = [7, 8],
             )
@@ -162,7 +181,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
                                 HighlightedEntity(id = j, state = "frontier", label = str(arr[j])),
                                 HighlightedEntity(id = pivot_pos, state = "source", label = str(pivot_val)),
                             ],
-                            f"arr[{j}] = {arr[j]} ≤ pivot {pivot_val}. Swap with arr[{i}] = {arr[i]}.",
+                            eb.build(
+                                title = f"Compare arr[{j}] and pivot",
+                                body = f"arr[{j}] = {arr[j]} <= pivot {pivot_val}. Swap with arr[{i}] = {arr[i]}.",
+                                data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [low, high], "pivot_value": pivot_val, "pivot_index": pivot_pos, "depth": depth},
+                            ),
                             comparing = [j, pivot_pos],
                             pivot_index = pivot_pos,
                             pseudocode_lines = [9, 10, 11],
@@ -181,7 +204,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
                                 HighlightedEntity(id = i, state = "swap", label = str(arr[i])),
                                 HighlightedEntity(id = j, state = "swap", label = str(arr[j])),
                             ],
-                            f"Swap arr[{i}] ↔ arr[{j}].",
+                            eb.build(
+                                title = f"Swap arr[{i}] and arr[{j}]",
+                                body = f"Swap arr[{i}] = {arr[i]} with arr[{j}] = {arr[j]}. {metrics['swaps']} swaps so far.",
+                                data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [low, high], "pivot_value": pivot_val, "pivot_index": pivot_pos, "depth": depth},
+                            ),
                             swapping = [i, j],
                             pivot_index = pivot_pos,
                             pseudocode_lines = [12],
@@ -198,7 +225,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
                                 HighlightedEntity(id = j, state = "frontier", label = str(arr[j])),
                                 HighlightedEntity(id = pivot_pos, state = "source", label = str(pivot_val)),
                             ],
-                            f"arr[{j}] = {arr[j]} ≤ pivot {pivot_val}. Already in left partition.",
+                            eb.build(
+                                title = f"Compare arr[{j}] and pivot",
+                                body = f"arr[{j}] = {arr[j]} <= pivot {pivot_val}. Already in left partition.",
+                                data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [low, high], "pivot_value": pivot_val, "pivot_index": pivot_pos, "depth": depth},
+                            ),
                             comparing = [j, pivot_pos],
                             pivot_index = pivot_pos,
                             pseudocode_lines = [9, 10, 11],
@@ -213,7 +244,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = j, state = "frontier", label = str(arr[j])),
                             HighlightedEntity(id = pivot_pos, state = "source", label = str(pivot_val)),
                         ],
-                        f"arr[{j}] = {arr[j]} > pivot {pivot_val}. Stays in right partition.",
+                        eb.build(
+                            title = f"Compare arr[{j}] and pivot",
+                            body = f"arr[{j}] = {arr[j]} > pivot {pivot_val}. Stays in right partition.",
+                            data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [low, high], "pivot_value": pivot_val, "pivot_index": pivot_pos, "depth": depth},
+                        ),
                         comparing = [j, pivot_pos],
                         pivot_index = pivot_pos,
                         pseudocode_lines = [9, 10],
@@ -237,7 +272,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = final_pivot_pos, state = "swap", label = str(arr[final_pivot_pos])),
                         HighlightedEntity(id = high, state = "swap", label = str(arr[high])),
                     ],
-                    f"Place pivot {pivot_val} into its final position arr[{final_pivot_pos}].",
+                    eb.build(
+                        title = f"Place pivot at arr[{final_pivot_pos}]",
+                        body = f"Pivot {pivot_val} placed into its final sorted position at index {final_pivot_pos}.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [low, high], "pivot_value": pivot_val, "pivot_index": final_pivot_pos, "depth": depth},
+                    ),
                     swapping = [final_pivot_pos, high],
                     pivot_index = final_pivot_pos,
                     pseudocode_lines = [13, 14],
@@ -258,8 +297,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
             add_step(
                 SortingEvents.PARTITION_END,
                 [HighlightedEntity(id = final_pivot_pos, state = "success", label = str(arr[final_pivot_pos]))],
-                f"Partition complete. Pivot {pivot_val} is sorted at index {final_pivot_pos}. "
-                f"Left: {left_size} element(s), Right: {right_size} element(s).",
+                eb.build(
+                    title = f"Partition complete at index {final_pivot_pos}",
+                    body = f"Pivot {pivot_val} sorted at index {final_pivot_pos}. Left: {left_size}, Right: {right_size}.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [low, high], "pivot_value": pivot_val, "pivot_index": final_pivot_pos, "depth": depth},
+                ),
                 pivot_index = final_pivot_pos,
                 pseudocode_lines = [3, 4],
             )
@@ -286,9 +328,11 @@ class QuickSortAlgorithm(BaseAlgorithm):
         add_step(
             SortingEvents.COMPLETE,
             [HighlightedEntity(id = list(range(n)), state = "success")],
-            f"Quick Sort complete! Sorted: [{sorted_vals}]. "
-            f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps, "
-            f"max depth {metrics['max_recursion_depth']}.",
+            eb.build(
+                title = "Quick Sort complete",
+                body = f"{metrics['comparisons']} comparisons, {metrics['swaps']} swaps, max depth {metrics['max_recursion_depth']}.",
+                data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "swaps": metrics["swaps"], "range": [0, n - 1], "pivot_value": None, "pivot_index": None, "depth": 0},
+            ),
             pseudocode_lines = [0],
         )
 

@@ -7,6 +7,7 @@ from app.simulation.registry import register
 from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import SortingInputPayload, SortingEvents
+from app.simulation.explanation_builder import ExplanationBuilder
 from app.exceptions import DomainError
 
 
@@ -22,7 +23,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
 
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
         benchmark_mode = algo_input.execution_mode == "benchmark"
 
         # parse + validate
@@ -67,7 +68,7 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
 
@@ -78,11 +79,17 @@ class InsertionSortAlgorithm(BaseAlgorithm):
         # first element is trivially sorted
         element_states[0] = "success"
         highlighted_entities = [HighlightedEntity(id = list(range(n)), state = "default")]
-        message = (
-            f"Initialize Insertion Sort on {n} elements. "
-            f"Build sorted portion from left; insert each element into its correct position."
+        add_step(
+            SortingEvents.INITIALIZE,
+            highlighted_entities,
+            eb.build(
+                title = "Initialize Insertion Sort",
+                body = f"Begin Insertion Sort on {n} elements. Build sorted portion from left.",
+                data_snapshot = {"array": list(arr), "comparisons": 0, "shifts": 0, "key_value": None, "key_index": None, "insert_position": None},
+            ),
+            sorted_boundary = 0,
+            pseudocode_lines = [0],
         )
-        add_step(SortingEvents.INITIALIZE, highlighted_entities, message, sorted_boundary = 0, pseudocode_lines = [0])
 
 
         # run the sort
@@ -97,7 +104,11 @@ class InsertionSortAlgorithm(BaseAlgorithm):
             add_step(
                 SortingEvents.COMPARE,
                 [HighlightedEntity(id = i, state = "active", label = str(key))],
-                f"Pick key = arr[{i}] = {key}. Scan left to find insertion point.",
+                eb.build(
+                    title = f"Pick key arr[{i}] = {key}",
+                    body = f"Scan left to find insertion point for key {key}.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "shifts": metrics["shifts"], "key_value": key, "key_index": i, "insert_position": None},
+                ),
                 comparing = [i],
                 sorted_boundary = i - 1,
                 pseudocode_lines = [1, 2, 3],
@@ -119,7 +130,11 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = j, state = "swap", label = str(arr[j])),
                             HighlightedEntity(id = j + 1, state = "active", label = str(key)),
                         ],
-                        f"arr[{j}] = {arr[j]} > key {key}. Shift arr[{j}] right to arr[{j + 1}].",
+                        eb.build(
+                            title = f"Shift arr[{j}] right",
+                            body = f"arr[{j}] = {arr[j]} > key {key}. Shift right to arr[{j + 1}].",
+                            data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "shifts": metrics["shifts"], "key_value": key, "key_index": i, "insert_position": None},
+                        ),
                         comparing = [j, j + 1],
                         sorted_boundary = i - 1,
                         pseudocode_lines = [4, 5, 6],
@@ -144,7 +159,11 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = j, state = "frontier", label = str(arr[j])),
                             HighlightedEntity(id = j + 1, state = "active", label = str(key)),
                         ],
-                        f"arr[{j}] = {arr[j]} ≤ key {key}. Insertion point found at index {j + 1}.",
+                        eb.build(
+                            title = f"Insertion point found at {j + 1}",
+                            body = f"arr[{j}] = {arr[j]} <= key {key}. Insert at index {j + 1}.",
+                            data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "shifts": metrics["shifts"], "key_value": key, "key_index": i, "insert_position": j + 1},
+                        ),
                         comparing = [j, j + 1],
                         sorted_boundary = i - 1,
                         pseudocode_lines = [4],
@@ -156,7 +175,11 @@ class InsertionSortAlgorithm(BaseAlgorithm):
                 add_step(
                     SortingEvents.COMPARE,
                     [HighlightedEntity(id = 0, state = "active", label = str(key))],
-                    f"key {key} is smaller than all elements. Insertion point is index 0.",
+                    eb.build(
+                        title = "Insert at index 0",
+                        body = f"Key {key} is smaller than all elements. Insertion point is index 0.",
+                        data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "shifts": metrics["shifts"], "key_value": key, "key_index": i, "insert_position": 0},
+                    ),
                     sorted_boundary = i - 1,
                     pseudocode_lines = [4],
                 )
@@ -170,7 +193,11 @@ class InsertionSortAlgorithm(BaseAlgorithm):
             add_step(
                 SortingEvents.INSERT,
                 [HighlightedEntity(id = j + 1, state = "source", label = str(key))],
-                f"Insert key {key} at arr[{j + 1}].",
+                eb.build(
+                    title = f"Insert {key} at arr[{j + 1}]",
+                    body = f"Place key {key} at index {j + 1}. {metrics['shifts']} shifts so far.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "shifts": metrics["shifts"], "key_value": key, "key_index": i, "insert_position": j + 1},
+                ),
                 sorted_boundary = i,
                 pseudocode_lines = [7],
             )
@@ -182,7 +209,11 @@ class InsertionSortAlgorithm(BaseAlgorithm):
             add_step(
                 SortingEvents.MARK_SORTED,
                 [HighlightedEntity(id = list(range(i + 1)), state = "success")],
-                f"Sorted portion is now arr[0..{i}].",
+                eb.build(
+                    title = f"Sorted portion [0..{i}]",
+                    body = f"Sorted portion is now arr[0..{i}]. {metrics['comparisons']} comparisons, {metrics['shifts']} shifts.",
+                    data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "shifts": metrics["shifts"], "key_value": key, "key_index": i, "insert_position": j + 1},
+                ),
                 sorted_boundary = i,
                 pseudocode_lines = [1],
             )
@@ -200,9 +231,11 @@ class InsertionSortAlgorithm(BaseAlgorithm):
         add_step(
             SortingEvents.COMPLETE,
             [HighlightedEntity(id = list(range(n)), state = "success")],
-            f"Insertion Sort complete! Sorted: [{sorted_vals}]. "
-            f"{metrics['comparisons']} comparisons, {metrics['shifts']} shifts, "
-            f"{metrics['writes']} writes.",
+            eb.build(
+                title = "Insertion Sort complete",
+                body = f"{metrics['comparisons']} comparisons, {metrics['shifts']} shifts, {metrics['writes']} writes.",
+                data_snapshot = {"array": list(arr), "comparisons": metrics["comparisons"], "shifts": metrics["shifts"], "key_value": None, "key_index": None, "insert_position": None},
+            ),
             sorted_boundary = n - 1,
             pseudocode_lines = [8],
         )
