@@ -123,9 +123,29 @@ function StepDetail({ step, stepIndex, algorithmKey, moduleType }) {
   if (!step) return null
 
   const eventType = step.event_type ?? step.eventType ?? 'STEP'
-  const explanation = step.explanation?.text ?? step.explanation ?? null
+  const rawExplanation = step.explanation
   const entities = step.highlighted_entities ?? step.highlightedEntities ?? []
   const snapshot = step.metrics_snapshot ?? step.metricsSnapshot ?? {}
+
+  // Normalize explanation: support both legacy strings and new structured objects
+  let title = null
+  let body = null
+  let dataSnapshot = null
+
+  if (typeof rawExplanation === 'string') {
+    // Legacy format: treat whole string as body
+    body = rawExplanation
+  } else if (rawExplanation && typeof rawExplanation === 'object') {
+    if (rawExplanation.title) {
+      // New structured format
+      title = rawExplanation.title
+      body = rawExplanation.body ?? null
+      dataSnapshot = rawExplanation.data_snapshot ?? null
+    } else if (rawExplanation.text) {
+      // Legacy { text: "..." } format
+      body = rawExplanation.text
+    }
+  }
 
   return (
     <div className = "p-4 space-y-4">
@@ -145,11 +165,36 @@ function StepDetail({ step, stepIndex, algorithmKey, moduleType }) {
         )}
       </div>
 
-      {/* Explanation text */}
-      {explanation && (
-        <div className = "space-y-1.5">
+      {/* Explanation */}
+      {(title || body || dataSnapshot) && (
+        <div className = "space-y-2">
           <p className = "mono-label">Explanation</p>
-          <p className = "text-xs text-slate-400 leading-relaxed">{explanation}</p>
+
+          {title && (
+            <p className = "text-xs font-medium text-slate-300">{title}</p>
+          )}
+
+          {body && (
+            <p className = "text-xs text-slate-400 leading-relaxed">{body}</p>
+          )}
+
+          {dataSnapshot && Object.keys(dataSnapshot).length > 0 && (
+            <div className = "pt-2 mt-2 border-t border-white/[0.06] space-y-1">
+              {Object.entries(dataSnapshot).map(([key, value]) => (
+                <div
+                  key = {key}
+                  className = "flex items-start justify-between gap-3 rounded bg-slate-800/40 border border-white/[0.04] px-2.5 py-1.5"
+                >
+                  <span className = "font-mono text-[10px] text-slate-500 shrink-0">
+                    {key.replace(/_/g, ' ')}
+                  </span>
+                  <span className = "font-mono text-[10px] text-slate-300 text-right break-all">
+                    {formatSnapshotValue(value)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -198,6 +243,28 @@ function StepDetail({ step, stepIndex, algorithmKey, moduleType }) {
 
     </div>
   )
+}
+
+
+function formatSnapshotValue(value) {
+  if (value === null || value === undefined) return '\u2014'
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]'
+    // Check if it's a 2D array (DP table)
+    if (Array.isArray(value[0])) {
+      return value.map(row => '[' + row.join(', ') + ']').join('\n')
+    }
+    return '[' + value.join(', ') + ']'
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value)
+    if (entries.length === 0) return '{}'
+    return entries.map(([k, v]) => k + ': ' + v).join(', ')
+  }
+  return String(value)
 }
 
 

@@ -2,6 +2,12 @@ from typing import Any
 from pydantic import BaseModel
 
 
+class StepExplanation(BaseModel):
+    title: str
+    body: str | None = None
+    data_snapshot: dict[str, Any] | None = None
+
+
 class HighlightedEntity(BaseModel):
     id: str | int | list[int]
     state: str
@@ -16,7 +22,7 @@ class TimelineStep(BaseModel):
     highlighted_entities: list[HighlightedEntity] 
     metrics_snapshot: dict[str, Any]          
     
-    explanation: str | None = None  
+    explanation: StepExplanation | str | None = None
     timestamp_or_order: int = 0     
 
 
