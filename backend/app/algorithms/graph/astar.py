@@ -9,6 +9,7 @@ from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
+from app.simulation.explanation_builder import ExplanationBuilder
 
 
 @register("graph", "astar")
@@ -22,7 +23,7 @@ class AStarAlgorithm(BaseAlgorithm):
         return "astar"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
             graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
@@ -117,7 +118,7 @@ class AStarAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -137,9 +138,17 @@ class AStarAlgorithm(BaseAlgorithm):
         add_step(
             "INITIALIZE",
             [HighlightedEntity(id = source, state = "source", label = source)],
-            f"Initialize A* from '{source}'. "
-            f"h({source}) = {round(h_scores[source], 2)}, f({source}) = {round(f_scores[source], 2)}. "
-            f"{target_message}",
+            eb.build(
+                title = f"Initialize A* from '{source}'",
+                body = f"h({source}) = {round(h_scores[source], 2)}, f({source}) = {round(f_scores[source], 2)}. {target_message}",
+                data_snapshot = {
+                    "distances": dist_display(),
+                    "f_scores": {n: round(f_scores[n], 2) if f_scores[n] != math.inf else "inf" for n in node_ids},
+                    "open_set_size": len(heap),
+                    "visited": [],
+                    "heuristic_value": round(h_scores[source], 2),
+                },
+            ),
             pseudocode_lines = [0, 1, 2, 3, 4],
         )
 
@@ -164,10 +173,18 @@ class AStarAlgorithm(BaseAlgorithm):
             add_step(
                 "POP_MIN",
                 [HighlightedEntity(id = current, state = node_states[current], label = current)],
-                f"Pop '{current}' with f = {round(current_f, 2)} "
-                f"(g = {round(g_scores[current], 2)}, h = {round(h_scores[current], 2)}). "
-                f"Inspecting its {neighbors_count} outgoing edge(s). "
-                f"({metrics['nodes_visited']} node(s) finalized so far.)",
+                eb.build(
+                    title = f"Pop '{current}' (f={round(current_f, 2)})",
+                    body = f"g={round(g_scores[current], 2)}, h={round(h_scores[current], 2)}. {neighbors_count} outgoing edge(s). {metrics['nodes_visited']} node(s) finalized.",
+                    data_snapshot = {
+                        "distances": dist_display(),
+                        "f_scores": {n: round(f_scores[n], 2) if f_scores[n] != math.inf else "inf" for n in node_ids},
+                        "open_set_size": len(heap),
+                        "visited": sorted(visited),
+                        "current_neighbors": [nb for nb, _ in adj[current]],
+                        "heuristic_value": round(h_scores[current], 2),
+                    },
+                ),
                 pseudocode_lines = [5, 6],
             )
 
@@ -192,9 +209,15 @@ class AStarAlgorithm(BaseAlgorithm):
                 add_step(
                     "PATH_FOUND",
                     highlighted_path,
-                    f"Target '{target}' reached! "
-                    f"Shortest path: {path_string} (cost {round(g_scores[target], 2)}). "
-                    f"A* guarantees the shortest path with an admissible heuristic.",
+                    eb.build(
+                        title = f"Target '{target}' reached",
+                        body = f"Shortest path: {path_string} (cost {round(g_scores[target], 2)}). A* guarantees optimality with an admissible heuristic.",
+                        data_snapshot = {
+                            "distances": dist_display(),
+                            "f_scores": {n: round(f_scores[n], 2) if f_scores[n] != math.inf else "inf" for n in node_ids},
+                            "visited": sorted(visited),
+                        },
+                    ),
                     path = path,
                     pseudocode_lines = [7],
                 )
@@ -213,8 +236,14 @@ class AStarAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = current, state = node_states[current], label = current),
                             HighlightedEntity(id = neighbor, state = node_states[neighbor], label = neighbor),
                         ],
-                        f"Edge {current} -> {neighbor} (w={weight}): "
-                        f"'{neighbor}' already finalized. Skip.",
+                        eb.build(
+                            title = f"Skip '{neighbor}'",
+                            body = f"Edge {current} -> {neighbor} (w={weight}): '{neighbor}' already finalized.",
+                            data_snapshot = {
+                                "distances": dist_display(),
+                                "visited": sorted(visited),
+                            },
+                        ),
                         pseudocode_lines = [8, 9],
                     )
                     continue
@@ -242,9 +271,18 @@ class AStarAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = current, state = node_states[current], label = current),
                             HighlightedEntity(id = neighbor, state = "frontier", label = neighbor),
                         ],
-                        f"Edge {current} -> {neighbor} (w={weight}): "
-                        f"Relax g[{neighbor}] from {old_label} to {round(new_g, 2)}. "
-                        f"f = {round(f_scores[neighbor], 2)} (g={round(new_g, 2)} + h={round(h_scores[neighbor], 2)}). Push to heap.",
+                        eb.build(
+                            title = f"Relax edge {current} -> {neighbor}",
+                            body = f"g[{neighbor}]: {old_label} -> {round(new_g, 2)}. f={round(f_scores[neighbor], 2)} (g={round(new_g, 2)} + h={round(h_scores[neighbor], 2)}).",
+                            data_snapshot = {
+                                "distances": dist_display(),
+                                "f_scores": {n: round(f_scores[n], 2) if f_scores[n] != math.inf else "inf" for n in node_ids},
+                                "open_set_size": len(heap),
+                                "visited": sorted(visited),
+                                "current_neighbors": [nb for nb, _ in adj[current]],
+                                "heuristic_value": round(h_scores[neighbor], 2),
+                            },
+                        ),
                         pseudocode_lines = [8, 9, 10, 11, 12, 13],
                     )
                 else:
@@ -254,8 +292,14 @@ class AStarAlgorithm(BaseAlgorithm):
                             HighlightedEntity(id = current, state = node_states[current], label = current),
                             HighlightedEntity(id = neighbor, state = node_states[neighbor], label = neighbor),
                         ],
-                        f"Edge {current} -> {neighbor} (w={weight}): "
-                        f"g[{neighbor}] = {round(g_scores[neighbor], 2)} <= {round(new_g, 2)}. No improvement.",
+                        eb.build(
+                            title = f"No improvement for '{neighbor}'",
+                            body = f"Edge {current} -> {neighbor} (w={weight}): g[{neighbor}]={round(g_scores[neighbor], 2)} <= {round(new_g, 2)}.",
+                            data_snapshot = {
+                                "distances": dist_display(),
+                                "visited": sorted(visited),
+                            },
+                        ),
                         pseudocode_lines = [8, 9, 10],
                     )
 
@@ -268,8 +312,14 @@ class AStarAlgorithm(BaseAlgorithm):
             add_step(
                 "COMPLETE",
                 [],
-                f"A* complete. Finalized {metrics['nodes_visited']} node(s), "
-                f"explored {metrics['edges_explored']} edge(s). {result_message}",
+                eb.build(
+                    title = "A* complete",
+                    body = f"Finalized {metrics['nodes_visited']} node(s), explored {metrics['edges_explored']} edge(s). {result_message}",
+                    data_snapshot = {
+                        "distances": dist_display(),
+                        "visited": sorted(visited),
+                    },
+                ),
                 pseudocode_lines = [14],
             )
 

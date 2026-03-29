@@ -8,6 +8,7 @@ from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
+from app.simulation.explanation_builder import ExplanationBuilder
 
 @register("graph", "bfs")
 class BFSAlgorithm(BaseAlgorithm):
@@ -21,7 +22,7 @@ class BFSAlgorithm(BaseAlgorithm):
     
     
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         # payload parse + validation
         try:
@@ -92,7 +93,7 @@ class BFSAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps)
             )
             
@@ -117,7 +118,20 @@ class BFSAlgorithm(BaseAlgorithm):
         else:
             target_message = "Visiting all reachable nodes."
             
-        add_step("INITIALIZE", initial_highlight, f"Initialize BFS from '{source}'. {target_message}", frontier = list(queue), pseudocode_lines = [0, 1, 2, 3, 4])
+        add_step(
+            "INITIALIZE",
+            initial_highlight,
+            eb.build(
+                title = f"Initialize BFS from '{source}'",
+                body = f"Set '{source}' as visited and enqueue it. {target_message}",
+                data_snapshot = {
+                    "queue": list(queue),
+                    "visited": sorted(visited),
+                },
+            ),
+            frontier = list(queue),
+            pseudocode_lines = [0, 1, 2, 3, 4],
+        )
         
         path_found = False
         final_path: list[str] | None = None
@@ -137,12 +151,16 @@ class BFSAlgorithm(BaseAlgorithm):
             neighbors_count = len(adj[current])
             visited_count = metrics["nodes_visited"]
             
-            explanation = (
-                f"Dequeue '{current}' from the front of the queue. "
-                f"Exploring its {neighbors_count} neighbor(s). "
-                f"({visited_count} node(s) visited so far.)"
+            explanation = eb.build(
+                title = f"Dequeue '{current}'",
+                body = f"Exploring {neighbors_count} neighbor(s). {visited_count} node(s) visited so far.",
+                data_snapshot = {
+                    "queue": list(queue),
+                    "visited": sorted(visited),
+                    "current_neighbors": list(adj[current]),
+                },
             )
-            
+
             highlight = [
                 HighlightedEntity(
                     id = current,
@@ -150,7 +168,7 @@ class BFSAlgorithm(BaseAlgorithm):
                     label = current
                 )
             ]
-            
+
             add_step("DEQUEUE", highlight, explanation, frontier = list(queue), pseudocode_lines = [5, 6])
             
             
@@ -184,12 +202,16 @@ class BFSAlgorithm(BaseAlgorithm):
                 path_string = " → ".join(path)
                 hops = len(path) - 1
                 
-                explanation = (
-                    f"Target '{target}' found! "
-                    f"Shortest path: {path_string} ({hops} hop(s)). "
-                    "BFS guarantees the shortest path in an unweighted graph."
+                explanation = eb.build(
+                    title = f"Target '{target}' found",
+                    body = f"Shortest path: {path_string} ({hops} hop(s)). BFS guarantees shortest path in unweighted graphs.",
+                    data_snapshot = {
+                        "path": path,
+                        "visited": sorted(visited),
+                        "total_edges_explored": metrics["edges_explored"],
+                    },
                 )
-                
+
                 add_step("PATH_FOUND", highlighted_path, explanation, frontier = list(queue), path = path, pseudocode_lines = [7, 8])
                 path_found = True
                 break
@@ -228,11 +250,16 @@ class BFSAlgorithm(BaseAlgorithm):
                     ]
                     
                     frontier_size = len(queue)
-                    explanation = (
-                        f"Edge {current} → {neighbor}: '{neighbor}' is unvisited. "
-                        f"Enqueue it. Frontier size is now {frontier_size}."
+                    explanation = eb.build(
+                        title = f"Enqueue '{neighbor}'",
+                        body = f"Edge {current} -> {neighbor}: '{neighbor}' is unvisited. Frontier size is now {frontier_size}.",
+                        data_snapshot = {
+                            "queue": list(queue),
+                            "visited": sorted(visited),
+                            "edge": [current, neighbor],
+                        },
                     )
-                    
+
                     add_step("ENQUEUE", highlighted_entities, explanation, frontier = list(queue), pseudocode_lines = [9, 10, 11, 12])
                     
                     
@@ -249,11 +276,15 @@ class BFSAlgorithm(BaseAlgorithm):
                             label = neighbor
                         )
                     ]
-                    explanation = (
-                        f"Edge {current} → {neighbor}: "
-                        f"'{neighbor}' is already visited. Skip."
+                    explanation = eb.build(
+                        title = f"Skip '{neighbor}'",
+                        body = f"Edge {current} -> {neighbor}: '{neighbor}' already visited.",
+                        data_snapshot = {
+                            "queue": list(queue),
+                            "visited": sorted(visited),
+                        },
                     )
-                    
+
                     add_step("SKIP_EDGE", highlighted_entities, explanation, frontier = list(queue), pseudocode_lines = [9, 10])
                     
             if node_states[current] not in ("source", "target", "success"):
@@ -268,12 +299,15 @@ class BFSAlgorithm(BaseAlgorithm):
             explored_edges = metrics["edges_explored"]
             result_message = f"No path found to '{target}'." if target else "All reachable nodes visited."
             
-            explanation = (
-                f"BFS complete. Visited {visited_nodes} node(s), "
-                f"explored {explored_edges} edge(s). "
-                f"{result_message}"
+            explanation = eb.build(
+                title = "BFS complete",
+                body = f"Visited {visited_nodes} node(s), explored {explored_edges} edge(s). {result_message}",
+                data_snapshot = {
+                    "visited": sorted(visited),
+                    "total_edges_explored": explored_edges,
+                },
             )
-            
+
             add_step("COMPLETE", [], explanation, frontier = [], pseudocode_lines = [13])
             
             

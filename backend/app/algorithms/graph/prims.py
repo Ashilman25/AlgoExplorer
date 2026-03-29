@@ -8,6 +8,7 @@ from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
+from app.simulation.explanation_builder import ExplanationBuilder
 
 
 @register("graph", "prims")
@@ -21,7 +22,7 @@ class PrimsAlgorithm(BaseAlgorithm):
         return "prims"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        explain = algo_input.explanation_level
+        eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
             graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
@@ -80,7 +81,7 @@ class PrimsAlgorithm(BaseAlgorithm):
                 state_payload = s_payload,
                 highlighted_entities = highlighted,
                 metrics_snapshot = dict(metrics),
-                explanation = explanation if explain != "none" else None,
+                explanation = explanation,
                 timestamp_or_order = len(steps),
             )
             steps.append(step)
@@ -93,8 +94,16 @@ class PrimsAlgorithm(BaseAlgorithm):
         add_step(
             "INITIALIZE",
             [HighlightedEntity(id = source, state = "source", label = source)],
-            f"Initialize Prim's MST from '{source}'. "
-            f"Add '{source}' to the tree. Push its {len(adj[source])} edge(s) to the heap.",
+            eb.build(
+                title = f"Initialize Prim's MST from '{source}'",
+                body = f"Add '{source}' to the tree. Push its {len(adj[source])} edge(s) to the heap.",
+                data_snapshot = {
+                    "mst_edges": [],
+                    "mst_cost": 0,
+                    "priority_queue_size": 0,
+                    "visited": sorted(in_tree),
+                },
+            ),
             pseudocode_lines = [0, 1, 2, 3, 4],
         )
 
@@ -123,8 +132,16 @@ class PrimsAlgorithm(BaseAlgorithm):
                         HighlightedEntity(id = from_node, state = node_states[from_node], label = from_node),
                         HighlightedEntity(id = to_node, state = node_states[to_node], label = to_node),
                     ],
-                    f"Edge {from_node} - {to_node} (w={weight}): "
-                    f"'{to_node}' already in MST. Skip.",
+                    eb.build(
+                        title = f"Skip edge {from_node}-{to_node}",
+                        body = f"Edge {from_node}-{to_node} (w={weight}): '{to_node}' already in MST.",
+                        data_snapshot = {
+                            "mst_edges": [[e["source"], e["target"], e["weight"]] for e in mst_edges],
+                            "mst_cost": mst_total_weight,
+                            "priority_queue_size": len(heap),
+                            "visited": sorted(in_tree),
+                        },
+                    ),
                     pseudocode_lines = [5, 6, 9],
                 )
                 continue
@@ -135,7 +152,16 @@ class PrimsAlgorithm(BaseAlgorithm):
                     HighlightedEntity(id = from_node, state = node_states[from_node], label = from_node),
                     HighlightedEntity(id = to_node, state = "active", label = to_node),
                 ],
-                f"Pop cheapest cross-edge: {from_node} - {to_node} (w={weight}).",
+                eb.build(
+                    title = f"Pop edge {from_node}-{to_node} (w={weight})",
+                    body = f"Cheapest cross-edge connects '{to_node}' to the MST.",
+                    data_snapshot = {
+                        "mst_edges": [[e["source"], e["target"], e["weight"]] for e in mst_edges],
+                        "mst_cost": mst_total_weight,
+                        "priority_queue_size": len(heap),
+                        "visited": sorted(in_tree),
+                    },
+                ),
                 pseudocode_lines = [5, 6],
             )
 
@@ -156,9 +182,16 @@ class PrimsAlgorithm(BaseAlgorithm):
                 [
                     HighlightedEntity(id = to_node, state = "success", label = to_node),
                 ],
-                f"Add edge {from_node} - {to_node} (w={weight}) to MST. "
-                f"Total weight: {mst_total_weight}. "
-                f"Tree has {len(in_tree)} node(s), {len(mst_edges)} edge(s).",
+                eb.build(
+                    title = f"Add edge {from_node}-{to_node} to MST",
+                    body = f"MST cost is now {mst_total_weight}. Tree has {len(in_tree)} node(s), {len(mst_edges)} edge(s).",
+                    data_snapshot = {
+                        "mst_edges": [[e["source"], e["target"], e["weight"]] for e in mst_edges],
+                        "mst_cost": mst_total_weight,
+                        "priority_queue_size": len(heap),
+                        "visited": sorted(in_tree),
+                    },
+                ),
                 pseudocode_lines = [7, 8, 9, 10, 11],
             )
 
@@ -178,9 +211,16 @@ class PrimsAlgorithm(BaseAlgorithm):
         add_step(
             "COMPLETE",
             [],
-            f"Prim's complete. MST has {len(mst_edges)} edge(s), "
-            f"total weight {mst_total_weight}, "
-            f"spanning {len(in_tree)} of {len(node_ids)} node(s).",
+            eb.build(
+                title = "Prim's complete",
+                body = f"MST has {len(mst_edges)} edge(s), total weight {mst_total_weight}, spanning {len(in_tree)} of {len(node_ids)} node(s).",
+                data_snapshot = {
+                    "mst_edges": [[e["source"], e["target"], e["weight"]] for e in mst_edges],
+                    "mst_cost": mst_total_weight,
+                    "priority_queue_size": 0,
+                    "visited": sorted(in_tree),
+                },
+            ),
             pseudocode_lines = [12],
         )
 
