@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import StepInspector from '../../../src/components/simulation/StepInspector'
+import { useMetadataStore } from '../../../src/stores/useMetadataStore'
 import { usePlaybackStore } from '../../../src/stores/usePlaybackStore'
 import { useRunStore } from '../../../src/stores/useRunStore'
 
@@ -24,9 +25,35 @@ const DEFAULT_RUN_STATE = {
   error: null,
 }
 
+const MOCK_LEARNING_INFO = {
+  complexity: {
+    time: { best: 'O(V + E)', average: 'O(V + E)', worst: 'O(V + E)' },
+    space: 'O(V)',
+  },
+  properties: ['complete', 'optimal-unweighted'],
+  insights: ['Guarantees shortest path in unweighted graphs'],
+  use_cases: {
+    use_when: ['Finding shortest path in unweighted graphs'],
+    avoid_when: ['Graph is weighted'],
+  },
+  scenarios: {
+    best_case: 'Target is adjacent to source',
+    worst_case: 'Target is the last node explored',
+  },
+}
+
+const DEFAULT_METADATA_STATE = {
+  modules: [],
+  algorithms: {},
+  presets: {},
+  isLoading: false,
+  error: null,
+}
+
 function resetStores() {
   usePlaybackStore.setState(DEFAULT_PLAYBACK_STATE)
   useRunStore.setState(DEFAULT_RUN_STATE)
+  useMetadataStore.setState(DEFAULT_METADATA_STATE)
 }
 
 describe('StepInspector', () => {
@@ -134,5 +161,42 @@ describe('StepInspector', () => {
     expect(screen.getByText('Custom Metric')).toBeInTheDocument()
     expect(screen.getByText('12')).toBeInTheDocument()
     expect(screen.queryByText('comparisons')).not.toBeInTheDocument()
+  })
+
+  it('renders Algorithm Info section when learning_info is available', () => {
+    useMetadataStore.setState({
+      ...DEFAULT_METADATA_STATE,
+      algorithms: {
+        graph: [{ key: 'bfs', learning_info: MOCK_LEARNING_INFO }],
+      },
+    })
+
+    render(<StepInspector moduleKey = "graph" algorithmKey = "bfs" />)
+
+    expect(screen.getByText('Algorithm Info')).toBeInTheDocument()
+    expect(screen.getAllByText('O(V + E)').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('complete')).toBeInTheDocument()
+    expect(screen.getByText('Guarantees shortest path in unweighted graphs')).toBeInTheDocument()
+  })
+
+  it('does not render Algorithm Info when no learning_info is available', () => {
+    render(<StepInspector />)
+
+    expect(screen.queryByText('Algorithm Info')).not.toBeInTheDocument()
+  })
+
+  it('expands Algorithm Info by default when no timeline is active', () => {
+    useMetadataStore.setState({
+      ...DEFAULT_METADATA_STATE,
+      algorithms: {
+        graph: [{ key: 'bfs', learning_info: MOCK_LEARNING_INFO }],
+      },
+    })
+
+    render(<StepInspector moduleKey = "graph" algorithmKey = "bfs" />)
+
+    expect(screen.getByText('Complexity')).toBeInTheDocument()
+    expect(screen.getByText('BEST')).toBeInTheDocument()
+    expect(screen.getByText('WORST')).toBeInTheDocument()
   })
 })
