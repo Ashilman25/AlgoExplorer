@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     auth_password_iterations: int = 600000
     benchmark_queue_name: str = "benchmarks"
     benchmark_progress_interval: int = 1
+    enforce_https: bool = False
 
     model_config = SettingsConfigDict(
         env_file = ENV_FILE,

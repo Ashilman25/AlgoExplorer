@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.middleware import SecurityHeadersMiddleware
+
 from app.config import settings
 from app.exceptions import AuthenticationError, ConflictError, DomainError, NotFoundException, PermissionError
 from app.observability import configure_logging, get_logger, compact_context, request_context
@@ -38,6 +40,11 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(lifespan = lifespan)
+
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    enforce_https = settings.enforce_https,
+)
 
 app.add_middleware(
     CORSMiddleware,
