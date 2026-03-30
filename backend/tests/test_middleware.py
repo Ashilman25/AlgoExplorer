@@ -1,8 +1,14 @@
+import logging
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.middleware import SecurityHeadersMiddleware
+from app.config import settings
+from app.main import app as main_app
+import app.main as main_module
 
 
 def make_app(enforce_https = False):
@@ -67,3 +73,75 @@ def test_https_redirect_preserves_path_and_query():
     assert response.status_code == 301
     location = response.headers["location"]
     assert location == "https://testserver/api/health?verbose=true&limit=10"
+
+
+def make_cors_app():
+    cors_app = FastAPI()
+    cors_app.add_middleware(
+        CORSMiddleware,
+        allow_origins = ["http://localhost:5173"],
+        allow_credentials = True,
+        allow_methods = ["GET", "POST", "PATCH", "OPTIONS"],
+        allow_headers = ["Content-Type", "Authorization"],
+    )
+
+    @cors_app.post("/api/test")
+    def test_post():
+        return {"status": "ok"}
+
+    return cors_app
+
+
+def test_cors_allows_valid_preflight():
+    app = make_cors_app()
+    client = TestClient(app)
+
+    response = client.options(
+        "/api/test",
+        headers = {
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Content-Type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "POST" in response.headers["access-control-allow-methods"]
+    assert "Content-Type" in response.headers["access-control-allow-headers"]
+
+
+def test_cors_rejects_disallowed_method():
+    app = make_cors_app()
+    client = TestClient(app)
+
+    response = client.options(
+        "/api/test",
+        headers = {
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "DELETE",
+        },
+    )
+
+    assert response.status_code == 400
+
+
+def test_production_warns_on_localhost_cors_origins(monkeypatch, caplog):
+    monkeypatch.setattr(main_module, "init_db", lambda: None)
+    monkeypatch.setattr(settings, "env", "production")
+
+    with caplog.at_level(logging.WARNING, logger = "algo_explorer.main"):
+        with TestClient(main_app):
+            pass
+
+    assert any("cors.localhost_origins_in_production" in r.message for r in caplog.records)
+
+
+def test_no_localhost_warning_in_development(monkeypatch, caplog):
+    monkeypatch.setattr(main_module, "init_db", lambda: None)
+    monkeypatch.setattr(settings, "env", "development")
+
+    with caplog.at_level(logging.WARNING, logger = "algo_explorer.main"):
+        with TestClient(main_app):
+            pass
+
+    assert not any("cors.localhost_origins_in_production" in r.message for r in caplog.records)

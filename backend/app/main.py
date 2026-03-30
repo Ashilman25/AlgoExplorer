@@ -36,6 +36,12 @@ async def lifespan(_app: FastAPI):
     )
     
     logger.info("app.startup.complete %s", context)
+
+    if settings.env == "production":
+        suspect = [o for o in settings.cors_origins_list if "localhost" in o or "127.0.0.1" in o]
+        if suspect:
+            logger.warning("cors.localhost_origins_in_production %s", compact_context(origins = suspect))
+
     yield
 
 
@@ -50,8 +56,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins = settings.cors_origins_list,
     allow_credentials = True,
-    allow_methods = ["*"],
-    allow_headers = ["*"],
+    allow_methods = ["GET", "POST", "PATCH", "OPTIONS"],
+    allow_headers = ["Content-Type", "Authorization"],
 )
 
 app.include_router(metadata.router)
