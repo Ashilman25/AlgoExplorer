@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app.data.registry import REGISTRY
 from app.exceptions import NotFoundException
-from app.schemas.metadata import AlgorithmMetadata, ModuleMetadata, MetadataResponse
+from app.schemas.metadata import AlgorithmMetadata, ModuleMetadata, MetadataResponse, LearningInfo
 
 router = APIRouter(prefix = "/api/metadata")
 
@@ -20,9 +20,10 @@ def get_modules():
                 description = alg_data["description"],
                 supported_modes = alg_data["supported_modes"],
                 supported_explanation_levels = alg_data["supported_explanation_levels"],
-                variants = alg_data.get("variants")
+                variants = alg_data.get("variants"),
+                learning_info = alg_data.get("learning_info")
             )
-            
+
             algs.append(alg_metadata)
             
         module_metadata = ModuleMetadata(
@@ -56,7 +57,8 @@ def get_module_by_key(module_key: str):
             description = alg_data["description"],
             supported_modes = alg_data["supported_modes"],
             supported_explanation_levels = alg_data["supported_explanation_levels"],
-            variants = alg_data.get("variants")
+            variants = alg_data.get("variants"),
+            learning_info = alg_data.get("learning_info")
         )
         algs.append(alg_metadata)
         
@@ -91,7 +93,8 @@ def get_alg_by_key(module_key: str, algorithm_key: str):
         description = specific_data["description"],
         supported_modes = specific_data["supported_modes"],
         supported_explanation_levels = specific_data["supported_explanation_levels"],
-        variants = specific_data.get("variants")
+        variants = specific_data.get("variants"),
+        learning_info = specific_data.get("learning_info")
     )
     
     return alg_metadata

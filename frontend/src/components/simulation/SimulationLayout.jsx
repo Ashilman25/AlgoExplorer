@@ -1,23 +1,44 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Braces } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import PlaybackBar from './PlaybackBar'
 import StepInspector from './StepInspector'
 import FloatingCodePanel from './FloatingCodePanel'
 import { usePlaybackStore } from '../../stores/usePlaybackStore'
+import { useMetadataStore } from '../../stores/useMetadataStore'
+import { metadataService } from '../../services'
 import { algorithmContent } from '../../content/algorithms'
 
 export default function SimulationLayout({ configPanel, children, metrics, className, moduleKey, algorithmKey }) {
   const [isCodePanelOpen, setIsCodePanelOpen] = useState(false)
   const currentStep = usePlaybackStore((s) => s.currentStep)
+  const setMetadata = useMetadataStore((s) => s.setMetadata)
+
+  useEffect(() => {
+    const { algorithms } = useMetadataStore.getState()
+    if (Object.keys(algorithms).length > 0) return
+
+    metadataService.getModules().then((data) => {
+      const modules = data.modules || []
+      const algsByModule = {}
+      const presetsByModule = {}
+
+      for (const mod of modules) {
+        algsByModule[mod.key] = mod.algorithms || []
+        if (mod.presets) presetsByModule[mod.key] = mod.presets
+      }
+
+      setMetadata({ modules, algorithms: algsByModule, presets: presetsByModule })
+    }).catch(() => {})
+  }, [setMetadata])
 
   const contentKey = moduleKey && algorithmKey ? `${moduleKey}/${algorithmKey}` : null
   const content = contentKey ? algorithmContent[contentKey] || null : null
   const activeLines = currentStep?.state_payload?.pseudocode_lines || []
 
   return (
-    <div className = {cn('flex flex-col gap-3 animate-enter stagger-1', className)}>
-      <div className = "flex gap-3" style={{ minHeight: '520px' }}>
+    <div className = {cn('flex flex-col gap-3 h-[calc(100vh-170px)] min-h-[520px] animate-enter stagger-1', className)}>
+      <div className = "flex gap-3 flex-1 min-h-0">
 
         {/* left — configurations */}
         <div
@@ -62,7 +83,7 @@ export default function SimulationLayout({ configPanel, children, metrics, class
           className = "flex flex-col rounded-xl border border-white/[0.07] bg-slate-800/50 overflow-hidden flex-none"
           style = {{ width: '300px' }}
         >
-          <StepInspector metrics = {metrics} />
+          <StepInspector metrics = {metrics} moduleKey = {moduleKey} algorithmKey = {algorithmKey} />
         </div>
 
       </div>

@@ -1,6 +1,8 @@
 import { usePlaybackStore } from '../../stores/usePlaybackStore'
 import { useRunStore } from '../../stores/useRunStore'
+import { useMetadataStore } from '../../stores/useMetadataStore'
 import Skeleton from '../ui/Skeleton'
+import AlgorithmInfo from './AlgorithmInfo'
 
 const ENTITY_STATE_CLASSES = {
   active:   'text-state-active   bg-state-active/10   border-state-active/30',
@@ -48,7 +50,7 @@ function fmtModule(key) {
 }
 
 
-export default function StepInspector({ metrics = [] }) {
+export default function StepInspector({ metrics = [], moduleKey, algorithmKey }) {
   const stepIndex = usePlaybackStore((s) => s.stepIndex)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
   const isLoading = usePlaybackStore((s) => s.isLoading)
@@ -58,6 +60,11 @@ export default function StepInspector({ metrics = [] }) {
   const summary = useRunStore((s) => s.summary)
 
   const hasTimeline = totalSteps > 0
+
+  const algorithms = useMetadataStore((s) => s.algorithms)
+  const learningInfo = moduleKey && algorithmKey
+    ? algorithms?.[moduleKey]?.find((a) => a.key === algorithmKey)?.learning_info ?? null
+    : null
 
   const displayMetrics = metrics.length > 0
     ? metrics
@@ -86,6 +93,8 @@ export default function StepInspector({ metrics = [] }) {
 
       {/* scrollable body */}
       <div className = "flex-1 overflow-y-auto min-h-0">
+        <AlgorithmInfo learningInfo = {learningInfo} defaultExpanded = {!hasTimeline} />
+
         {isLoading ? (
           <LoadingSkeleton />
 
