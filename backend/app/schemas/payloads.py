@@ -43,6 +43,7 @@ class GridInputPayload(BaseModel):
     target: GridCell
     
     weighted: bool = False
+    allow_diagonal: bool = False
     mode: Literal["grid"] = "grid"
 
 

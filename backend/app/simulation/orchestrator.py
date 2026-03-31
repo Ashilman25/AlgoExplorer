@@ -5,7 +5,7 @@ from app.simulation import registry
 from app.schemas.runs import CreateRunRequest, CreateRunResponse
 from app.data.models import SimulationRun
 from app.persistence import encode_timeline_payload, safe_json_value
-from app.validators import validate_module_algorithm, validate_graph_payload, validate_array_payload, validate_dp_payload
+from app.validators import validate_module_algorithm, validate_graph_payload, validate_grid_payload, validate_array_payload, validate_dp_payload
 from app.observability import get_logger, compact_context, summarize_input_payload, summarize_algorithm_config, summarize_summary_metrics
 
 from app.exceptions import DomainError
@@ -122,14 +122,17 @@ def run_simulation(request: CreateRunRequest, db, user_id: int | None = None, gu
 
 def _validate_payload(module_type: str, algorithm_key: str, input_payload: dict) -> None:
     if module_type == "graph":
-        validate_graph_payload(input_payload, algorithm_key = algorithm_key)
-        
+        if input_payload.get("mode") == "grid":
+            validate_grid_payload(input_payload, algorithm_key = algorithm_key)
+        else:
+            validate_graph_payload(input_payload, algorithm_key = algorithm_key)
+
     elif module_type == "sorting":
         validate_array_payload(input_payload, algorithm_key = algorithm_key)
-        
+
     elif module_type == "dp":
         validate_dp_payload(algorithm_key, input_payload)
-        
+
     else:
         raise DomainError(f"No payload validator for unknown module '{module_type}'")
 
