@@ -73,6 +73,7 @@ def create_benchmark_job(request: Request, body: CreateBenchmarkRequest, db = De
         "sizes": body.sizes,
         "trials_per_size": body.trials_per_size,
         "metrics": body.metrics,
+        "category": body.category,
     }, label = "benchmark config")
 
     logger.info(
