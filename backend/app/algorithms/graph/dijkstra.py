@@ -63,6 +63,49 @@ class DijkstraAlgorithm(BaseAlgorithm):
                 adj[v].append((u, w))
                 
                 
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            dist: dict[str, float] = {n: math.inf for n in node_ids}
+            dist[source] = 0
+            visited: set[str] = set()
+            counter = 0
+            heap: list[tuple[float, int, str]] = [(0, counter, source)]
+            metrics = {"nodes_visited": 0, "edges_explored": 0, "relaxations": 0, "frontier_size": 1}
+            path_found = False
+
+            while heap:
+                current_dist, _, current = heapq.heappop(heap)
+                metrics["frontier_size"] = len(heap)
+
+                if current in visited:
+                    continue
+
+                visited.add(current)
+                metrics["nodes_visited"] += 1
+
+                if target and current == target:
+                    path_found = True
+                    break
+
+                for neighbor, weight in adj[current]:
+                    metrics["edges_explored"] += 1
+                    if neighbor in visited:
+                        continue
+                    new_dist = current_dist + weight
+                    if new_dist < dist[neighbor]:
+                        dist[neighbor] = new_dist
+                        metrics["relaxations"] += 1
+                        counter += 1
+                        heapq.heappush(heap, (new_dist, counter, neighbor))
+                        metrics["frontier_size"] = len(heap)
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"path_found": path_found, "path": [], "nodes_visited": metrics["nodes_visited"]},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         #simulation stuff
         node_states: dict[str, str] = {}
         for n in node_ids:
@@ -105,6 +148,8 @@ class DijkstraAlgorithm(BaseAlgorithm):
         
         
         def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, frontier_size: int = 0, path: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
+            if algo_input.execution_mode == "benchmark":
+                return
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),

@@ -44,6 +44,36 @@ class DFSAlgorithm(BaseAlgorithm):
             if not graph_input.directed:
                 adj[v].append(u)
 
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            stack: list[str] = [source]
+            visited: set[str] = {source}
+            metrics = {"nodes_visited": 0, "edges_explored": 0, "stack_max_size": 1}
+            path_found = False
+
+            while stack:
+                current = stack.pop()
+                metrics["nodes_visited"] += 1
+
+                if target and current == target:
+                    path_found = True
+                    break
+
+                for neighbor in reversed(adj[current]):
+                    metrics["edges_explored"] += 1
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        stack.append(neighbor)
+                        if len(stack) > metrics["stack_max_size"]:
+                            metrics["stack_max_size"] = len(stack)
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"path_found": path_found, "path": [], "nodes_visited": metrics["nodes_visited"]},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}
         edge_states: dict[str, str] = {}
@@ -58,6 +88,8 @@ class DFSAlgorithm(BaseAlgorithm):
             return f"{a}-{b}"
 
         def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, frontier: list[str] | None = None, path: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
+            if algo_input.execution_mode == "benchmark":
+                return
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),

@@ -66,6 +66,31 @@ class KruskalsAlgorithm(BaseAlgorithm):
                 sorted_edges.append((w, u, v))
         sorted_edges.sort()
 
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            uf = UnionFind(node_ids)
+            mst_total_weight = 0.0
+            edges_added = 0
+            metrics = {"edges_considered": 0, "edges_added": 0, "components_remaining": len(node_ids), "mst_total_weight": 0}
+
+            for weight, u, v in sorted_edges:
+                metrics["edges_considered"] += 1
+                if uf.union(u, v):
+                    mst_total_weight += weight
+                    edges_added += 1
+                    metrics["edges_added"] = edges_added
+                    metrics["components_remaining"] = uf.num_components
+                    metrics["mst_total_weight"] = mst_total_weight
+                    if edges_added == len(node_ids) - 1:
+                        break
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"mst_edges": [], "total_weight": mst_total_weight, "nodes_in_tree": edges_added + uf.num_components},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}
         edge_states: dict[str, str] = {}
@@ -85,6 +110,8 @@ class KruskalsAlgorithm(BaseAlgorithm):
             return f"{a}-{b}"
 
         def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, pseudocode_lines: list[int] | None = None) -> None:
+            if algo_input.execution_mode == "benchmark":
+                return
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),

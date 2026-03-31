@@ -59,6 +59,34 @@ class BFSAlgorithm(BaseAlgorithm):
                 adj[v].append(u)
             
         
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            queue: deque[str] = deque([source])
+            visited: set[str] = {source}
+            metrics = {"nodes_visited": 0, "edges_explored": 0, "frontier_size": 1}
+
+            while queue:
+                current = queue.popleft()
+                metrics["frontier_size"] = len(queue)
+                metrics["nodes_visited"] += 1
+
+                if target and current == target:
+                    break
+
+                for neighbor in adj[current]:
+                    metrics["edges_explored"] += 1
+                    if neighbor not in visited:
+                        visited.add(neighbor)
+                        queue.append(neighbor)
+                        metrics["frontier_size"] = len(queue)
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"path_found": target is not None and current == target, "path": [], "nodes_visited": metrics["nodes_visited"]},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         #simulation state
         node_states: dict[str, str] = {}
         for n in node_ids:
@@ -78,6 +106,8 @@ class BFSAlgorithm(BaseAlgorithm):
         
         
         def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, frontier: list[str] | None = None, path: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
+            if algo_input.execution_mode == "benchmark":
+                return
             s_payload = {
                 "node_states" : dict(node_states),
                 "edge_states" : dict(edge_states),

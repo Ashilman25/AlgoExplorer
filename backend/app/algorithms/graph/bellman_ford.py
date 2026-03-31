@@ -48,6 +48,34 @@ class BellmanFordAlgorithm(BaseAlgorithm):
             if not directed:
                 all_edges.append((v, u, w))
 
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            dist: dict[str, float] = {n: math.inf for n in node_ids}
+            dist[source] = 0
+            V = len(node_ids)
+            metrics = {"edges_processed": 0, "relaxation_count": 0, "passes_completed": 0}
+
+            for pass_num in range(1, V):
+                metrics["passes_completed"] += 1
+                for u, v, w in all_edges:
+                    metrics["edges_processed"] += 1
+                    if dist[u] != math.inf and dist[u] + w < dist[v]:
+                        dist[v] = dist[u] + w
+                        metrics["relaxation_count"] += 1
+
+            # negative cycle detection pass
+            for u, v, w in all_edges:
+                metrics["edges_processed"] += 1
+                if dist[u] != math.inf and dist[u] + w < dist[v]:
+                    break
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"path_found": False, "path": []},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}
         edge_states: dict[str, str] = {}
@@ -71,6 +99,8 @@ class BellmanFordAlgorithm(BaseAlgorithm):
             return result
 
         def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, path: list[str] | None = None, negative_cycle: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
+            if algo_input.execution_mode == "benchmark":
+                return
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),

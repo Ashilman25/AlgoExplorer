@@ -47,6 +47,47 @@ class PrimsAlgorithm(BaseAlgorithm):
             adj[u].append((v, w))
             adj[v].append((u, w))
 
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            in_tree: set[str] = {source}
+            counter = 0
+            heap: list[tuple[float, int, str, str]] = []
+            mst_total_weight = 0.0
+            edges_added = 0
+            metrics = {"nodes_in_tree": 1, "edges_added": 0, "mst_total_weight": 0, "heap_max_size": 0}
+
+            for neighbor, weight in adj[source]:
+                counter += 1
+                heapq.heappush(heap, (weight, counter, source, neighbor))
+            if len(heap) > metrics["heap_max_size"]:
+                metrics["heap_max_size"] = len(heap)
+
+            while heap:
+                weight, _, from_node, to_node = heapq.heappop(heap)
+                if to_node in in_tree:
+                    continue
+
+                in_tree.add(to_node)
+                mst_total_weight += weight
+                edges_added += 1
+                metrics["nodes_in_tree"] = len(in_tree)
+                metrics["edges_added"] = edges_added
+                metrics["mst_total_weight"] = mst_total_weight
+
+                for neighbor, w in adj[to_node]:
+                    if neighbor not in in_tree:
+                        counter += 1
+                        heapq.heappush(heap, (w, counter, to_node, neighbor))
+                        if len(heap) > metrics["heap_max_size"]:
+                            metrics["heap_max_size"] = len(heap)
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"mst_edges": [], "total_weight": mst_total_weight, "nodes_in_tree": len(in_tree)},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}
         edge_states: dict[str, str] = {}
@@ -65,6 +106,8 @@ class PrimsAlgorithm(BaseAlgorithm):
             return f"{a}-{b}"
 
         def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, pseudocode_lines: list[int] | None = None) -> None:
+            if algo_input.execution_mode == "benchmark":
+                return
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),
