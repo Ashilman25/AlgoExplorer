@@ -64,6 +64,48 @@ class AStarAlgorithm(BaseAlgorithm):
             if not graph_input.directed:
                 adj[v].append((u, w))
 
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            g_scores: dict[str, float] = {n: math.inf for n in node_ids}
+            g_scores[source] = 0
+            visited: set[str] = set()
+            counter = 0
+            heap: list[tuple[float, int, str]] = [(heuristic(source), counter, source)]
+            metrics = {"nodes_visited": 0, "edges_explored": 0, "heuristic_evaluations": len(node_ids), "heap_max_size": 1}
+            path_found = False
+
+            while heap:
+                _, _, current = heapq.heappop(heap)
+
+                if current in visited:
+                    continue
+
+                visited.add(current)
+                metrics["nodes_visited"] += 1
+
+                if target and current == target:
+                    path_found = True
+                    break
+
+                for neighbor, weight in adj[current]:
+                    metrics["edges_explored"] += 1
+                    if neighbor in visited:
+                        continue
+                    new_g = g_scores[current] + weight
+                    if new_g < g_scores[neighbor]:
+                        g_scores[neighbor] = new_g
+                        counter += 1
+                        heapq.heappush(heap, (new_g + heuristic(neighbor), counter, neighbor))
+                        if len(heap) > metrics["heap_max_size"]:
+                            metrics["heap_max_size"] = len(heap)
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"path_found": path_found, "path": [], "nodes_visited": metrics["nodes_visited"]},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}
         edge_states: dict[str, str] = {}
@@ -103,6 +145,8 @@ class AStarAlgorithm(BaseAlgorithm):
             return result
 
         def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, path: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
+            if algo_input.execution_mode == "benchmark":
+                return
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),

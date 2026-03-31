@@ -11,24 +11,53 @@ import { parseApiError } from '../services/client'
 import { useBenchmarkStore } from '../stores/useBenchmarkStore'
 import BenchmarkChart from '../components/benchmark/BenchmarkChart'
 import {
+  BENCHMARK_MODULE_TYPES,
+  BENCHMARK_CATEGORIES,
   BENCHMARK_ALGORITHMS,
   BENCHMARK_INPUT_FAMILIES,
   BENCHMARK_METRICS,
   BENCHMARK_LIMITS,
   BENCHMARK_SIZE_PRESETS,
+  BENCHMARK_SIZE_LIMITS,
 } from '../config/benchmarkConfig'
 import GuestPromptBanner from '../components/guest/GuestPromptBanner'
-
-const MODULE_TYPE = 'sorting'
 
 const METRIC_ICONS = {
   runtime_ms: Clock,
   comparisons: Hash,
   swaps: ArrowUpDown,
   writes: PenTool,
+  nodes_visited: Hash,
+  edges_explored: Hash,
+  max_structure_size: Hash,
+  relaxations: Hash,
+  edges_considered: Hash,
+  edges_added: Hash,
+  mst_total_weight: Hash,
+  nodes_ordered: Hash,
+  edges_processed: Hash,
 }
 
-
+function getAlgorithms(moduleType, category) {
+  if (moduleType === 'sorting') return BENCHMARK_ALGORITHMS.sorting
+  return BENCHMARK_ALGORITHMS.graph?.[category] ?? []
+}
+function getFamilies(moduleType, category) {
+  if (moduleType === 'sorting') return BENCHMARK_INPUT_FAMILIES.sorting
+  return BENCHMARK_INPUT_FAMILIES.graph?.[category] ?? []
+}
+function getMetrics(moduleType, category) {
+  if (moduleType === 'sorting') return BENCHMARK_METRICS.sorting
+  return BENCHMARK_METRICS.graph?.[category] ?? []
+}
+function getSizePresets(moduleType, category, inputFamily) {
+  if (moduleType === 'sorting') return BENCHMARK_SIZE_PRESETS.sorting
+  return BENCHMARK_SIZE_PRESETS.graph?.[inputFamily] ?? []
+}
+function getSizeLimits(moduleType, inputFamily) {
+  if (moduleType === 'sorting') return BENCHMARK_SIZE_LIMITS.sorting
+  return BENCHMARK_SIZE_LIMITS.graph?.[inputFamily] ?? { min: 10, max: 10000 }
+}
 
 
 function CheckboxGroup({ label, options, selected, onChange, min = 0, max = Infinity }) {
@@ -77,11 +106,11 @@ function CheckboxGroup({ label, options, selected, onChange, min = 0, max = Infi
 
 // ── Size Selector ───────────────────────────────────────────
 
-function SizeSelector({ preset, onPresetChange, customSizes, onCustomSizesChange }) {
+function SizeSelector({ preset, onPresetChange, customSizes, onCustomSizesChange, sizePresets, sizeLimits }) {
   const [showCustom, setShowCustom] = useState(false)
   const [customInput, setCustomInput] = useState('')
 
-  const presetOptions = BENCHMARK_SIZE_PRESETS.map((p, i) => ({
+  const presetOptions = sizePresets.map((p, i) => ({
     value: String(i),
     label: p.label,
   }))
@@ -94,7 +123,7 @@ function SizeSelector({ preset, onPresetChange, customSizes, onCustomSizesChange
     } else {
       onPresetChange(val)
       setShowCustom(false)
-      onCustomSizesChange(BENCHMARK_SIZE_PRESETS[Number(val)].sizes)
+      onCustomSizesChange(sizePresets[Number(val)].sizes)
     }
   }
 
@@ -102,7 +131,7 @@ function SizeSelector({ preset, onPresetChange, customSizes, onCustomSizesChange
     const parsed = customInput
       .split(/[,\s]+/)
       .map((s) => parseInt(s.trim(), 10))
-      .filter((n) => !isNaN(n) && n >= BENCHMARK_LIMITS.SIZE_MIN && n <= BENCHMARK_LIMITS.SIZE_MAX)
+      .filter((n) => !isNaN(n) && n >= sizeLimits.min && n <= sizeLimits.max)
     const unique = [...new Set(parsed)].sort((a, b) => a - b).slice(0, BENCHMARK_LIMITS.SIZES_MAX_COUNT)
     if (unique.length > 0) {
       onCustomSizesChange(unique)
@@ -128,7 +157,12 @@ function SizeSelector({ preset, onPresetChange, customSizes, onCustomSizesChange
                        text-sm text-slate-200 placeholder-slate-600
                        focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 outline-none"
           />
-          <Button size="sm" onClick={handleApplyCustom}>Apply</Button>
+          <div className="flex items-center justify-between">
+            <Button size="sm" onClick={handleApplyCustom}>Apply</Button>
+            <span className="text-[10px] text-slate-600 font-mono">
+              {sizeLimits.min.toLocaleString()}\u2013{sizeLimits.max.toLocaleString()}
+            </span>
+          </div>
         </div>
       )}
       <div className="flex flex-wrap gap-1 mt-1">
@@ -146,6 +180,8 @@ function SizeSelector({ preset, onPresetChange, customSizes, onCustomSizesChange
 // ── Config Panel ────────────────────────────────────────────
 
 function BenchmarkConfig({
+  moduleType, onModuleTypeChange,
+  category, onCategoryChange,
   algorithms, onAlgorithmsChange,
   inputFamily, onInputFamilyChange,
   sizePreset, onSizePresetChange,
@@ -154,7 +190,23 @@ function BenchmarkConfig({
   metrics, onMetricsChange,
   onLaunch, isRunning,
 }) {
-  const familyOptions = BENCHMARK_INPUT_FAMILIES[MODULE_TYPE].map((f) => ({
+  const moduleOptions = BENCHMARK_MODULE_TYPES.map((m) => ({
+    value: m,
+    label: m.charAt(0).toUpperCase() + m.slice(1),
+  }))
+
+  const categoryOptions = (BENCHMARK_CATEGORIES[moduleType] ?? []).map((c) => ({
+    value: c.key,
+    label: c.label,
+  }))
+
+  const resolvedAlgorithms = getAlgorithms(moduleType, category)
+  const resolvedFamilies = getFamilies(moduleType, category)
+  const resolvedMetrics = getMetrics(moduleType, category)
+  const resolvedPresets = getSizePresets(moduleType, category, inputFamily)
+  const resolvedLimits = getSizeLimits(moduleType, inputFamily)
+
+  const familyOptions = resolvedFamilies.map((f) => ({
     value: f.key,
     label: f.label,
   }))
@@ -164,9 +216,25 @@ function BenchmarkConfig({
       <Card title="Benchmark Configuration">
         <div className="p-4 space-y-5">
 
+          <Select
+            label="Module"
+            options={moduleOptions}
+            value={moduleType}
+            onChange={(e) => onModuleTypeChange(e.target.value)}
+          />
+
+          {moduleType === 'graph' && (
+            <Select
+              label="Category"
+              options={categoryOptions}
+              value={category ?? ''}
+              onChange={(e) => onCategoryChange(e.target.value)}
+            />
+          )}
+
           <CheckboxGroup
             label="Algorithms"
-            options={BENCHMARK_ALGORITHMS[MODULE_TYPE]}
+            options={resolvedAlgorithms}
             selected={algorithms}
             onChange={onAlgorithmsChange}
             min={BENCHMARK_LIMITS.ALGORITHMS_MIN}
@@ -185,6 +253,8 @@ function BenchmarkConfig({
             onPresetChange={onSizePresetChange}
             customSizes={sizes}
             onCustomSizesChange={onSizesChange}
+            sizePresets={resolvedPresets}
+            sizeLimits={resolvedLimits}
           />
 
           <Slider
@@ -199,7 +269,7 @@ function BenchmarkConfig({
 
           <CheckboxGroup
             label="Metrics"
-            options={BENCHMARK_METRICS[MODULE_TYPE]}
+            options={resolvedMetrics}
             selected={metrics}
             onChange={onMetricsChange}
             min={1}
@@ -243,11 +313,13 @@ function BenchmarkSummary({ summary, status }) {
 
 // ── Results Table ───────────────────────────────────────────
 
-function ResultsTable({ table, metrics }) {
+function ResultsTable({ table, metrics, moduleType, category }) {
   const [sortCol, setSortCol] = useState('size')
   const [sortDir, setSortDir] = useState('asc')
 
   if (!table || table.length === 0) return null
+
+  const resolvedMetrics = getMetrics(moduleType, category)
 
   const handleSort = (col) => {
     if (sortCol === col) {
@@ -261,8 +333,8 @@ function ResultsTable({ table, metrics }) {
   const metricColumns = []
   for (const m of metrics) {
     const prefix = m === 'runtime_ms' ? 'runtime' : m
-    metricColumns.push({ key: `${prefix}_mean`, label: `${BENCHMARK_METRICS[MODULE_TYPE].find((x) => x.key === m)?.label ?? m} (mean)` })
-    metricColumns.push({ key: `${prefix}_median`, label: `${BENCHMARK_METRICS[MODULE_TYPE].find((x) => x.key === m)?.label ?? m} (med)` })
+    metricColumns.push({ key: `${prefix}_mean`, label: `${resolvedMetrics.find((x) => x.key === m)?.label ?? m} (mean)` })
+    metricColumns.push({ key: `${prefix}_median`, label: `${resolvedMetrics.find((x) => x.key === m)?.label ?? m} (med)` })
   }
 
   const sorted = [...table].sort((a, b) => {
@@ -328,15 +400,17 @@ function ResultsTable({ table, metrics }) {
 
 // ── Charts ──────────────────────────────────────────────────
 
-function ChartSection({ series, metrics }) {
+function ChartSection({ series, metrics, moduleType, category }) {
   if (!series || Object.keys(series).length === 0) return null
+
+  const resolvedMetrics = getMetrics(moduleType, category)
 
   return (
     <Card title="Performance Charts">
       <div className="p-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {metrics.map((metricKey) => {
-            const metricInfo = BENCHMARK_METRICS[MODULE_TYPE].find((m) => m.key === metricKey)
+            const metricInfo = resolvedMetrics.find((m) => m.key === metricKey)
             const Icon = METRIC_ICONS[metricKey] ?? Hash
             const seriesData = series[metricKey]
 
@@ -419,7 +493,7 @@ function ExportBar({ resultData }) {
         <Download size={14} strokeWidth={1.5} className="text-slate-500" />
         <span className="text-xs text-slate-500">Export Results</span>
       </div>
-      
+
       <div className="flex items-center gap-2">
         <Button size="sm" icon={FileJson} onClick={() => exportJSON(resultData)}>
           JSON
@@ -440,16 +514,20 @@ export default function BenchmarksPage() {
   const toast = useToast()
   const { setJob, setActiveJob, pollJob, stopPolling, jobs, activeJobId } = useBenchmarkStore()
 
+  // Module / category state
+  const [moduleType, setModuleType] = useState('sorting')
+  const [category, setCategory] = useState(null)
+
   // Form state
   const [algorithms, setAlgorithms] = useState(
-    BENCHMARK_ALGORITHMS[MODULE_TYPE].map((a) => a.key)
+    BENCHMARK_ALGORITHMS.sorting.map((a) => a.key)
   )
   const [inputFamily, setInputFamily] = useState('random')
   const [sizePreset, setSizePreset] = useState('0')
-  const [sizes, setSizes] = useState(BENCHMARK_SIZE_PRESETS[0].sizes)
+  const [sizes, setSizes] = useState(BENCHMARK_SIZE_PRESETS.sorting[0].sizes)
   const [trials, setTrials] = useState(BENCHMARK_LIMITS.TRIALS_DEFAULT)
   const [metrics, setMetrics] = useState(
-    BENCHMARK_METRICS[MODULE_TYPE].slice(0, 3).map((m) => m.key)
+    BENCHMARK_METRICS.sorting.slice(0, 3).map((m) => m.key)
   )
 
   // Result state
@@ -512,20 +590,82 @@ export default function BenchmarksPage() {
     return () => stopPolling()
   }, [stopPolling])
 
+  const handleModuleTypeChange = useCallback((newModule) => {
+    setModuleType(newModule)
+    setResultData(null)
+    setBenchmarkError(null)
+
+    if (newModule === 'sorting') {
+      setCategory(null)
+      const algs = BENCHMARK_ALGORITHMS.sorting
+      setAlgorithms(algs.map((a) => a.key))
+      const families = BENCHMARK_INPUT_FAMILIES.sorting
+      setInputFamily(families[0].key)
+      const presets = BENCHMARK_SIZE_PRESETS.sorting
+      setSizePreset('0')
+      setSizes(presets[0].sizes)
+      const mets = BENCHMARK_METRICS.sorting
+      setMetrics(mets.slice(0, 3).map((m) => m.key))
+    } else {
+      const firstCat = BENCHMARK_CATEGORIES[newModule]?.[0]?.key ?? null
+      setCategory(firstCat)
+      const algs = getAlgorithms(newModule, firstCat)
+      setAlgorithms(algs.map((a) => a.key))
+      const families = getFamilies(newModule, firstCat)
+      const firstFamily = families[0]?.key ?? ''
+      setInputFamily(firstFamily)
+      const presets = getSizePresets(newModule, firstCat, firstFamily)
+      setSizePreset('0')
+      setSizes(presets[0]?.sizes ?? [])
+      const mets = getMetrics(newModule, firstCat)
+      setMetrics(mets.slice(0, 3).map((m) => m.key))
+    }
+    setTrials(BENCHMARK_LIMITS.TRIALS_DEFAULT)
+  }, [])
+
+  const handleCategoryChange = useCallback((newCat) => {
+    setCategory(newCat)
+    setResultData(null)
+    setBenchmarkError(null)
+
+    const algs = getAlgorithms(moduleType, newCat)
+    setAlgorithms(algs.map((a) => a.key))
+    const families = getFamilies(moduleType, newCat)
+    const firstFamily = families[0]?.key ?? ''
+    setInputFamily(firstFamily)
+    const presets = getSizePresets(moduleType, newCat, firstFamily)
+    setSizePreset('0')
+    setSizes(presets[0]?.sizes ?? [])
+    const mets = getMetrics(moduleType, newCat)
+    setMetrics(mets.slice(0, 3).map((m) => m.key))
+  }, [moduleType])
+
+  const handleInputFamilyChange = useCallback((newFamily) => {
+    setInputFamily(newFamily)
+    const presets = getSizePresets(moduleType, category, newFamily)
+    setSizePreset('0')
+    setSizes(presets[0]?.sizes ?? [])
+  }, [moduleType, category])
+
   const handleLaunch = useCallback(async () => {
     setIsRunning(true)
     setResultData(null)
     setBenchmarkError(null)
 
     try {
-      const statusResp = await benchmarksService.createJob({
-        module_type: MODULE_TYPE,
+      const body = {
+        module_type: moduleType,
         algorithm_keys: algorithms,
         input_family: inputFamily,
         sizes,
         trials_per_size: trials,
         metrics,
-      })
+      }
+      if (category) {
+        body.category = category
+      }
+
+      const statusResp = await benchmarksService.createJob(body)
 
       setJob(statusResp.id, statusResp)
       setActiveJob(statusResp.id)
@@ -541,7 +681,7 @@ export default function BenchmarksPage() {
         message: parsed.message,
       })
     }
-  }, [algorithms, inputFamily, sizes, trials, metrics, setJob, setActiveJob, pollJob, toast])
+  }, [moduleType, category, algorithms, inputFamily, sizes, trials, metrics, setJob, setActiveJob, pollJob, toast])
 
   const progress = activeJob?.progress ?? 0
   const statusLabel = activeJob?.status === 'pending'
@@ -577,10 +717,14 @@ export default function BenchmarksPage() {
 
       <div className="flex gap-6 items-start">
         <BenchmarkConfig
+          moduleType={moduleType}
+          onModuleTypeChange={handleModuleTypeChange}
+          category={category}
+          onCategoryChange={handleCategoryChange}
           algorithms={algorithms}
           onAlgorithmsChange={setAlgorithms}
           inputFamily={inputFamily}
-          onInputFamilyChange={setInputFamily}
+          onInputFamilyChange={handleInputFamilyChange}
           sizePreset={sizePreset}
           onSizePresetChange={setSizePreset}
           sizes={sizes}
@@ -631,8 +775,8 @@ export default function BenchmarksPage() {
             <>
               <BenchmarkSummary summary={resultData.summary} status={resultData.status} />
               <ExportBar resultData={resultData} />
-              <ChartSection series={resultData.series} metrics={metrics} />
-              <ResultsTable table={resultData.table} metrics={metrics} />
+              <ChartSection series={resultData.series} metrics={metrics} moduleType={moduleType} category={category} />
+              <ResultsTable table={resultData.table} metrics={metrics} moduleType={moduleType} category={category} />
             </>
           )}
 

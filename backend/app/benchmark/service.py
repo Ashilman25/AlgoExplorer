@@ -7,7 +7,9 @@ from app.observability import get_logger, compact_context, summarize_benchmark_c
 from app.simulation import registry
 from app.simulation.types import AlgorithmInput
 
-import app.algorithms.sorting 
+import app.algorithms.sorting
+import app.algorithms.graph
+from app.benchmark.graph_inputs import generate_graph_input
 
 logger = get_logger("benchmark.service")
 
@@ -17,6 +19,42 @@ _METRIC_TABLE_PREFIX = {
     "comparisons": "comparisons",
     "swaps": "swaps",
     "writes": "writes",
+    "nodes_visited": "nodes_visited",
+    "edges_explored": "edges_explored",
+    "max_structure_size": "max_structure_size",
+    "relaxations": "relaxations",
+    "edges_considered": "edges_considered",
+    "edges_added": "edges_added",
+    "mst_total_weight": "mst_total_weight",
+    "nodes_ordered": "nodes_ordered",
+    "edges_processed": "edges_processed",
+}
+
+
+_GRAPH_METRIC_MAP = {
+    ("bfs", "nodes_visited"): "nodes_visited",
+    ("bfs", "edges_explored"): "edges_explored",
+    ("bfs", "max_structure_size"): "frontier_size",
+    ("dfs", "nodes_visited"): "nodes_visited",
+    ("dfs", "edges_explored"): "edges_explored",
+    ("dfs", "max_structure_size"): "stack_max_size",
+    ("dijkstra", "nodes_visited"): "nodes_visited",
+    ("dijkstra", "edges_explored"): "edges_explored",
+    ("dijkstra", "relaxations"): "relaxations",
+    ("astar", "nodes_visited"): "nodes_visited",
+    ("astar", "edges_explored"): "edges_explored",
+    ("astar", "relaxations"): None,
+    ("bellman_ford", "nodes_visited"): None,
+    ("bellman_ford", "edges_explored"): "edges_processed",
+    ("bellman_ford", "relaxations"): "relaxation_count",
+    ("prims", "edges_considered"): None,
+    ("prims", "edges_added"): "edges_added",
+    ("prims", "mst_total_weight"): "mst_total_weight",
+    ("kruskals", "edges_considered"): "edges_considered",
+    ("kruskals", "edges_added"): "edges_added",
+    ("kruskals", "mst_total_weight"): "mst_total_weight",
+    ("topological_sort", "nodes_ordered"): "nodes_ordered",
+    ("topological_sort", "edges_processed"): "edges_processed",
 }
 
 
@@ -43,6 +81,30 @@ def generate_sorting_input(family: str, size: int) -> list[int]:
     
     else:
         raise ValueError(f"Unknown input family: {family}")
+
+
+def _resolve_metric_key(module_type, algo_key, benchmark_metric):
+    if benchmark_metric == "runtime_ms":
+        return "runtime_ms"
+    if module_type == "sorting":
+        return benchmark_metric
+    return _GRAPH_METRIC_MAP.get((algo_key, benchmark_metric))
+
+
+def _null_aggregate():
+    return {"mean": None, "median": None, "stddev": None, "min": None, "max": None}
+
+
+def _generate_input(module_type, config, size):
+    if module_type == "sorting":
+        arr = generate_sorting_input(config["input_family"], size)
+        return {"array": arr}
+    elif module_type == "graph":
+        return generate_graph_input(
+            config["input_family"], size, config["category"], config["algorithm_keys"]
+        )
+    else:
+        raise ValueError(f"Unknown module type: {module_type}")
 
 
 def _aggregate_metric(trial_metrics: list[dict], metric_key: str) -> dict:
@@ -91,16 +153,20 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
             trial_results = []
 
             for _ in range(trials_per_size):
-                arr = generate_sorting_input(input_family, size)
+                input_payload = _generate_input(module_type, config, size)
 
                 algo_input = AlgorithmInput(
-                    input_payload = {"array": arr},
+                    input_payload = input_payload,
                     execution_mode = "benchmark",
                     explanation_level = "none",
                 )
 
+                t0 = time.perf_counter()
                 output = algorithm.run(algo_input)
-                trial_results.append(output.summary_metrics)
+                t1 = time.perf_counter()
+                raw_metrics = dict(output.summary_metrics)
+                raw_metrics["runtime_ms"] = round((t1 - t0) * 1000, 3)
+                trial_results.append(raw_metrics)
 
             completed_runs += trials_per_size
 
@@ -109,7 +175,11 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
 
             aggregated = {}
             for metric_key in metrics:
-                aggregated[metric_key] = _aggregate_metric(trial_results, metric_key)
+                resolved = _resolve_metric_key(module_type, algo_key, metric_key)
+                if resolved is not None:
+                    aggregated[metric_key] = _aggregate_metric(trial_results, resolved)
+                else:
+                    aggregated[metric_key] = _null_aggregate()
 
 
             for metric_key in metrics:

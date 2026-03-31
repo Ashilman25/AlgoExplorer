@@ -42,6 +42,32 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
             adj[u].append(v)
             in_degree[v] += 1
 
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            in_deg = dict(in_degree)
+            queue: deque[str] = deque(n for n in node_ids if in_deg[n] == 0)
+            ordered = 0
+            metrics = {"nodes_ordered": 0, "edges_processed": 0, "in_degree_updates": 0}
+
+            while queue:
+                current = queue.popleft()
+                ordered += 1
+                metrics["nodes_ordered"] = ordered
+
+                for neighbor in adj[current]:
+                    metrics["edges_processed"] += 1
+                    in_deg[neighbor] -= 1
+                    metrics["in_degree_updates"] += 1
+                    if in_deg[neighbor] == 0:
+                        queue.append(neighbor)
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"ordering": [], "cycle_detected": ordered < len(node_ids), "nodes_ordered": ordered},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}
         edge_states: dict[str, str] = {}
@@ -58,6 +84,8 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
             return f"{a}-{b}"
 
         def add_step(event_type: str, highlighted: list[HighlightedEntity], explanation: str, cycle_detected: bool = False, cycle_nodes: list[str] | None = None, pseudocode_lines: list[int] | None = None) -> None:
+            if algo_input.execution_mode == "benchmark":
+                return
             s_payload = {
                 "node_states": dict(node_states),
                 "edge_states": dict(edge_states),

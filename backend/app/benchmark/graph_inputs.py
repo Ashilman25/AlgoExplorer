@@ -1,0 +1,359 @@
+import math
+import random
+from collections import deque
+
+
+# ---------------------------------------------------------------------------
+# Node / edge helpers
+# ---------------------------------------------------------------------------
+
+def _make_nodes(size, with_coords = False):
+    nodes = []
+    for i in range(size):
+        node = {"id": str(i)}
+        if with_coords:
+            side = math.isqrt(size)
+            node["x"] = float(i % side)
+            node["y"] = float(i // side)
+        nodes.append(node)
+    return nodes
+
+
+# ---------------------------------------------------------------------------
+# Undirected topology generators
+# ---------------------------------------------------------------------------
+
+def _tree(size):
+    nodes = _make_nodes(size)
+    ids = [str(i) for i in range(size)]
+    random.shuffle(ids)
+
+    edges = []
+    for i in range(1, size):
+        j = random.randint(0, i - 1)
+        u, v = ids[i], ids[j]
+        edges.append({"source": u, "target": v})
+
+    return {"nodes": nodes, "edges": edges}
+
+
+def _sparse_random(size):
+    result = _tree(size)
+    edges = result["edges"]
+
+    existing = set()
+    for e in edges:
+        pair = (min(e["source"], e["target"]), max(e["source"], e["target"]))
+        existing.add(pair)
+
+    target_edges = 2 * size
+    extra_needed = target_edges - len(edges)
+    ids = [str(i) for i in range(size)]
+    attempts = 0
+    max_attempts = extra_needed * 10
+
+    while len(edges) < target_edges and attempts < max_attempts:
+        u = random.choice(ids)
+        v = random.choice(ids)
+        if u == v:
+            attempts += 1
+            continue
+        pair = (min(u, v), max(u, v))
+        if pair in existing:
+            attempts += 1
+            continue
+        existing.add(pair)
+        edges.append({"source": u, "target": v})
+        attempts += 1
+
+    result["edges"] = edges
+    return result
+
+
+def _dense_random(size):
+    result = _tree(size)
+    edges = result["edges"]
+
+    existing = set()
+    for e in edges:
+        pair = (min(e["source"], e["target"]), max(e["source"], e["target"]))
+        existing.add(pair)
+
+    max_edges = size * (size - 1) // 2
+    target_edges = max_edges // 2
+
+    remaining = []
+    for i in range(size):
+        for j in range(i + 1, size):
+            pair = (str(i), str(j))
+            if pair not in existing:
+                remaining.append(pair)
+
+    random.shuffle(remaining)
+    needed = target_edges - len(edges)
+    for pair in remaining[:needed]:
+        edges.append({"source": pair[0], "target": pair[1]})
+
+    result["edges"] = edges
+    return result
+
+
+def _grid(size):
+    side = math.isqrt(size)
+    if side * side != size:
+        raise ValueError(f"Grid size {size} must be a perfect square")
+
+    nodes = []
+    for idx in range(size):
+        row = idx // side
+        col = idx % side
+        nodes.append({"id": str(idx), "x": float(col), "y": float(row)})
+
+    edges = []
+    for idx in range(size):
+        row = idx // side
+        col = idx % side
+        # right neighbor
+        if col < side - 1:
+            edges.append({"source": str(idx), "target": str(idx + 1)})
+        # down neighbor
+        if row < side - 1:
+            edges.append({"source": str(idx), "target": str(idx + side)})
+
+    return {"nodes": nodes, "edges": edges}
+
+
+def _complete(size):
+    nodes = _make_nodes(size)
+    edges = []
+    for i in range(size):
+        for j in range(i + 1, size):
+            edges.append({"source": str(i), "target": str(j)})
+
+    return {"nodes": nodes, "edges": edges}
+
+
+# ---------------------------------------------------------------------------
+# DAG topology generators
+# ---------------------------------------------------------------------------
+
+def _chain(size):
+    nodes = _make_nodes(size)
+    edges = []
+    for i in range(size - 1):
+        edges.append({"source": str(i), "target": str(i + 1)})
+
+    return {"nodes": nodes, "edges": edges}
+
+
+def _sparse_dag(size):
+    result = _chain(size)
+    edges = result["edges"]
+
+    existing = set()
+    for e in edges:
+        existing.add((e["source"], e["target"]))
+
+    target_edges = 2 * size
+    extra_needed = target_edges - len(edges)
+    attempts = 0
+    max_attempts = extra_needed * 10
+
+    while len(edges) < target_edges and attempts < max_attempts:
+        u = random.randint(0, size - 2)
+        v = random.randint(u + 1, size - 1)
+        pair = (str(u), str(v))
+        if pair in existing:
+            attempts += 1
+            continue
+        existing.add(pair)
+        edges.append({"source": str(u), "target": str(v)})
+        attempts += 1
+
+    result["edges"] = edges
+    return result
+
+
+def _dense_dag(size):
+    result = _chain(size)
+    edges = result["edges"]
+
+    existing = set()
+    for e in edges:
+        existing.add((e["source"], e["target"]))
+
+    max_forward = size * (size - 1) // 2
+    target_edges_total = int(max_forward * 0.3)
+
+    remaining = []
+    for i in range(size):
+        for j in range(i + 1, size):
+            pair = (str(i), str(j))
+            if pair not in existing:
+                remaining.append(pair)
+
+    random.shuffle(remaining)
+    needed = target_edges_total - len(edges)
+    for pair in remaining[:needed]:
+        edges.append({"source": pair[0], "target": pair[1]})
+
+    result["edges"] = edges
+    return result
+
+
+def _layered_dag(size):
+    num_layers = max(2, math.isqrt(size))
+    nodes = _make_nodes(size)
+
+    # distribute nodes across layers
+    base_per_layer = size // num_layers
+    remainder = size % num_layers
+
+    layers = []
+    idx = 0
+    for layer_i in range(num_layers):
+        count = base_per_layer + (1 if layer_i < remainder else 0)
+        layer_nodes = [str(i) for i in range(idx, idx + count)]
+        layers.append(layer_nodes)
+        idx += count
+
+    edges = []
+    edge_set = set()
+    for layer_i in range(len(layers) - 1):
+        current_layer = layers[layer_i]
+        next_layer = layers[layer_i + 1]
+        for node_id in current_layer:
+            num_connections = min(random.randint(1, 3), len(next_layer))
+            targets = random.sample(next_layer, num_connections)
+            for t in targets:
+                pair = (node_id, t)
+                if pair not in edge_set:
+                    edge_set.add(pair)
+                    edges.append({"source": node_id, "target": t})
+
+    return {"nodes": nodes, "edges": edges}
+
+
+# ---------------------------------------------------------------------------
+# Category config and topology dispatch
+# ---------------------------------------------------------------------------
+
+_CATEGORY_CONFIG = {
+    "traversal":     {"weighted": False, "directed": False, "needs_coords": False, "needs_source": True,  "needs_target": True},
+    "shortest_path": {"weighted": True,  "directed": True,  "needs_coords": True,  "needs_source": True,  "needs_target": True},
+    "mst":           {"weighted": True,  "directed": False, "needs_coords": False, "needs_source": True,  "needs_target": False},
+    "ordering":      {"weighted": False, "directed": True,  "needs_coords": False, "needs_source": False, "needs_target": False},
+}
+
+_TOPOLOGY_GENERATORS = {
+    "tree": _tree,
+    "sparse_random": _sparse_random,
+    "dense_random": _dense_random,
+    "grid": _grid,
+    "complete": _complete,
+    "chain": _chain,
+    "sparse_dag": _sparse_dag,
+    "dense_dag": _dense_dag,
+    "layered_dag": _layered_dag,
+}
+
+
+
+
+def _add_weights(edges, allow_negative = False):
+    weighted_edges = []
+    for e in edges:
+        new_edge = dict(e)
+        if allow_negative and random.random() < 0.1:
+            new_edge["weight"] = random.randint(-20, -1)
+        else:
+            new_edge["weight"] = random.randint(1, 100)
+        weighted_edges.append(new_edge)
+    return weighted_edges
+
+
+def _add_coordinates(nodes):
+    count = len(nodes)
+    side = max(1, math.isqrt(count))
+
+    coordinated = []
+    for i, n in enumerate(nodes):
+        new_node = dict(n)
+        if new_node.get("x") is not None and new_node.get("y") is not None:
+            coordinated.append(new_node)
+            continue
+        row = i // side
+        col = i % side
+        new_node["x"] = round(float(col) + random.uniform(-0.3, 0.3), 2)
+        new_node["y"] = round(float(row) + random.uniform(-0.3, 0.3), 2)
+        coordinated.append(new_node)
+    return coordinated
+
+
+def _pick_source_target(nodes, edges, need_target = False):
+    node_ids = [n["id"] for n in nodes]
+    source = random.choice(node_ids)
+
+    if not need_target:
+        return (source, None)
+
+    # BFS from source treating edges as undirected to find farthest node
+    adj = {}
+    for nid in node_ids:
+        adj[nid] = []
+    for e in edges:
+        adj[e["source"]].append(e["target"])
+        adj[e["target"]].append(e["source"])
+
+    visited = {source}
+    queue = deque([(source, 0)])
+    farthest = source
+    max_dist = 0
+
+    while queue:
+        current, dist = queue.popleft()
+        if dist > max_dist:
+            max_dist = dist
+            farthest = current
+        for neighbor in adj[current]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append((neighbor, dist + 1))
+
+    target = farthest if farthest != source else (
+        node_ids[1] if len(node_ids) > 1 else source
+    )
+    return (source, target)
+
+
+
+
+def generate_graph_input(family, size, category, algorithm_keys):
+    config = _CATEGORY_CONFIG[category]
+    generator = _TOPOLOGY_GENERATORS[family]
+
+    result = generator(size)
+
+    if config["weighted"]:
+        allow_negative = "bellman_ford" in algorithm_keys
+        result["edges"] = _add_weights(result["edges"], allow_negative = allow_negative)
+
+    if config["needs_coords"]:
+        result["nodes"] = _add_coordinates(result["nodes"])
+
+    if config["needs_source"]:
+        source, target = _pick_source_target(
+            result["nodes"], result["edges"],
+            need_target = config["needs_target"],
+        )
+        result["source"] = source
+        result["target"] = target
+    else:
+        result["source"] = None
+        result["target"] = None
+
+    result["weighted"] = config["weighted"]
+    result["directed"] = config["directed"]
+    result["mode"] = "graph"
+
+    return result
