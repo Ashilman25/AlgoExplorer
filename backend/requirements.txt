@@ -17,3 +17,4 @@ pydantic-settings>=2.1.0
 pytest>=8.0.0
 redis[hiredis]==5.0.1
 rq>=1.16
+slowapi>=0.1.9

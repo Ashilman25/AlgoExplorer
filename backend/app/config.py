@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     benchmark_queue_name: str = "benchmarks"
     benchmark_progress_interval: int = 1
     enforce_https: bool = False
+    rate_limit_auth: str = "5/minute"
+    rate_limit_general: str = "30/minute"
+    rate_limit_readonly: str = "60/minute"
+    rate_limit_storage_uri: str = "redis://localhost:6379/1"
+    lockout_max_attempts: int = 5
+    lockout_duration_minutes: int = 15
 
     model_config = SettingsConfigDict(
         env_file = ENV_FILE,
