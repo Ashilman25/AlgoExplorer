@@ -238,7 +238,6 @@ function BenchmarkConfig({
             selected={algorithms}
             onChange={onAlgorithmsChange}
             min={BENCHMARK_LIMITS.ALGORITHMS_MIN}
-            max={BENCHMARK_LIMITS.ALGORITHMS_MAX}
           />
 
           <Select
@@ -314,12 +313,20 @@ function BenchmarkSummary({ summary, status }) {
 // ── Results Table ───────────────────────────────────────────
 
 function ResultsTable({ table, metrics, moduleType, category }) {
-  const [sortCol, setSortCol] = useState('size')
+  const [sortCol, setSortCol] = useState('algorithm_key')
   const [sortDir, setSortDir] = useState('asc')
+  const [showAllSizes, setShowAllSizes] = useState(false)
+  const [selectedSize, setSelectedSize] = useState(null)
 
   if (!table || table.length === 0) return null
 
   const resolvedMetrics = getMetrics(moduleType, category)
+
+  // Extract unique sizes sorted ascending
+  const allSizes = [...new Set(table.map((r) => r.size))].sort((a, b) => a - b)
+
+  // Default to largest size
+  const activeSize = selectedSize ?? allSizes[allSizes.length - 1]
 
   const handleSort = (col) => {
     if (sortCol === col) {
@@ -337,9 +344,15 @@ function ResultsTable({ table, metrics, moduleType, category }) {
     metricColumns.push({ key: `${prefix}_median`, label: `${resolvedMetrics.find((x) => x.key === m)?.label ?? m} (med)` })
   }
 
-  const sorted = [...table].sort((a, b) => {
+  // Filter rows: single size unless "show all" is toggled
+  const filtered = showAllSizes ? table : table.filter((r) => r.size === activeSize)
+
+  const sorted = [...filtered].sort((a, b) => {
     const av = a[sortCol] ?? 0
     const bv = b[sortCol] ?? 0
+    if (typeof av === 'string' && typeof bv === 'string') {
+      return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+    }
     return sortDir === 'asc' ? av - bv : bv - av
   })
 
@@ -351,17 +364,44 @@ function ResultsTable({ table, metrics, moduleType, category }) {
     return val
   }
 
+  // Columns: hide "Size" column when viewing a single size
+  const headerColumns = showAllSizes
+    ? [{ key: 'algorithm_key', label: 'Algorithm' }, { key: 'size', label: 'Size' }, ...metricColumns]
+    : [{ key: 'algorithm_key', label: 'Algorithm' }, ...metricColumns]
+
   return (
     <Card title="Results Table">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700/30">
+        <div className="flex items-center gap-3">
+          {!showAllSizes && allSizes.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Size</span>
+              <select
+                value={activeSize}
+                onChange={(e) => setSelectedSize(Number(e.target.value))}
+                className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
+              >
+                {allSizes.map((s) => (
+                  <option key={s} value={s}>{s.toLocaleString()}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        {allSizes.length > 1 && (
+          <button
+            onClick={() => setShowAllSizes((v) => !v)}
+            className="text-[10px] font-medium text-cyan-400 hover:text-cyan-300 transition-colors uppercase tracking-wide"
+          >
+            {showAllSizes ? 'Filter by size' : 'Show all sizes'}
+          </button>
+        )}
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-700/50">
-              {[
-                { key: 'algorithm_key', label: 'Algorithm' },
-                { key: 'size', label: 'Size' },
-                ...metricColumns,
-              ].map((col) => (
+              {headerColumns.map((col) => (
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
@@ -382,7 +422,9 @@ function ResultsTable({ table, metrics, moduleType, category }) {
                 className={`border-b border-slate-800/50 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}
               >
                 <td className="px-3 py-2 text-slate-300 font-mono text-xs">{row.algorithm_key}</td>
-                <td className="px-3 py-2 text-slate-400 font-mono text-xs">{row.size?.toLocaleString()}</td>
+                {showAllSizes && (
+                  <td className="px-3 py-2 text-slate-400 font-mono text-xs">{row.size?.toLocaleString()}</td>
+                )}
                 {metricColumns.map((col) => (
                   <td key={col.key} className="px-3 py-2 text-slate-400 font-mono text-xs">
                     {formatCell(row[col.key])}

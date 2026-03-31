@@ -15,7 +15,8 @@ BENCHMARK_CATEGORIES = {
 }
 
 BENCHMARK_ALGORITHMS = {
-    "sorting": {"quicksort", "mergesort"},
+    "sorting": {"quicksort", "mergesort", "bubble_sort", "insertion_sort",
+                "selection_sort", "heap_sort"},
     "graph":   {"bfs", "dfs", "dijkstra", "astar", "bellman_ford",
                 "prims", "kruskals", "topological_sort"},
 }
@@ -62,7 +63,6 @@ TRIALS_MIN = 1
 TRIALS_MAX = 20
 TRIALS_DEFAULT = 5
 ALGORITHMS_MIN = 1
-ALGORITHMS_MAX = 5
 
 _GRID_FAMILIES = {"grid"}
 
@@ -96,9 +96,6 @@ class CreateBenchmarkRequest(BaseModel):
     def validate_algorithm_keys(cls, v):
         if len(v) < ALGORITHMS_MIN:
             raise ValueError(f"At least {ALGORITHMS_MIN} algorithm required")
-
-        if len(v) > ALGORITHMS_MAX:
-            raise ValueError(f"At most {ALGORITHMS_MAX} algorithms allowed")
 
         if len(set(v)) != len(v):
             raise ValueError("Duplicate algorithm keys")
