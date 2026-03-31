@@ -13,6 +13,10 @@ from app.observability import configure_logging, get_logger, compact_context, re
 from app.schemas.errors import ErrorDetail, ErrorResponse
 from app.routes import auth, metadata, runs, benchmarks
 from app.db import init_db
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+
+from app.rate_limiting import limiter
 
 
 # to start:
@@ -46,6 +50,9 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(lifespan = lifespan)
+
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     SecurityHeadersMiddleware,
@@ -219,12 +226,43 @@ async def unexpected_error_handler(request: Request, exc: Exception):
     )
 
 
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    retry_after = exc.detail.split("per")[0].strip() if exc.detail else "60"
+
+    if request.url.path.startswith("/api/auth"):
+        message = f"Too many login attempts. Please try again in {retry_after} seconds."
+    else:
+        message = "Too many requests. Please try again later."
+
+    logger.warning(
+        "rate_limit.exceeded %s",
+        compact_context(
+            **request_context(request),
+            limit = str(exc.detail),
+        ),
+    )
+
+    return JSONResponse(
+        status_code = 429,
+        content = ErrorResponse(
+            error = ErrorDetail(
+                error_code = "RATE_LIMITED",
+                message = message,
+            )
+        ).model_dump(),
+        headers = {"Retry-After": retry_after},
+    )
+
+
 # base routes
 
 @app.get("/api/health")
-def health():
+@limiter.limit(settings.rate_limit_readonly)
+def health(request: Request):
     return {"status": "ok"}
 
 @app.get("/api/version")
-def version():
+@limiter.limit(settings.rate_limit_readonly)
+def version(request: Request):
     return {"version": "0.1.0"}

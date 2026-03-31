@@ -1,5 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from app.config import settings
 from app.data.registry import REGISTRY
+from app.rate_limiting import limiter
 from app.exceptions import NotFoundException
 from app.schemas.metadata import AlgorithmMetadata, ModuleMetadata, MetadataResponse, LearningInfo
 
@@ -7,7 +9,8 @@ router = APIRouter(prefix = "/api/metadata")
 
 #gets all modules and their metadata
 @router.get("/modules")
-def get_modules():
+@limiter.limit(settings.rate_limit_readonly)
+def get_modules(request: Request):
     metadatas = []
     
     for module_key, module_data in REGISTRY.items():
@@ -43,7 +46,8 @@ def get_modules():
 
 #gets metadata for a specific module (graph, sorting, dp)
 @router.get("/modules/{module_key}")
-def get_module_by_key(module_key: str):
+@limiter.limit(settings.rate_limit_readonly)
+def get_module_by_key(request: Request, module_key: str):
     if module_key not in REGISTRY:
         raise NotFoundException(f"Module '{module_key}' not found.")
     
@@ -76,7 +80,8 @@ def get_module_by_key(module_key: str):
 
 #gets specific metadata for algorithm in specific module
 @router.get("/modules/{module_key}/algorithms/{algorithm_key}")
-def get_alg_by_key(module_key: str, algorithm_key: str):
+@limiter.limit(settings.rate_limit_readonly)
+def get_alg_by_key(request: Request, module_key: str, algorithm_key: str):
     if module_key not in REGISTRY:
         raise NotFoundException(f"Module '{module_key}' not found.")
     

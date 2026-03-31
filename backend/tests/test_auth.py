@@ -226,3 +226,91 @@ def test_logout_revokes_session_blocks_future_access_and_logs_success(client, se
 
     messages = [record.getMessage() for record in caplog.records]
     assert any("auth.logout.succeeded" in message for message in messages)
+
+
+def test_account_locks_after_max_failed_attempts(client, session_factory):
+    client.post("/api/auth/register", json = register_payload())
+
+    # Fail 5 times
+    for i in range(5):
+        resp = client.post("/api/auth/login", json = {"email": "user@example.com", "password": "wrongpassword"})
+        assert resp.status_code == 401
+
+    # 6th attempt with correct password should still fail (locked)
+    resp = client.post("/api/auth/login", json = {"email": "user@example.com", "password": "securePassword123"})
+    assert resp.status_code == 401
+    assert resp.json()["error"]["message"] == "Invalid email or password."
+
+
+def test_successful_login_resets_failed_attempts(client, session_factory):
+    client.post("/api/auth/register", json = register_payload())
+
+    # Fail 3 times (below threshold)
+    for i in range(3):
+        client.post("/api/auth/login", json = {"email": "user@example.com", "password": "wrongpassword"})
+
+    # Succeed
+    resp = client.post("/api/auth/login", json = {"email": "user@example.com", "password": "securePassword123"})
+    assert resp.status_code == 200
+
+    # Verify counter reset — fail 4 more times, should not lock
+    for i in range(4):
+        client.post("/api/auth/login", json = {"email": "user@example.com", "password": "wrongpassword"})
+
+    # 5th fail after reset should lock
+    resp = client.post("/api/auth/login", json = {"email": "user@example.com", "password": "wrongpassword"})
+    assert resp.status_code == 401
+
+    # Now locked — correct password should fail
+    resp = client.post("/api/auth/login", json = {"email": "user@example.com", "password": "securePassword123"})
+    assert resp.status_code == 401
+
+
+def test_lockout_logs_structured_events(client, caplog):
+    import logging
+    caplog.set_level(logging.WARNING, logger = "algo_explorer.services.auth")
+
+    client.post("/api/auth/register", json = register_payload())
+
+    # Trigger lockout
+    for i in range(5):
+        client.post("/api/auth/login", json = {"email": "user@example.com", "password": "wrongpassword"})
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("auth.lockout.triggered" in m for m in messages)
+
+
+def test_locked_account_returns_generic_message(client):
+    client.post("/api/auth/register", json = register_payload())
+
+    for i in range(5):
+        client.post("/api/auth/login", json = {"email": "user@example.com", "password": "wrongpassword"})
+
+    # Locked account gives same message as wrong password
+    resp = client.post("/api/auth/login", json = {"email": "user@example.com", "password": "securePassword123"})
+    assert resp.json()["error"]["message"] == "Invalid email or password."
+
+    # Nonexistent account gives same message too
+    resp = client.post("/api/auth/login", json = {"email": "nobody@example.com", "password": "whatever1234"})
+    assert resp.json()["error"]["message"] == "Invalid email or password."
+
+
+def test_lockout_expires_after_duration(client, session_factory, monkeypatch):
+    from datetime import datetime, timedelta
+
+    client.post("/api/auth/register", json = register_payload())
+
+    # Trigger lockout
+    for i in range(5):
+        client.post("/api/auth/login", json = {"email": "user@example.com", "password": "wrongpassword"})
+
+    # Fast-forward: set locked_until to the past
+    with session_factory() as db:
+        from app.data.models import UserAccount
+        user = db.query(UserAccount).filter(UserAccount.email == "user@example.com").one()
+        user.locked_until = datetime.utcnow() - timedelta(minutes = 1)
+        db.commit()
+
+    # Should now be able to login
+    resp = client.post("/api/auth/login", json = {"email": "user@example.com", "password": "securePassword123"})
+    assert resp.status_code == 200

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from rq import Queue
 from app.exceptions import NotFoundException, PermissionError
 from app.observability import get_logger, compact_context, summarize_benchmark_config
@@ -7,6 +7,7 @@ from app.worker.connection import get_redis
 from app.worker.health import get_worker_health
 from app.worker.tasks import execute_benchmark
 from app.config import settings
+from app.rate_limiting import limiter
 from app.schemas.benchmarks import (
     CreateBenchmarkRequest,
     BenchmarkResultsResponse,
@@ -43,19 +44,29 @@ def enqueue_benchmark(benchmark_id: int) -> None:
 
 
 @router.get("/", response_model = list[BenchmarkStatusResponse])
-def list_benchmark_jobs(db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
+@limiter.limit(settings.rate_limit_general)
+def list_benchmark_jobs(request: Request, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
     if user:
         rows = db.query(BenchmarkJob).filter(BenchmarkJob.user_id == user.id).order_by(BenchmarkJob.created_at.desc()).all()
     else:
-        rows = db.query(BenchmarkJob).filter(BenchmarkJob.user_id.is_(None)).order_by(BenchmarkJob.created_at.desc()).all()
-        
+        guest_session_id = request.headers.get("X-Guest-Session")
+        query = db.query(BenchmarkJob).filter(BenchmarkJob.user_id.is_(None))
+        if guest_session_id:
+            query = query.filter(BenchmarkJob.guest_session_id == guest_session_id)
+        rows = query.order_by(BenchmarkJob.created_at.desc()).all()
+
     jobs = [BenchmarkStatusResponse.model_validate(job) for job in rows]
 
     return jobs
 
 
 @router.post("/", response_model = BenchmarkStatusResponse)
-def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
+@limiter.limit(settings.rate_limit_general)
+def create_benchmark_job(request: Request, body: CreateBenchmarkRequest, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
+    guest_session_id = None
+    if user is None:
+        guest_session_id = request.headers.get("X-Guest-Session")
+
     config = safe_json_value({
         "algorithm_keys": body.algorithm_keys,
         "input_family": body.input_family,
@@ -74,6 +85,7 @@ def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db), use
 
     job = BenchmarkJob(
         user_id = user.id if user else None,
+        guest_session_id = guest_session_id,
         module_type = body.module_type,
         config = config,
         status = "pending",
@@ -102,12 +114,14 @@ def create_benchmark_job(body: CreateBenchmarkRequest, db = Depends(get_db), use
 
 
 @router.get("/workers/health", response_model = WorkerHealthResponse)
-def worker_health():
+@limiter.limit(settings.rate_limit_readonly)
+def worker_health(request: Request):
     return get_worker_health()
 
 
 @router.get("/{benchmark_id}", response_model = BenchmarkStatusResponse)
-def get_benchmark_job(benchmark_id: int, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
+@limiter.limit(settings.rate_limit_readonly)
+def get_benchmark_job(request: Request, benchmark_id: int, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
     job = db.query(BenchmarkJob).filter(BenchmarkJob.id == benchmark_id).first()
     if not job:
         raise NotFoundException(f"Benchmark Job '{benchmark_id}' not found.")
@@ -117,7 +131,8 @@ def get_benchmark_job(benchmark_id: int, db = Depends(get_db), user: UserAccount
 
 
 @router.patch("/{benchmark_id}/status", response_model = BenchmarkStatusResponse)
-def update_benchmark_status(benchmark_id: int, body: UpdateBenchmarkStatusRequest, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
+@limiter.limit(settings.rate_limit_general)
+def update_benchmark_status(request: Request, benchmark_id: int, body: UpdateBenchmarkStatusRequest, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
     job = db.query(BenchmarkJob).filter(BenchmarkJob.id == benchmark_id).first()
     if not job:
         raise NotFoundException(f"Benchmark Job '{benchmark_id}' not found.")
@@ -132,7 +147,8 @@ def update_benchmark_status(benchmark_id: int, body: UpdateBenchmarkStatusReques
 
 
 @router.get("/{benchmark_id}/results", response_model = BenchmarkResultsResponse)
-def get_benchmark_results(benchmark_id: int, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
+@limiter.limit(settings.rate_limit_readonly)
+def get_benchmark_results(request: Request, benchmark_id: int, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
     job = db.query(BenchmarkJob).filter(BenchmarkJob.id == benchmark_id).first()
     if not job:
         raise NotFoundException(f"Benchmark Job '{benchmark_id}' not found.")

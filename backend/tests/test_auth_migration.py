@@ -98,16 +98,20 @@ BENCHMARK = {
 }
 
 
+GUEST_SESSION = "test-guest-session-abc"
+GUEST_HEADERS = {"X-Guest-Session": GUEST_SESSION}
+
+
 def create_guest_run(client, **overrides):
     payload = {**SORTING_RUN, **overrides}
-    resp = client.post("/api/runs/", json = payload)
+    resp = client.post("/api/runs/", json = payload, headers = GUEST_HEADERS)
     assert resp.status_code == 200
     return resp.json()
 
 
 def create_guest_benchmark(client):
     with patch("app.routes.benchmarks.enqueue_benchmark"):
-        resp = client.post("/api/benchmarks/", json = BENCHMARK)
+        resp = client.post("/api/benchmarks/", json = BENCHMARK, headers = GUEST_HEADERS)
     assert resp.status_code == 200
     return resp.json()
 
@@ -186,6 +190,7 @@ def test_guest_to_account_migration_full_lifecycle(client, session_factory):
     claim = client.post("/api/auth/claim", json = {
         "run_ids": [guest_run_1["id"], guest_run_2["id"]],
         "benchmark_ids": [guest_bench["id"]],
+        "guest_session_id": GUEST_SESSION,
     }, headers = hdr(token))
 
     assert claim.status_code == 200
@@ -216,6 +221,7 @@ def test_claimed_runs_appear_in_owner_run_history(client):
     client.post("/api/auth/claim", json = {
         "run_ids": [guest_run["id"]],
         "benchmark_ids": [],
+        "guest_session_id": GUEST_SESSION,
     }, headers = hdr(token))
 
     # now it appears in the owner's run list
@@ -235,6 +241,7 @@ def test_claimed_benchmarks_appear_in_owner_benchmark_list(client):
     client.post("/api/auth/claim", json = {
         "run_ids": [],
         "benchmark_ids": [guest_bench["id"]],
+        "guest_session_id": GUEST_SESSION,
     }, headers = hdr(token))
 
     benchmarks = client.get("/api/benchmarks/", headers = hdr(token)).json()
@@ -252,6 +259,7 @@ def test_double_claim_does_not_duplicate(client):
     first = client.post("/api/auth/claim", json = {
         "run_ids": [guest_run["id"]],
         "benchmark_ids": [],
+        "guest_session_id": GUEST_SESSION,
     }, headers = hdr(token)).json()
     assert first["runs_claimed"] == 1
 
@@ -259,6 +267,7 @@ def test_double_claim_does_not_duplicate(client):
     second = client.post("/api/auth/claim", json = {
         "run_ids": [guest_run["id"]],
         "benchmark_ids": [],
+        "guest_session_id": GUEST_SESSION,
     }, headers = hdr(token)).json()
     assert second["runs_claimed"] == 0
 
@@ -294,7 +303,7 @@ def test_guest_scenario_run_accessible_without_auth(client):
 
 def test_claimed_scenario_runs_transfer_to_owner(client, session_factory):
     # guest creates a scenario-linked run
-    guest_run = client.post("/api/runs/", json = {**SORTING_RUN, "scenario_id": 99}).json()
+    guest_run = client.post("/api/runs/", json = {**SORTING_RUN, "scenario_id": 99}, headers = GUEST_HEADERS).json()
 
     auth = register(client)
     token = auth["access_token"]
@@ -302,6 +311,7 @@ def test_claimed_scenario_runs_transfer_to_owner(client, session_factory):
     client.post("/api/auth/claim", json = {
         "run_ids": [guest_run["id"]],
         "benchmark_ids": [],
+        "guest_session_id": GUEST_SESSION,
     }, headers = hdr(token))
 
     # verify ownership transferred and scenario_id preserved

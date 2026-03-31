@@ -149,23 +149,62 @@ def register_user_account(payload: RegisterRequest, db: Session) -> AuthTokenRes
     
 def login_user_account(payload: LoginRequest, db: Session) -> AuthTokenResponse:
     user = db.query(UserAccount).filter(UserAccount.email == payload.email).first()
-    
-    if user is None or not verify_password(payload.password, user.password_hash):
+
+    if user is None:
         logger.warning(
             "auth.login.failed %s",
             compact_context(email = payload.email, reason = "invalid_credentials")
         )
         raise AuthenticationError("Invalid email or password.")
-    
+
+    # Check if account is locked
+    if user.locked_until is not None and user.locked_until > datetime.utcnow():
+        remaining = int((user.locked_until - datetime.utcnow()).total_seconds())
+        logger.warning(
+            "auth.login.locked_out %s",
+            compact_context(email = payload.email, remaining_seconds = remaining),
+        )
+        raise AuthenticationError("Invalid email or password.")
+
+    if not verify_password(payload.password, user.password_hash):
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+
+        if user.failed_login_attempts >= settings.lockout_max_attempts:
+            user.locked_until = datetime.utcnow() + timedelta(minutes = settings.lockout_duration_minutes)
+            db.commit()
+            logger.warning(
+                "auth.lockout.triggered %s",
+                compact_context(
+                    email = payload.email,
+                    attempts = user.failed_login_attempts,
+                    lockout_minutes = settings.lockout_duration_minutes,
+                ),
+            )
+        else:
+            db.commit()
+            logger.warning(
+                "auth.login.failed %s",
+                compact_context(
+                    email = payload.email,
+                    reason = "invalid_credentials",
+                    attempts = user.failed_login_attempts,
+                ),
+            )
+
+        raise AuthenticationError("Invalid email or password.")
+
+    # Successful login — reset lockout state
+    user.failed_login_attempts = 0
+    user.locked_until = None
     access_token = issue_session_token(user.id, db)
     db.commit()
     db.refresh(user)
-    
+
     logger.info(
         "auth.login.succeeded %s",
         compact_context(user_id = user.id, email = user.email),
     )
-    
+
     return build_auth_response(user, access_token)
 
 
