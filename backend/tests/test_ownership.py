@@ -242,10 +242,12 @@ def test_other_user_cannot_access_owned_benchmark(client):
 
 
 def test_claim_reassigns_guest_resources(client, session_factory):
-    # Create guest resources
-    run = client.post("/api/runs/", json = SORTING_RUN_PAYLOAD).json()
+    guest_headers = {"X-Guest-Session": "guest-sess-claim"}
+
+    # Create guest resources with session ID
+    run = client.post("/api/runs/", json = SORTING_RUN_PAYLOAD, headers = guest_headers).json()
     with patch("app.routes.benchmarks.enqueue_benchmark"):
-        benchmark = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD).json()
+        benchmark = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = guest_headers).json()
 
     # Register and claim
     auth = register_user(client, "claimer@test.com", "claimer")
@@ -254,6 +256,7 @@ def test_claim_reassigns_guest_resources(client, session_factory):
     resp = client.post("/api/auth/claim", json = {
         "run_ids": [run["id"]],
         "benchmark_ids": [benchmark["id"]],
+        "guest_session_id": "guest-sess-claim",
     }, headers = auth_header(token))
 
     assert resp.status_code == 200
@@ -315,3 +318,145 @@ def test_claim_with_nonexistent_ids_claims_zero(client):
     assert resp.status_code == 200
     assert resp.json()["runs_claimed"] == 0
     assert resp.json()["benchmarks_claimed"] == 0
+
+
+def test_guest_run_stores_session_id(client, session_factory):
+    resp = client.post(
+        "/api/runs/",
+        json = SORTING_RUN_PAYLOAD,
+        headers = {"X-Guest-Session": "abc-123-guest-session"},
+    )
+    assert resp.status_code == 200
+    run_id = resp.json()["id"]
+
+    with session_factory() as db:
+        run = db.query(SimulationRun).filter(SimulationRun.id == run_id).one()
+        assert run.guest_session_id == "abc-123-guest-session"
+        assert run.user_id is None
+
+
+def test_guest_run_without_session_header_has_null_session_id(client, session_factory):
+    resp = client.post("/api/runs/", json = SORTING_RUN_PAYLOAD)
+    assert resp.status_code == 200
+    run_id = resp.json()["id"]
+
+    with session_factory() as db:
+        run = db.query(SimulationRun).filter(SimulationRun.id == run_id).one()
+        assert run.guest_session_id is None
+
+
+def test_authenticated_run_ignores_guest_session_header(client, session_factory):
+    auth = register_user(client, "owner@test.com", "owner")
+    resp = client.post(
+        "/api/runs/",
+        json = SORTING_RUN_PAYLOAD,
+        headers = {**auth_header(auth["access_token"]), "X-Guest-Session": "should-be-ignored"},
+    )
+    assert resp.status_code == 200
+    run_id = resp.json()["id"]
+
+    with session_factory() as db:
+        run = db.query(SimulationRun).filter(SimulationRun.id == run_id).one()
+        assert run.guest_session_id is None
+        assert run.user_id == auth["user"]["id"]
+
+
+def test_guest_benchmark_stores_session_id(client, session_factory):
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        resp = client.post(
+            "/api/benchmarks/",
+            json = BENCHMARK_PAYLOAD,
+            headers = {"X-Guest-Session": "bench-session-456"},
+        )
+    assert resp.status_code == 200
+    job_id = resp.json()["id"]
+
+    with session_factory() as db:
+        job = db.query(BenchmarkJob).filter(BenchmarkJob.id == job_id).one()
+        assert job.guest_session_id == "bench-session-456"
+
+
+def test_claim_with_matching_session_id_succeeds(client, session_factory):
+    guest_headers = {"X-Guest-Session": "my-guest-session"}
+
+    run = client.post("/api/runs/", json = SORTING_RUN_PAYLOAD, headers = guest_headers).json()
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        benchmark = client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = guest_headers).json()
+
+    auth = register_user(client, "claimer@test.com", "claimer")
+    resp = client.post("/api/auth/claim", json = {
+        "run_ids": [run["id"]],
+        "benchmark_ids": [benchmark["id"]],
+        "guest_session_id": "my-guest-session",
+    }, headers = auth_header(auth["access_token"]))
+
+    assert resp.status_code == 200
+    assert resp.json()["runs_claimed"] == 1
+    assert resp.json()["benchmarks_claimed"] == 1
+
+
+def test_claim_with_wrong_session_id_transfers_nothing(client, session_factory):
+    guest_headers = {"X-Guest-Session": "real-session"}
+
+    run = client.post("/api/runs/", json = SORTING_RUN_PAYLOAD, headers = guest_headers).json()
+
+    auth = register_user(client, "claimer@test.com", "claimer")
+    resp = client.post("/api/auth/claim", json = {
+        "run_ids": [run["id"]],
+        "benchmark_ids": [],
+        "guest_session_id": "wrong-session",
+    }, headers = auth_header(auth["access_token"]))
+
+    assert resp.status_code == 200
+    assert resp.json()["runs_claimed"] == 0
+
+    with session_factory() as db:
+        run_row = db.query(SimulationRun).filter(SimulationRun.id == run["id"]).one()
+        assert run_row.user_id is None
+
+
+def test_claim_without_session_id_on_hardened_records_transfers_nothing(client, session_factory):
+    guest_headers = {"X-Guest-Session": "has-session"}
+
+    run = client.post("/api/runs/", json = SORTING_RUN_PAYLOAD, headers = guest_headers).json()
+
+    auth = register_user(client, "claimer@test.com", "claimer")
+    resp = client.post("/api/auth/claim", json = {
+        "run_ids": [run["id"]],
+        "benchmark_ids": [],
+        "guest_session_id": "",
+    }, headers = auth_header(auth["access_token"]))
+
+    assert resp.status_code == 200
+    assert resp.json()["runs_claimed"] == 0
+
+
+def test_guest_run_list_scoped_by_session_id(client):
+    # Guest A creates a run
+    client.post("/api/runs/", json = SORTING_RUN_PAYLOAD, headers = {"X-Guest-Session": "guest-a"})
+    # Guest B creates a run
+    client.post("/api/runs/", json = SORTING_RUN_PAYLOAD, headers = {"X-Guest-Session": "guest-b"})
+
+    # Guest A lists runs — should see only their own
+    resp = client.get("/api/runs/", headers = {"X-Guest-Session": "guest-a"})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    # Guest B lists runs — should see only their own
+    resp = client.get("/api/runs/", headers = {"X-Guest-Session": "guest-b"})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
+def test_guest_benchmark_list_scoped_by_session_id(client):
+    with patch("app.routes.benchmarks.enqueue_benchmark"):
+        client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = {"X-Guest-Session": "guest-a"})
+        client.post("/api/benchmarks/", json = BENCHMARK_PAYLOAD, headers = {"X-Guest-Session": "guest-b"})
+
+    resp = client.get("/api/benchmarks/", headers = {"X-Guest-Session": "guest-a"})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    resp = client.get("/api/benchmarks/", headers = {"X-Guest-Session": "guest-b"})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
