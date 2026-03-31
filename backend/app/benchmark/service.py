@@ -58,6 +58,28 @@ _GRAPH_METRIC_MAP = {
 }
 
 
+_SORTING_METRIC_MAP = {
+    ("quicksort", "comparisons"):       "comparisons",
+    ("quicksort", "swaps"):             "swaps",
+    ("quicksort", "writes"):            "writes",
+    ("mergesort", "comparisons"):       "comparisons",
+    ("mergesort", "swaps"):             "swaps",
+    ("mergesort", "writes"):            "writes",
+    ("bubble_sort", "comparisons"):     "comparisons",
+    ("bubble_sort", "swaps"):           "swaps",
+    ("bubble_sort", "writes"):          None,
+    ("insertion_sort", "comparisons"):  "comparisons",
+    ("insertion_sort", "swaps"):        "shifts",
+    ("insertion_sort", "writes"):       "writes",
+    ("selection_sort", "comparisons"):  "comparisons",
+    ("selection_sort", "swaps"):        "swaps",
+    ("selection_sort", "writes"):       None,
+    ("heap_sort", "comparisons"):       "comparisons",
+    ("heap_sort", "swaps"):             "swaps",
+    ("heap_sort", "writes"):            None,
+}
+
+
 def generate_sorting_input(family: str, size: int) -> list[int]:
     if family == "random":
         return [random.randint(1, size * 10) for _ in range(size)]
@@ -87,7 +109,7 @@ def _resolve_metric_key(module_type, algo_key, benchmark_metric):
     if benchmark_metric == "runtime_ms":
         return "runtime_ms"
     if module_type == "sorting":
-        return benchmark_metric
+        return _SORTING_METRIC_MAP.get((algo_key, benchmark_metric))
     return _GRAPH_METRIC_MAP.get((algo_key, benchmark_metric))
 
 

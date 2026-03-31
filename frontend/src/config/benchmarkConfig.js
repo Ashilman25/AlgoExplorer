@@ -13,6 +13,10 @@ export const BENCHMARK_ALGORITHMS = {
   sorting: [
     { key: 'quicksort', label: 'Quick Sort' },
     { key: 'mergesort', label: 'Merge Sort' },
+    { key: 'bubble_sort', label: 'Bubble Sort' },
+    { key: 'insertion_sort', label: 'Insertion Sort' },
+    { key: 'selection_sort', label: 'Selection Sort' },
+    { key: 'heap_sort', label: 'Heap Sort' },
   ],
   graph: {
     traversal: [
@@ -112,7 +116,6 @@ export const BENCHMARK_LIMITS = {
   TRIALS_MAX: 20,
   TRIALS_DEFAULT: 5,
   ALGORITHMS_MIN: 1,
-  ALGORITHMS_MAX: 5,
 }
 
 export const BENCHMARK_SIZE_LIMITS = {
