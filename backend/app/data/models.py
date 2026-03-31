@@ -31,6 +31,8 @@ class UserAccount(Base):
     
     settings: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable = False, default = default_user_settings)
     created_at: Mapped[datetime] = mapped_column(DateTime, default = datetime.utcnow, nullable = False)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default = 0, nullable = False)
+    locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone = True), nullable = True, default = None)
 
     sessions: Mapped[List["AuthSession"]] = relationship(back_populates = "user", cascade = "all, delete-orphan")
 
@@ -55,6 +57,7 @@ class SimulationRun(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key = True, autoincrement = True)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user_accounts.id"), nullable = True, index = True)
+    guest_session_id: Mapped[Optional[str]] = mapped_column(String(36), nullable = True, index = True)
     scenario_id: Mapped[Optional[int]] = mapped_column(Integer, nullable = True)
 
     module_type: Mapped[str] = mapped_column(String(50), nullable = False)
@@ -73,6 +76,7 @@ class BenchmarkJob(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key = True, autoincrement = True)
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("user_accounts.id"), nullable = True, index = True)
+    guest_session_id: Mapped[Optional[str]] = mapped_column(String(36), nullable = True, index = True)
     module_type: Mapped[str] = mapped_column(String(50), nullable = False)
 
     config: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable = False)

@@ -122,6 +122,7 @@ class ClaimGuestDataRequest(BaseModel):
 
     run_ids: list[int] = []
     benchmark_ids: list[int] = []
+    guest_session_id: str = ""
 
 
 class ClaimGuestDataResponse(BaseModel):
