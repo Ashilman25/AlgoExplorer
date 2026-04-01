@@ -24,6 +24,7 @@ def get_modules(request: Request):
                 supported_modes = alg_data["supported_modes"],
                 supported_explanation_levels = alg_data["supported_explanation_levels"],
                 variants = alg_data.get("variants"),
+                grid_only = alg_data.get("grid_only"),
                 learning_info = alg_data.get("learning_info")
             )
 
@@ -62,6 +63,7 @@ def get_module_by_key(request: Request, module_key: str):
             supported_modes = alg_data["supported_modes"],
             supported_explanation_levels = alg_data["supported_explanation_levels"],
             variants = alg_data.get("variants"),
+            grid_only = alg_data.get("grid_only"),
             learning_info = alg_data.get("learning_info")
         )
         algs.append(alg_metadata)
@@ -99,6 +101,7 @@ def get_alg_by_key(request: Request, module_key: str, algorithm_key: str):
         supported_modes = specific_data["supported_modes"],
         supported_explanation_levels = specific_data["supported_explanation_levels"],
         variants = specific_data.get("variants"),
+        grid_only = specific_data.get("grid_only"),
         learning_info = specific_data.get("learning_info")
     )
     

@@ -266,6 +266,138 @@ REGISTRY: dict = {
                     },
                 },
             },
+            "bfs_grid": {
+                "label": "BFS (Grid)",
+                "description": "Explores grid cells level by level using a queue. Finds shortest paths by hop count on uniform-cost grids.",
+                "supported_modes": ["simulate"],
+                "supported_explanation_levels": ["none", "standard", "detailed"],
+                "grid_only": True,
+                "learning_info": {
+                    "complexity": {
+                        "time": {"best": "O(R * C)", "average": "O(R * C)", "worst": "O(R * C)"},
+                        "space": "O(R * C)",
+                    },
+                    "properties": ["complete", "optimal-unweighted", "level-order", "grid-native"],
+                    "insights": [
+                        "Expands in concentric wavefronts from the source — every cell at distance k is explored before any at k+1",
+                        "On a uniform-cost grid, hop count equals true shortest distance, making BFS optimal without a priority queue",
+                    ],
+                    "use_cases": {
+                        "use_when": [
+                            "Grid has uniform movement cost (no weighted diagonals)",
+                            "Finding shortest path by number of steps",
+                            "Visualizing the wavefront expansion pattern",
+                        ],
+                        "avoid_when": [
+                            "Diagonal movement has different cost — use Dijkstra or A*",
+                            "Grid is large and target is far — A* with a heuristic explores fewer cells",
+                        ],
+                    },
+                    "scenarios": {
+                        "best_case": "Target is adjacent to source — found in the first expansion",
+                        "worst_case": "Target is in the opposite corner with no walls — entire grid explored",
+                    },
+                },
+            },
+            "dfs_grid": {
+                "label": "DFS (Grid)",
+                "description": "Explores grid cells depth-first using a stack, diving as far as possible before backtracking. Does not guarantee shortest paths.",
+                "supported_modes": ["simulate"],
+                "supported_explanation_levels": ["none", "standard", "detailed"],
+                "grid_only": True,
+                "learning_info": {
+                    "complexity": {
+                        "time": {"best": "O(R * C)", "average": "O(R * C)", "worst": "O(R * C)"},
+                        "space": "O(R * C)",
+                    },
+                    "properties": ["not-optimal", "backtracking", "stack-based", "grid-native"],
+                    "insights": [
+                        "Dives deep along one direction before backtracking — the path it finds is usually not the shortest",
+                        "Backtracking behavior is clearly visible on a grid, making it an excellent teaching tool for stack-based traversal",
+                    ],
+                    "use_cases": {
+                        "use_when": [
+                            "Exploring reachability — does any path exist between two cells",
+                            "Maze generation and maze-solving demonstrations",
+                            "Teaching stack-based traversal and backtracking concepts",
+                        ],
+                        "avoid_when": [
+                            "Shortest path is needed — use BFS, Dijkstra, or A*",
+                            "Grid is very deep with long dead-end corridors — stack depth grows linearly",
+                        ],
+                    },
+                    "scenarios": {
+                        "best_case": "Target is along the first explored direction — found quickly",
+                        "worst_case": "Target is adjacent to source but explored last — nearly entire grid traversed with backtracking",
+                    },
+                },
+            },
+            "dijkstra_grid": {
+                "label": "Dijkstra (Grid)",
+                "description": "Finds shortest paths on weighted grids using a priority queue. Handles non-uniform movement costs such as diagonal steps.",
+                "supported_modes": ["simulate"],
+                "supported_explanation_levels": ["none", "standard", "detailed"],
+                "grid_only": True,
+                "learning_info": {
+                    "complexity": {
+                        "time": {"best": "O(R * C * log(R * C))", "average": "O(R * C * log(R * C))", "worst": "O(R * C * log(R * C))"},
+                        "space": "O(R * C)",
+                    },
+                    "properties": ["optimal-weighted", "greedy", "handles-diagonal-cost", "grid-native"],
+                    "insights": [
+                        "Essential when diagonal moves cost more than cardinal moves — BFS assumes uniform cost and gives wrong shortest paths",
+                        "On a uniform-cost grid without diagonals, Dijkstra behaves identically to BFS but with priority queue overhead",
+                    ],
+                    "use_cases": {
+                        "use_when": [
+                            "Grid allows diagonal movement with different cost than cardinal",
+                            "Weighted terrain where movement cost varies by cell",
+                            "Comparing Dijkstra's exploration pattern against A* on the same grid",
+                        ],
+                        "avoid_when": [
+                            "Grid has uniform cost and no diagonals — BFS is simpler and equally optimal",
+                            "A good heuristic is available — A* will explore fewer cells",
+                        ],
+                    },
+                    "scenarios": {
+                        "best_case": "Target is the closest cell by weighted distance — settled immediately",
+                        "worst_case": "Open grid with target in the far corner — explores most cells before reaching it",
+                    },
+                },
+            },
+            "astar_grid": {
+                "label": "A* (Grid)",
+                "description": "Finds shortest paths using distance-so-far plus a heuristic estimate, focusing exploration toward the target. Auto-selects Manhattan or Octile heuristic.",
+                "supported_modes": ["simulate"],
+                "supported_explanation_levels": ["none", "standard", "detailed"],
+                "grid_only": True,
+                "learning_info": {
+                    "complexity": {
+                        "time": {"best": "O(R * C)", "average": "O(R * C * log(R * C))", "worst": "O(R * C * log(R * C))"},
+                        "space": "O(R * C)",
+                    },
+                    "properties": ["optimal-with-admissible-heuristic", "heuristic-guided", "grid-native"],
+                    "insights": [
+                        "Auto-selects the best heuristic for the grid: Manhattan distance for 4-directional, Octile distance for 8-directional movement",
+                        "On open grids, A* can reach the target while exploring a fraction of the cells Dijkstra would visit — the heuristic steers search toward the goal",
+                    ],
+                    "use_cases": {
+                        "use_when": [
+                            "Grid coordinates provide a natural distance heuristic",
+                            "Shortest path needed with minimal cell exploration",
+                            "Comparing heuristic-guided vs blind search on the same grid",
+                        ],
+                        "avoid_when": [
+                            "Grid has uniform cost and no diagonals — BFS is simpler with identical results",
+                            "Maze with many dead ends that the heuristic cannot anticipate — performance degrades toward Dijkstra's",
+                        ],
+                    },
+                    "scenarios": {
+                        "best_case": "Open grid with few obstacles — heuristic guides search nearly straight to the target",
+                        "worst_case": "Dense maze where heuristic provides little guidance — explores nearly as many cells as Dijkstra",
+                    },
+                },
+            },
         },
     },
     "sorting": {

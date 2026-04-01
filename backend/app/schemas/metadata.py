@@ -38,6 +38,7 @@ class AlgorithmMetadata(BaseModel):
     supported_modes: list[str]
     supported_explanation_levels: list[str]
     variants: list[str] | None = None
+    grid_only: bool | None = None
     learning_info: LearningInfo | None = None
 
 
