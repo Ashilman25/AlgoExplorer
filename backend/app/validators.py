@@ -8,6 +8,7 @@ from app.schemas.payloads import (
     KnapsackInputPayload,
     CoinChangeInputPayload,
     FibonacciInputPayload,
+    GridInputPayload,
 )
 
 #check module_type in registry, and alg_key in that module in registry
@@ -104,9 +105,88 @@ def validate_graph_payload(input_payload: dict, algorithm_key: str = "bfs"):
     if algorithm_key == "topological_sort":
         if not input_payload.get("directed", False):
             raise DomainError("Topological Sort requires a directed graph.")
-        
-        
-        
+
+
+# ── grid validation ─────────────────────────────────────────────────
+
+GRID_MIN_DIM = 5
+GRID_MAX_DIM = 50
+
+
+def validate_grid_payload(input_payload: dict, algorithm_key: str = "bfs"):
+
+    # Phase 1: Pydantic schema validation
+    try:
+        parsed = GridInputPayload.model_validate(input_payload)
+
+    except ValidationError as e:
+        first_error = e.errors()[0]
+
+        loc_list = first_error["loc"]
+        string_locations = []
+
+        for loc in loc_list:
+            string_locations.append(str(loc))
+
+        field = " -> ".join(string_locations)
+
+        raise DomainError(f"Invalid grid input ({field}): {first_error['msg']}")
+
+    # Phase 2: Domain rules
+    grid = parsed.grid
+    num_rows = len(grid)
+
+    # Rule 1: row count
+    if num_rows < GRID_MIN_DIM or num_rows > GRID_MAX_DIM:
+        raise DomainError(
+            f"Grid must have between {GRID_MIN_DIM} and {GRID_MAX_DIM} rows, got {num_rows}"
+        )
+
+    # Rule 2: rectangular
+    expected_cols = len(grid[0])
+    for i, row in enumerate(grid):
+        if len(row) != expected_cols:
+            raise DomainError(
+                f"Grid must be rectangular — row {i} has {len(row)} columns, expected {expected_cols}"
+            )
+
+    # Rule 3: column count
+    if expected_cols < GRID_MIN_DIM or expected_cols > GRID_MAX_DIM:
+        raise DomainError(
+            f"Grid must have between {GRID_MIN_DIM} and {GRID_MAX_DIM} columns, got {expected_cols}"
+        )
+
+    # Rule 4: cell values
+    for r in range(num_rows):
+        for c in range(expected_cols):
+            if grid[r][c] not in (0, 1):
+                raise DomainError(
+                    f"Grid cell [{r}][{c}] must be 0 (passable) or 1 (wall), got {grid[r][c]}"
+                )
+
+    # Rule 5 & 6: source/target within bounds
+    for label, cell in [("Source", parsed.source), ("Target", parsed.target)]:
+        if cell.row < 0 or cell.row >= num_rows:
+            raise DomainError(
+                f"{label} row ({cell.row}) is out of bounds for grid with {num_rows} rows"
+            )
+        if cell.col < 0 or cell.col >= expected_cols:
+            raise DomainError(
+                f"{label} col ({cell.col}) is out of bounds for grid with {expected_cols} columns"
+            )
+
+    # Rule 7 & 8: source/target not walls
+    if grid[parsed.source.row][parsed.source.col] == 1:
+        raise DomainError("Source cell is a wall")
+
+    if grid[parsed.target.row][parsed.target.col] == 1:
+        raise DomainError("Target cell is a wall")
+
+    # Rule 9: source != target
+    if parsed.source.row == parsed.target.row and parsed.source.col == parsed.target.col:
+        raise DomainError("Source and target must be different cells")
+
+
 ANIMATION_SIZE_LIMIT = 200
 
 

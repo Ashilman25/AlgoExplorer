@@ -6,3 +6,7 @@ from app.algorithms.graph import bellman_ford
 from app.algorithms.graph import prims
 from app.algorithms.graph import kruskals
 from app.algorithms.graph import topological_sort
+from app.algorithms.graph import bfs_grid
+from app.algorithms.graph import dfs_grid
+from app.algorithms.graph import dijkstra_grid
+from app.algorithms.graph import astar_grid
