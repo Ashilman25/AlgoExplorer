@@ -16,7 +16,8 @@ describe('useGridState', () => {
   describe('initial state', () => {
     it('returns default state with no initialState', () => {
       const { result } = renderHook(() => useGridState())
-      expect(result.current.gridSize).toBe(20)
+      expect(result.current.rows).toBe(20)
+      expect(result.current.cols).toBe(20)
       expect(result.current.walls).toBeInstanceOf(Set)
       expect(result.current.walls.size).toBe(0)
       expect(result.current.startCell).toBeNull()
@@ -28,18 +29,20 @@ describe('useGridState', () => {
 
     it('hydrates from initialState', () => {
       const initial = {
-        gridSize: 10,
+        rows: 10,
+        cols: 15,
         walls: new Set(['1,1', '2,2']),
         startCell: [0, 0],
-        endCell: [9, 9],
+        endCell: [9, 14],
         allowDiagonal: true,
         density: 0.3,
       }
       const { result } = renderHook(() => useGridState(initial))
-      expect(result.current.gridSize).toBe(10)
+      expect(result.current.rows).toBe(10)
+      expect(result.current.cols).toBe(15)
       expect(result.current.walls.size).toBe(2)
       expect(result.current.startCell).toEqual([0, 0])
-      expect(result.current.endCell).toEqual([9, 9])
+      expect(result.current.endCell).toEqual([9, 14])
       expect(result.current.allowDiagonal).toBe(true)
       // mazeType always defaults to 'none' on hydration
       expect(result.current.mazeType).toBe('none')
@@ -95,21 +98,46 @@ describe('useGridState', () => {
     })
   })
 
-  describe('setGridSize', () => {
-    it('updates gridSize and resets walls, pins, and mazeType', () => {
+  describe('setDimensions', () => {
+    it('updates rows and cols', () => {
+      const { result } = renderHook(() => useGridState())
+      act(() => result.current.setDimensions(30, 40))
+      expect(result.current.rows).toBe(30)
+      expect(result.current.cols).toBe(40)
+    })
+
+    it('clears walls and pins when dimensions change', () => {
       const initial = {
-        gridSize: 20,
+        rows: 20,
+        cols: 20,
         walls: new Set(['1,1']),
         startCell: [0, 0],
         endCell: [5, 5],
       }
       const { result } = renderHook(() => useGridState(initial))
-      act(() => result.current.setGridSize(30))
-      expect(result.current.gridSize).toBe(30)
+      act(() => result.current.setDimensions(30, 40))
+      expect(result.current.rows).toBe(30)
+      expect(result.current.cols).toBe(40)
       expect(result.current.walls.size).toBe(0)
       expect(result.current.startCell).toBeNull()
       expect(result.current.endCell).toBeNull()
       expect(result.current.mazeType).toBe('none')
+    })
+
+    it('no-ops when dimensions have not changed', () => {
+      const initial = {
+        rows: 20,
+        cols: 20,
+        walls: new Set(['1,1']),
+        startCell: [0, 0],
+        endCell: [5, 5],
+      }
+      const { result } = renderHook(() => useGridState(initial))
+      act(() => result.current.setDimensions(20, 20))
+      // Walls and pins should NOT be cleared
+      expect(result.current.walls.size).toBe(1)
+      expect(result.current.startCell).toEqual([0, 0])
+      expect(result.current.endCell).toEqual([5, 5])
     })
   })
 
@@ -164,7 +192,6 @@ describe('useGridState', () => {
       act(() => result.current.setMazeType('scatter'))
       act(() => result.current.setDensity(0.40))
       expect(result.current.density).toBe(0.40)
-      // Wall count likely changed (not guaranteed due to randomness, but density increased)
       expect(result.current.walls.size).toBeGreaterThanOrEqual(0)
     })
 
@@ -173,7 +200,6 @@ describe('useGridState', () => {
       act(() => result.current.setMazeType('backtracker'))
       const wallsAfterBacktracker = new Set(result.current.walls)
       act(() => result.current.setDensity(0.40))
-      // Walls unchanged — backtracker does not use density
       expect(result.current.walls).toEqual(wallsAfterBacktracker)
     })
   })
@@ -188,9 +214,10 @@ describe('useGridState', () => {
   })
 
   describe('resetGrid', () => {
-    it('clears walls, pins, and timeline but preserves gridSize and allowDiagonal', () => {
+    it('clears walls, pins, and timeline but preserves rows/cols and allowDiagonal', () => {
       const initial = {
-        gridSize: 30,
+        rows: 30,
+        cols: 40,
         walls: new Set(['1,1']),
         startCell: [0, 0],
         endCell: [5, 5],
@@ -201,7 +228,8 @@ describe('useGridState', () => {
       expect(result.current.walls.size).toBe(0)
       expect(result.current.startCell).toBeNull()
       expect(result.current.endCell).toBeNull()
-      expect(result.current.gridSize).toBe(30)
+      expect(result.current.rows).toBe(30)
+      expect(result.current.cols).toBe(40)
       expect(result.current.allowDiagonal).toBe(true)
       expect(result.current.mazeType).toBe('none')
     })
@@ -209,7 +237,7 @@ describe('useGridState', () => {
 
   describe('buildGridPayload', () => {
     it('converts state to backend GridInputPayload format', () => {
-      const { result } = renderHook(() => useGridState({ gridSize: 5 }))
+      const { result } = renderHook(() => useGridState({ rows: 5, cols: 5 }))
       act(() => {
         result.current.handleStartPlace(0, 0)
         result.current.handleEndPlace(4, 4)
@@ -231,14 +259,27 @@ describe('useGridState', () => {
       expect(payload.grid[0][0]).toBe(0) // passable
     })
 
+    it('produces rectangular grid when rows !== cols', () => {
+      const { result } = renderHook(() => useGridState({ rows: 10, cols: 15 }))
+      act(() => {
+        result.current.handleStartPlace(0, 0)
+        result.current.handleEndPlace(9, 14)
+      })
+
+      const payload = result.current.buildGridPayload()
+
+      expect(payload.grid).toHaveLength(10)
+      expect(payload.grid[0]).toHaveLength(15)
+    })
+
     it('returns null when startCell is missing', () => {
-      const { result } = renderHook(() => useGridState({ gridSize: 5 }))
+      const { result } = renderHook(() => useGridState({ rows: 5, cols: 5 }))
       act(() => result.current.handleEndPlace(4, 4))
       expect(result.current.buildGridPayload()).toBeNull()
     })
 
     it('returns null when endCell is missing', () => {
-      const { result } = renderHook(() => useGridState({ gridSize: 5 }))
+      const { result } = renderHook(() => useGridState({ rows: 5, cols: 5 }))
       act(() => result.current.handleStartPlace(0, 0))
       expect(result.current.buildGridPayload()).toBeNull()
     })

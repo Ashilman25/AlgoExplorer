@@ -7,6 +7,7 @@ import {
   recencyColor,
   parseHexColor,
   hexFromRgb,
+  computeGridDimensions,
 } from '../../../../src/components/simulation/grid/gridMath'
 
 describe('calcCellSize', () => {
@@ -119,5 +120,32 @@ describe('recencyColor', () => {
     expect(c.r).toBe(251)
     expect(c.g).toBeGreaterThan(140)
     expect(c.g).toBeLessThan(192)
+  })
+})
+
+describe('computeGridDimensions', () => {
+  it('returns expected rows/cols for typical container', () => {
+    // 900 / 28 = 32.14 → 32 cols, 600 / 28 = 21.43 → 21 rows
+    const { rows, cols } = computeGridDimensions(900, 600)
+    expect(cols).toBe(32)
+    expect(rows).toBe(21)
+  })
+
+  it('clamps cols to 50 for very wide container', () => {
+    const { rows, cols } = computeGridDimensions(2000, 600)
+    expect(cols).toBe(50)
+    expect(rows).toBe(21)
+  })
+
+  it('clamps rows to 5 for very short container', () => {
+    const { rows, cols } = computeGridDimensions(900, 100)
+    expect(cols).toBe(32)
+    expect(rows).toBe(5)
+  })
+
+  it('clamps both axes independently', () => {
+    const { rows, cols } = computeGridDimensions(3000, 80)
+    expect(cols).toBe(50)
+    expect(rows).toBe(5)
   })
 })

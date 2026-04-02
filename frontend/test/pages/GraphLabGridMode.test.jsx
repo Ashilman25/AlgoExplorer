@@ -216,6 +216,12 @@ describe('GraphLabPage — mode switch', () => {
     expect(algoSelect.value).toBe('bfs_grid')
   })
 
+  it('does not show grid size slider in grid mode', () => {
+    renderPage()
+    fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'grid' } })
+    expect(screen.queryByLabelText('Grid size')).not.toBeInTheDocument()
+  })
+
   it('switches algorithm to bfs on graph mode change', () => {
     renderPage()
 

@@ -7,8 +7,8 @@ import GridConfig from '../../../src/components/simulation/GridConfig'
 const defaultProps = {
   algorithm: 'bfs_grid',
   onAlgorithmChange: vi.fn(),
-  gridSize: 20,
-  onGridSizeChange: vi.fn(),
+  rows: 20,
+  cols: 30,
   mazeType: 'none',
   onMazeTypeChange: vi.fn(),
   density: 0.25,
@@ -21,7 +21,6 @@ const defaultProps = {
   onModeChange: vi.fn(),
   onRun: vi.fn(),
   onReset: vi.fn(),
-  onSave: vi.fn(),
   isRunning: false,
   error: null,
   canRun: true,
@@ -53,9 +52,15 @@ describe('GridConfig', () => {
     expect(screen.getByText('A* — Heuristic Search')).toBeInTheDocument()
   })
 
-  it('renders grid size slider showing current value', () => {
-    renderConfig({ gridSize: 30 })
-    expect(screen.getByText('30 × 30')).toBeInTheDocument()
+  it('does not render grid size slider', () => {
+    renderConfig()
+    expect(screen.queryByLabelText('Grid size')).not.toBeInTheDocument()
+    expect(screen.queryByText('Grid Size')).not.toBeInTheDocument()
+  })
+
+  it('does not render save scenario button', () => {
+    renderConfig()
+    expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
   })
 
   it('renders maze generation dropdown', () => {
@@ -92,9 +97,9 @@ describe('GridConfig', () => {
     expect(screen.getByText('Something went wrong')).toBeInTheDocument()
   })
 
-  it('renders input summary with grid info', () => {
-    renderConfig({ gridSize: 15, allowDiagonal: true })
-    expect(screen.getByText('15 × 15 grid')).toBeInTheDocument()
+  it('renders input summary with rows x cols', () => {
+    renderConfig({ rows: 21, cols: 32, allowDiagonal: true })
+    expect(screen.getByText('21 × 32 grid')).toBeInTheDocument()
     expect(screen.getByText('8-dir')).toBeInTheDocument()
   })
 
