@@ -41,6 +41,7 @@ class DFSGridAlgorithm(BaseAlgorithm):
                 "frontier_max_size": 1,
                 "path_length": 0,
                 "total_steps": 0,
+                "stack_depth": 0,
             }
             path_found = False
 
@@ -57,6 +58,7 @@ class DFSGridAlgorithm(BaseAlgorithm):
                 while path_stack and current not in neighbor_sets.get(path_stack[-1], set()):
                     path_stack.pop()
                 path_stack.append(current)
+                metrics["stack_depth"] = len(path_stack)
 
                 if current == config.end:
                     path_found = True
@@ -102,6 +104,7 @@ class DFSGridAlgorithm(BaseAlgorithm):
             "frontier_max_size": 1,
             "path_length": 0,
             "total_steps": 0,
+            "stack_depth": 0,
         }
 
         stack: list[tuple[int, int]] = [config.start]
@@ -169,6 +172,7 @@ class DFSGridAlgorithm(BaseAlgorithm):
                 ))
 
             path_stack.append(current)
+            metrics["stack_depth"] = len(path_stack)
 
             # POP step
             steps.append(make_grid_step(
