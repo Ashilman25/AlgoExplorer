@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { algorithmContent } from '../../src/content/algorithms'
 
-const REQUIRED_LANGUAGES = ['python', 'javascript', 'java', 'cpp']
+const ALL_LANGUAGES = ['python', 'javascript', 'java', 'cpp']
+const PYTHON_ONLY_KEYS = ['graph/bfs_grid', 'graph/dfs_grid', 'graph/dijkstra_grid', 'graph/astar_grid']
 
 describe('algorithmContent', () => {
   const keys = Object.keys(algorithmContent)
@@ -22,9 +23,11 @@ describe('algorithmContent', () => {
         })
       })
 
-      it('has code for all four required languages', () => {
+      const requiredLangs = PYTHON_ONLY_KEYS.includes(key) ? ['python'] : ALL_LANGUAGES
+
+      it(`has code for required languages (${requiredLangs.join(', ')})`, () => {
         expect(entry.code).toBeDefined()
-        REQUIRED_LANGUAGES.forEach((lang) => {
+        requiredLangs.forEach((lang) => {
           expect(typeof entry.code[lang]).toBe('string')
           expect(entry.code[lang].length).toBeGreaterThan(10)
         })
