@@ -6,6 +6,10 @@ import bellmanFord from './graph/bellman-ford'
 import kruskals from './graph/kruskals'
 import prims from './graph/prims'
 import topologicalSort from './graph/topological-sort'
+import bfsGrid from './graph/bfs-grid'
+import dfsGrid from './graph/dfs-grid'
+import dijkstraGrid from './graph/dijkstra-grid'
+import astarGrid from './graph/astar-grid'
 
 import quicksort from './sorting/quicksort'
 import mergesort from './sorting/mergesort'
@@ -31,6 +35,10 @@ export const algorithmContent = {
   'graph/kruskals': kruskals,
   'graph/prims': prims,
   'graph/topological_sort': topologicalSort,
+  'graph/bfs_grid': bfsGrid,
+  'graph/dfs_grid': dfsGrid,
+  'graph/dijkstra_grid': dijkstraGrid,
+  'graph/astar_grid': astarGrid,
 
   'sorting/quicksort': quicksort,
   'sorting/mergesort': mergesort,
