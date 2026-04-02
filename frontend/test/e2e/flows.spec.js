@@ -16,8 +16,8 @@ test.describe('Phase 10.3 end-to-end flows', () => {
     const { run, timeline } = await runSortingSimulation(page)
 
     expect(run.module_type).toBe('sorting')
-    expect(run.algorithm_key).toBe('quicksort')
-    expect(timeline.algorithm_key).toBe('quicksort')
+    expect(run.algorithm_key).toBe('bubble_sort')
+    expect(timeline.algorithm_key).toBe('bubble_sort')
     await expectReplayWorks(page)
   })
 
@@ -29,7 +29,7 @@ test.describe('Phase 10.3 end-to-end flows', () => {
 
     await page.goto('/scenarios')
     await expect(page).toHaveURL(/\/scenarios$/)
-    await expect(page.getByText('Quick Sort — 6 elements')).toBeVisible()
+    await expect(page.getByText('Bubble Sort — 6 elements')).toBeVisible()
 
     await page.getByRole('button', { name: 'Load' }).click()
 
@@ -57,13 +57,13 @@ test.describe('Phase 10.3 end-to-end flows', () => {
     const { run } = await runSortingSimulation(page)
 
     await openRunsGrid(page)
-    await expect(page.getByText('Quick Sort')).toBeVisible()
+    await expect(page.getByText('Bubble Sort')).toBeVisible()
 
     await page.getByRole('button', { name: 'Save Scenario' }).click()
     await expect(page.getByText('Scenario saved')).toBeVisible()
 
     await page.goto('/scenarios')
-    await expect(page.getByText(/Quick Sort — /)).toBeVisible()
+    await expect(page.getByText(/Bubble Sort — /)).toBeVisible()
 
     await openRunsGrid(page)
     const { summary, timeline } = await reopenRunFromHistory(page)

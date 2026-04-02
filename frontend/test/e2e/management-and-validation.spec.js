@@ -53,11 +53,11 @@ test.describe('Validation and guest management', () => {
     await expect(page.getByText('Scenario saved')).toBeVisible()
 
     await openScenariosList(page)
-    await expect(page.getByText('Quick Sort — 6 elements')).toBeVisible()
+    await expect(page.getByText('Bubble Sort — 6 elements')).toBeVisible()
 
     const originalScenarioRow = page
       .locator('div')
-      .filter({ hasText: 'Quick Sort — 6 elements' })
+      .filter({ hasText: 'Bubble Sort — 6 elements' })
       .filter({ has: page.getByTitle('Edit') })
       .first()
 
@@ -65,14 +65,14 @@ test.describe('Validation and guest management', () => {
     await originalScenarioRow.getByTitle('Edit').click()
 
     const dialog = page.getByRole('dialog')
-    await dialog.getByPlaceholder('e.g. BFS on cyclic graph').fill('Edited Quick Sort Scenario')
+    await dialog.getByPlaceholder('e.g. BFS on cyclic graph').fill('Edited Bubble Sort Scenario')
     await dialog.getByPlaceholder('Type a tag and press Enter').fill('smoke')
     await dialog.getByPlaceholder('Type a tag and press Enter').press('Enter')
     await dialog.getByRole('button', { name: 'Save' }).click()
 
     await expect(page.getByText('Scenario updated')).toBeVisible()
     await expect(
-      page.locator('p').filter({ hasText: 'Edited Quick Sort Scenario' }).first(),
+      page.locator('p').filter({ hasText: 'Edited Bubble Sort Scenario' }).first(),
     ).toBeVisible()
     await expect(page.getByRole('button', { name: 'smoke' })).toBeVisible()
 
@@ -82,7 +82,7 @@ test.describe('Validation and guest management', () => {
     const searchInput = page.getByPlaceholder(/Search scenarios/)
     await searchInput.fill('edited')
     await expect(
-      page.locator('p').filter({ hasText: 'Edited Quick Sort Scenario' }).first(),
+      page.locator('p').filter({ hasText: 'Edited Bubble Sort Scenario' }).first(),
     ).toBeVisible()
 
     await searchInput.fill('missing')
@@ -90,12 +90,12 @@ test.describe('Validation and guest management', () => {
     await page.getByRole('button', { name: 'Clear filters' }).click()
 
     await expect(
-      page.locator('p').filter({ hasText: 'Edited Quick Sort Scenario' }).first(),
+      page.locator('p').filter({ hasText: 'Edited Bubble Sort Scenario' }).first(),
     ).toBeVisible()
 
     const refreshedRow = page
       .locator('div')
-      .filter({ hasText: 'Edited Quick Sort Scenario' })
+      .filter({ hasText: 'Edited Bubble Sort Scenario' })
       .filter({ has: page.getByTitle('Duplicate') })
       .first()
 
@@ -103,17 +103,17 @@ test.describe('Validation and guest management', () => {
     await refreshedRow.getByTitle('Duplicate').click()
     await expect(page.getByText('Scenario duplicated')).toBeVisible()
     await expect(
-      page.locator('p').filter({ hasText: 'Edited Quick Sort Scenario (copy)' }).first(),
+      page.locator('p').filter({ hasText: 'Edited Bubble Sort Scenario (copy)' }).first(),
     ).toBeVisible()
 
     await searchInput.fill('(copy)')
     await expect(
-      page.locator('p').filter({ hasText: 'Edited Quick Sort Scenario (copy)' }).first(),
+      page.locator('p').filter({ hasText: 'Edited Bubble Sort Scenario (copy)' }).first(),
     ).toBeVisible()
 
     const copyRow = page
       .locator('div')
-      .filter({ hasText: 'Edited Quick Sort Scenario (copy)' })
+      .filter({ hasText: 'Edited Bubble Sort Scenario (copy)' })
       .filter({ has: page.getByTitle('Delete') })
       .first()
 
@@ -125,7 +125,7 @@ test.describe('Validation and guest management', () => {
     await expect(page.getByText('No matching scenarios')).toBeVisible()
     await page.getByRole('button', { name: 'Clear filters' }).click()
     await expect(
-      page.locator('p').filter({ hasText: 'Edited Quick Sort Scenario' }).first(),
+      page.locator('p').filter({ hasText: 'Edited Bubble Sort Scenario' }).first(),
     ).toBeVisible()
   })
 
@@ -134,11 +134,11 @@ test.describe('Validation and guest management', () => {
     await runSortingSimulation(page)
 
     await openRunsGrid(page)
-    await expect(page.getByText('Quick Sort')).toBeVisible()
+    await expect(page.getByText('Bubble Sort')).toBeVisible()
 
     const runSearchInput = page.getByPlaceholder(/Search runs/)
-    await runSearchInput.fill('quick')
-    await expect(page.getByText('Quick Sort')).toBeVisible()
+    await runSearchInput.fill('bubble')
+    await expect(page.getByText('Bubble Sort')).toBeVisible()
 
     await page.getByRole('button', { name: 'Rerun' }).click()
 
