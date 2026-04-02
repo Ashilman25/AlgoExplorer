@@ -39,6 +39,10 @@ const mockCtx = {
   set shadowBlur(v) {},
   set shadowColor(v) {},
   set lineDashOffset(v) {},
+  set font(v) {},
+  set textAlign(v) {},
+  set textBaseline(v) {},
+  fillText: vi.fn(),
 }
 
 // ── rAF mock — fires callbacks synchronously but breaks recursion ────────────
@@ -147,27 +151,28 @@ describe('GridCanvas', () => {
     expect(zIndices).toEqual(['1', '2', '3', '4', '5'])
   })
 
-  it('sets crosshair cursor in build mode', () => {
+  it('sets crosshair cursor on canvas area in build mode', () => {
     const { container } = renderCanvas()
-    const wrapper = container.querySelector('[data-testid="grid-canvas-container"]')
-    expect(wrapper.style.cursor).toBe('crosshair')
+    // Canvas area is the child div that holds the 5 canvases
+    const canvases = container.querySelectorAll('canvas')
+    expect(canvases[0].parentElement.style.cursor).toBe('crosshair')
   })
 
-  it('sets default cursor in playback mode', () => {
+  it('sets default cursor on canvas area in playback mode', () => {
     usePlaybackStore.setState({ totalSteps: 5 })
     const { container } = renderCanvas()
-    const wrapper = container.querySelector('[data-testid="grid-canvas-container"]')
-    expect(wrapper.style.cursor).toBe('default')
+    const canvases = container.querySelectorAll('canvas')
+    expect(canvases[0].parentElement.style.cursor).toBe('default')
   })
 
   it('shows empty state message when no timeline and no pins', () => {
     renderCanvas()
-    expect(screen.getByText(/click to place start/i)).toBeInTheDocument()
+    expect(screen.getByText(/drag to paint walls/i)).toBeInTheDocument()
   })
 
   it('hides empty state message when start cell is set', () => {
     renderCanvas({ startCell: [2, 3] })
-    expect(screen.queryByText(/click to place start/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/drag to paint walls/i)).not.toBeInTheDocument()
   })
 })
 
@@ -183,29 +188,7 @@ describe('GridCanvas', () => {
 //   offsetX=300, offsetY=220 → col=7, row=5
 
 describe('GridCanvas — build mode interactions', () => {
-  it('calls onStartPlace on first click', () => {
-    const onStartPlace = vi.fn()
-    const { container } = renderCanvas({ onStartPlace })
-    const topCanvas = container.querySelectorAll('canvas')[4]
-
-    pd(topCanvas, { offsetX: 120, offsetY: 80, pointerId: 1 })
-    pu(topCanvas, { offsetX: 120, offsetY: 80, pointerId: 1 })
-
-    expect(onStartPlace).toHaveBeenCalledWith(2, 3)
-  })
-
-  it('calls onEndPlace on second click', () => {
-    const onEndPlace = vi.fn()
-    const { container } = renderCanvas({ startCell: [2, 3], onEndPlace })
-    const topCanvas = container.querySelectorAll('canvas')[4]
-
-    pd(topCanvas, { offsetX: 400, offsetY: 400, pointerId: 1 })
-    pu(topCanvas, { offsetX: 400, offsetY: 400, pointerId: 1 })
-
-    expect(onEndPlace).toHaveBeenCalledWith(10, 10)
-  })
-
-  it('calls onWallBatch for drag painting', () => {
+  it('calls onWallBatch incrementally during drag', () => {
     const onWallBatch = vi.fn()
     const { container } = renderCanvas({ startCell: [0, 0], endCell: [19, 19], onWallBatch })
     const topCanvas = container.querySelectorAll('canvas')[4]
@@ -215,10 +198,9 @@ describe('GridCanvas — build mode interactions', () => {
     pm(topCanvas, { offsetX: 300, offsetY: 220, pointerId: 1 })
     pu(topCanvas, { offsetX: 300, offsetY: 220, pointerId: 1 })
 
-    expect(onWallBatch).toHaveBeenCalled()
-    const [cells, isWall] = onWallBatch.mock.calls[0]
-    expect(isWall).toBe(true)
-    expect(cells.length).toBeGreaterThanOrEqual(1)
+    // First move applies origin cell + new cell, second move applies another
+    expect(onWallBatch).toHaveBeenCalledTimes(3)
+    expect(onWallBatch.mock.calls[0][1]).toBe(true) // paint mode
   })
 
   it('suppresses interactions in playback mode', () => {
@@ -231,5 +213,111 @@ describe('GridCanvas — build mode interactions', () => {
     pu(topCanvas, { offsetX: 120, offsetY: 80, pointerId: 1 })
 
     expect(onStartPlace).not.toHaveBeenCalled()
+  })
+})
+
+describe('GridCanvas — pin drag-and-drop', () => {
+  it('shows grab cursor on unplaced start tray badge', () => {
+    renderCanvas()
+    const badge = screen.getByLabelText('Start pin — not placed')
+    expect(badge.style.cursor).toBe('grab')
+  })
+
+  it('shows default cursor on placed start tray badge', () => {
+    renderCanvas({ startCell: [2, 3] })
+    const badge = screen.getByLabelText('Start pin placed')
+    expect(badge.style.cursor).toBe('default')
+  })
+
+  it('shows grab cursor on unplaced end tray badge', () => {
+    renderCanvas({ startCell: [0, 0] })
+    const badge = screen.getByLabelText('End pin — not placed')
+    expect(badge.style.cursor).toBe('grab')
+  })
+
+  it('shows ghost pin during tray drag', () => {
+    renderCanvas()
+    const badge = screen.getByLabelText('Start pin — not placed')
+
+    // Start drag from tray
+    fireEvent.pointerDown(badge, { clientX: 100, clientY: 50 })
+
+    // Move to trigger ghost
+    fireEvent.pointerMove(document, { clientX: 200, clientY: 200 })
+
+    const ghost = screen.getByTestId('ghost-pin')
+    expect(ghost).toBeInTheDocument()
+    expect(ghost.style.pointerEvents).toBe('none')
+
+    // Release
+    fireEvent.pointerUp(document)
+    expect(screen.queryByTestId('ghost-pin')).not.toBeInTheDocument()
+  })
+
+  it('places start pin via tray drag onto grid', () => {
+    const onStartPlace = vi.fn()
+    const { container } = renderCanvas({ onStartPlace })
+    const badge = screen.getByLabelText('Start pin — not placed')
+
+    // Start drag from tray
+    fireEvent.pointerDown(badge, { clientX: 50, clientY: 20 })
+
+    // Mock getBoundingClientRect for the top canvas (layer 5)
+    const topCanvas = container.querySelectorAll('canvas')[4]
+    Object.defineProperty(topCanvas, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, width: 800, height: 800 }),
+      configurable: true,
+    })
+
+    // clientX=120, clientY=80 → ox=120, oy=80 → col=3, row=2
+    fireEvent.pointerMove(document, { clientX: 120, clientY: 80 })
+    fireEvent.pointerUp(document)
+
+    expect(onStartPlace).toHaveBeenCalledWith(2, 3)
+  })
+
+  it('does not place pin when dropped on a wall', () => {
+    const onStartPlace = vi.fn()
+    const walls = new Set(['2,3'])
+    const { container } = renderCanvas({ onStartPlace, walls })
+    const badge = screen.getByLabelText('Start pin — not placed')
+
+    fireEvent.pointerDown(badge, { clientX: 50, clientY: 20 })
+
+    const topCanvas = container.querySelectorAll('canvas')[4]
+    Object.defineProperty(topCanvas, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, width: 800, height: 800 }),
+      configurable: true,
+    })
+
+    // Cell [2,3] is a wall
+    fireEvent.pointerMove(document, { clientX: 120, clientY: 80 })
+    fireEvent.pointerUp(document)
+
+    expect(onStartPlace).not.toHaveBeenCalled()
+  })
+
+  it('removes start pin on click (no drag)', () => {
+    const onStartPlace = vi.fn()
+    const { container } = renderCanvas({ startCell: [5, 5], onStartPlace })
+    const topCanvas = container.querySelectorAll('canvas')[4]
+
+    // Click on the start pin center: cell [5,5] → center at (5*40+20, 5*40+20) = (220, 220)
+    pd(topCanvas, { offsetX: 220, offsetY: 220, pointerId: 1 })
+    pu(topCanvas, { offsetX: 220, offsetY: 220, pointerId: 1 })
+
+    expect(onStartPlace).toHaveBeenCalledWith(null, null)
+  })
+
+  it('removes end pin on click (no drag)', () => {
+    const onEndPlace = vi.fn()
+    const { container } = renderCanvas({ startCell: [0, 0], endCell: [10, 10], onEndPlace })
+    const topCanvas = container.querySelectorAll('canvas')[4]
+
+    // Click on end pin center: cell [10,10] → center at (420, 420)
+    pd(topCanvas, { offsetX: 420, offsetY: 420, pointerId: 1 })
+    pu(topCanvas, { offsetX: 420, offsetY: 420, pointerId: 1 })
+
+    expect(onEndPlace).toHaveBeenCalledWith(null, null)
   })
 })

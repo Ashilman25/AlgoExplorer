@@ -19,8 +19,8 @@ describe('calcCellSize', () => {
   it('fits a wide grid in a narrow container (cols limit)', () => {
     expect(calcCellSize(400, 800, 10, 40)).toBe(10)
   })
-  it('floors to avoid subpixel blur', () => {
-    expect(calcCellSize(801, 801, 20, 20)).toBe(40)
+  it('uses fractional size for edge-to-edge fill', () => {
+    expect(calcCellSize(801, 801, 20, 20)).toBeCloseTo(40.05, 1)
   })
   it('returns at least 1 for degenerate sizes', () => {
     expect(calcCellSize(5, 5, 50, 50)).toBe(1)
@@ -28,15 +28,21 @@ describe('calcCellSize', () => {
 })
 
 describe('calcGridOffset', () => {
-  it('centers grid in a square container with square grid', () => {
+  it('returns zero offset when grid fills container exactly', () => {
     const offset = calcGridOffset(800, 800, 40, 20, 20)
     expect(offset).toEqual({ x: 0, y: 0 })
   })
-  it('centers grid horizontally in a wide container', () => {
+  it('centers on non-constraining axis only', () => {
+    // 1000 wide, 500 tall, cellSize=10, 50 rows, 20 cols
+    // gridW = 20*10 = 200, gridH = 50*10 = 500
+    // x offset = (1000-200)/2 = 400, y offset = 0
     const offset = calcGridOffset(1000, 500, 10, 50, 20)
     expect(offset).toEqual({ x: 400, y: 0 })
   })
-  it('centers grid vertically in a tall container', () => {
+  it('centers vertically when width is constraining', () => {
+    // 400 wide, 800 tall, cellSize=10, 10 rows, 40 cols
+    // gridW = 40*10 = 400, gridH = 10*10 = 100
+    // x offset = 0, y offset = (800-100)/2 = 350
     const offset = calcGridOffset(400, 800, 10, 10, 40)
     expect(offset).toEqual({ x: 0, y: 350 })
   })
