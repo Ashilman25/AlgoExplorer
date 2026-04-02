@@ -3,7 +3,7 @@ import { SkipBack, ChevronLeft, Play, Pause, ChevronRight, SkipForward } from 'l
 import { cn } from '../../utils/cn'
 import { usePlaybackStore } from '../../stores/usePlaybackStore'
 
-const SPEEDS = [0.25, 0.5, 1, 2, 4]
+const SPEEDS = [0.25, 0.5, 1, 2, 4, 8, 16]
 const BASE_DELAY_MS = 700   // ms per step at 1× speed
 
 export default function PlaybackBar() {
@@ -94,7 +94,7 @@ function SpeedControl({ speed, setSpeed }) {
   const safeIndex  = speedIndex === -1 ? SPEEDS.indexOf(1) : speedIndex
 
   return (
-    <div className = "flex flex-col justify-center gap-1.5 flex-none" style = {{ width: '76px' }}>
+    <div className = "flex flex-col justify-center gap-1.5 flex-none" style = {{ width: '96px' }}>
       <div className = "flex items-center justify-between">
         <span className = "mono-label">SPEED</span>
         <span className = "font-mono text-[11px] text-brand-400 font-medium leading-none">
@@ -114,11 +114,16 @@ function SpeedControl({ speed, setSpeed }) {
         title = {`Playback speed: ${speed}×`}
       />
 
-      {/* the tick labels, like .5x, 1x, 2x*/}
+      {/* tick labels aligned to slider stops */}
       <div className = "flex justify-between">
-        <span className = "font-mono text-[8px] text-slate-700 leading-none">¼×</span>
-        <span className = "font-mono text-[8px] text-slate-700 leading-none">1×</span>
-        <span className = "font-mono text-[8px] text-slate-700 leading-none">4×</span>
+        {SPEEDS.map((s, i) => {
+          const label = s === 0.25 ? '¼×' : s === 1 ? '1×' : s === 4 ? '4×' : s === 16 ? '16×' : null
+          return (
+            <span key = {i} className = "font-mono text-[8px] text-slate-700 leading-none text-center" style = {{ width: 0, overflow: 'visible' }}>
+              {label}
+            </span>
+          )
+        })}
       </div>
     </div>
   )

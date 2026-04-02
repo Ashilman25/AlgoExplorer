@@ -595,24 +595,27 @@ export default function BenchmarksPage() {
     if (activeJob.status === 'completed') {
       setIsRunning(false)
 
-      if (activeJob.results) {
+      if (activeJob.resultsError) {
+        const parsed = parseApiError(activeJob.resultsError)
+        setBenchmarkError(parsed)
+        toast({ type: 'error', title: parsed.title, message: parsed.message })
+      } else if (activeJob.results) {
         setResultData({
           status: 'completed',
           summary: activeJob.results?.summary || activeJob.summary || {},
           series: activeJob.results?.series || {},
           table: activeJob.results?.table || [],
         })
+        toast({
+          type: 'success',
+          title: 'Benchmark complete',
+          message: `Benchmark finished successfully.`,
+        })
       } else {
         benchmarksService.getResults(activeJobId).then((results) => {
           setResultData(results)
         })
       }
-
-      toast({
-        type: 'success',
-        title: 'Benchmark complete',
-        message: `Benchmark finished successfully.`,
-      })
     } else if (activeJob.status === 'failed') {
       setIsRunning(false)
       setBenchmarkError({

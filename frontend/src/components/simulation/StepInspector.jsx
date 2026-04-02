@@ -3,6 +3,7 @@ import { useRunStore } from '../../stores/useRunStore'
 import { useMetadataStore } from '../../stores/useMetadataStore'
 import Skeleton from '../ui/Skeleton'
 import AlgorithmInfo from './AlgorithmInfo'
+import GridFocusCard from './GridFocusCard'
 
 const ENTITY_STATE_CLASSES = {
   active:   'text-state-active   bg-state-active/10   border-state-active/30',
@@ -114,6 +115,9 @@ export default function StepInspector({ metrics = [], moduleKey, algorithmKey })
         )}
 
       </div>
+
+      {/* grid focus — fixed, grid-mode only */}
+      <GridFocusCard />
 
       {/* footer */}
       <div className = "shrink-0 p-3 border-t border-white/[0.07] space-y-1.5">

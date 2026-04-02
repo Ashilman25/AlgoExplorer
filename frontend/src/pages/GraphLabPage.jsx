@@ -2,14 +2,16 @@ import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast, ErrorAlert } from '../components/ui'
-import { SimulationLayout, ConfigPanel, ConfigSection } from '../components/simulation'
+import { SimulationLayout, ConfigPanel, ConfigSection, GridCanvas, GridConfig, GridDataStructurePanel } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
+import { useGridState } from '../hooks/useGridState'
 import { useReopenRun } from '../hooks/useReopenRun'
 import { usePlaybackStore } from '../stores/usePlaybackStore'
 import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
 import { generateId } from '../services/guestService'
+import { EXPLANATION_LEVELS, MODE_OPTIONS } from '../config/simulationConfig'
 import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 
 
@@ -157,16 +159,6 @@ const GRAPH_ALGOS = [
   { value: 'topological_sort', label: 'Topological Sort — DAG Ordering' },
 ]
 
-const EXPLANATION_LEVELS = [
-  { value: 'standard', label: 'Standard' },
-  { value: 'detailed', label: 'Detailed' },
-  { value: 'none',     label: 'None' },
-]
-
-const MODE_OPTIONS = [
-  { value: 'graph', label: 'Graph' },
-  { value: 'grid',  label: 'Grid', disabled: true },
-]
 
 
 export function GraphConfig({
@@ -928,6 +920,32 @@ export default function GraphLabPage() {
   const [explanationLevel, setExplanationLevel] = useState('standard')
   const [mode, setMode] = useState(gp?.mode ?? 'graph')
 
+  // ── Grid state ──
+  const gridInitial = useMemo(() => {
+    if (gp?.mode !== 'grid') return undefined
+    const sz = gp.grid?.length ?? 20
+    const wallSet = new Set()
+    if (gp.grid) {
+      for (let r = 0; r < gp.grid.length; r++) {
+        for (let c = 0; c < gp.grid[r].length; c++) {
+          if (gp.grid[r][c] === 1) wallSet.add(`${r},${c}`)
+        }
+      }
+    }
+    const colCount = gp.grid?.[0]?.length ?? sz
+    return {
+      rows: sz,
+      cols: colCount,
+      walls: wallSet,
+      startCell: gp.source ? [gp.source.row, gp.source.col] : null,
+      endCell: gp.target ? [gp.target.row, gp.target.col] : null,
+      allowDiagonal: gp.allow_diagonal ?? false,
+      density: gp.density ?? 0.25,
+    }
+  }, [gp])
+
+  const gridState = useGridState(gridInitial)
+
   const canvasContainerRef = useRef(null)
   const [canvasSize, setCanvasSize] = useState({ w: 600, h: 500 })
 
@@ -1070,8 +1088,30 @@ export default function GraphLabPage() {
     }))
   }, [algorithm])
 
+  // ── Mode switching ──────────────────────────────────────────────────────────
+  const handleModeChange = useCallback((e) => {
+    const newMode = e.target.value
+    setMode(newMode)
+    setAlgorithm(newMode === 'grid' ? 'bfs_grid' : 'bfs')
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
   // ── Run / Reset / Save ─────────────────────────────────────────────────────
   const handleRun = useCallback(() => {
+    if (mode === 'grid') {
+      const payload = gridState.buildGridPayload()
+      if (!payload) return
+      run({
+        module_type: 'graph',
+        algorithm_key: algorithm,
+        input_payload: payload,
+        execution_mode: 'simulate',
+        explanation_level: explanationLevel,
+      })
+      return
+    }
+
     const category = ALGORITHM_CATEGORY[algorithm] ?? 'pathfinding'
 
     // apply category overrides
@@ -1095,12 +1135,15 @@ export default function GraphLabPage() {
       execution_mode: 'simulate',
       explanation_level: explanationLevel,
     })
-  }, [run, algorithm, graphNodes, graphEdges, source, target, weighted, directed, mode, explanationLevel])
+  }, [run, algorithm, graphNodes, graphEdges, source, target, weighted, directed, mode, explanationLevel, gridState])
 
   const handleReset = useCallback(() => {
     clearTimeline()
     clearRun()
-  }, [clearTimeline, clearRun])
+    if (mode === 'grid') {
+      gridState.resetGrid()
+    }
+  }, [clearTimeline, clearRun, mode, gridState])
 
   const handleSave = useCallback(() => {
     const name = `Custom Graph — ${algorithm.toUpperCase()}`
@@ -1132,56 +1175,100 @@ export default function GraphLabPage() {
         moduleKey = "graph"
         algorithmKey = {algorithm}
         configPanel = {
-          <GraphConfig
-            algorithm = {algorithm}
-            onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
-            preset = {presetKey}
-            onPresetChange = {handlePresetChange}
-            source = {source}
-            onSourceChange = {(e) => setSource(e.target.value)}
-            target = {target}
-            onTargetChange = {(e) => setTarget(e.target.value)}
-            weighted = {weighted}
-            onWeightedChange = {(e) => setWeighted(e.target.checked)}
-            directed = {directed}
-            onDirectedChange = {(e) => setDirected(e.target.checked)}
-            explanationLevel = {explanationLevel}
-            onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
-            mode = {mode}
-            onModeChange = {(e) => setMode(e.target.value)}
-            nodeOptions = {nodeOptions}
-            edgeCount = {graphEdges.length}
-            onRun = {handleRun}
-            onReset = {handleReset}
-            onSave = {handleSave}
-            isRunning = {isRunning || isPlaying}
-            error = {timelineError}
-          />
+          mode === 'graph' ? (
+            <GraphConfig
+              algorithm = {algorithm}
+              onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
+              preset = {presetKey}
+              onPresetChange = {handlePresetChange}
+              source = {source}
+              onSourceChange = {(e) => setSource(e.target.value)}
+              target = {target}
+              onTargetChange = {(e) => setTarget(e.target.value)}
+              weighted = {weighted}
+              onWeightedChange = {(e) => setWeighted(e.target.checked)}
+              directed = {directed}
+              onDirectedChange = {(e) => setDirected(e.target.checked)}
+              explanationLevel = {explanationLevel}
+              onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
+              mode = {mode}
+              onModeChange = {handleModeChange}
+              nodeOptions = {nodeOptions}
+              edgeCount = {graphEdges.length}
+              onRun = {handleRun}
+              onReset = {handleReset}
+              onSave = {handleSave}
+              isRunning = {isRunning || isPlaying}
+              error = {timelineError}
+            />
+          ) : (
+            <GridConfig
+              algorithm = {algorithm}
+              onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
+              rows = {gridState.rows}
+              cols = {gridState.cols}
+              mazeType = {gridState.mazeType}
+              onMazeTypeChange = {(e) => gridState.setMazeType(e.target.value)}
+              density = {gridState.density}
+              onDensityChange = {(e) => gridState.setDensity(Number(e.target.value) / 100)}
+              allowDiagonal = {gridState.allowDiagonal}
+              onAllowDiagonalChange = {(e) => gridState.setAllowDiagonal(e.target.checked)}
+              explanationLevel = {explanationLevel}
+              onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
+              mode = {mode}
+              onModeChange = {handleModeChange}
+              onRun = {handleRun}
+              onReset = {handleReset}
+              isRunning = {isRunning || isPlaying}
+              error = {timelineError}
+              canRun = {!!gridState.startCell && !!gridState.endCell}
+            />
+          )
         }
       >
-        <div className = "flex flex-col flex-1 min-h-0">
-          <BuilderToolbar builderMode = {builderMode} onModeChange = {setBuilderMode} connectSource = {connectSource} />
-          <GraphCanvas
-            nodes = {graphNodes}
-            edges = {graphEdges}
-            nodePositions = {nodePositions}
-            weighted = {weighted}
-            directed = {directed}
-            algorithm = {algorithm}
-            source = {source}
-            target = {target}
-            builderMode = {builderMode}
-            connectSource = {connectSource}
-            canvasSize = {canvasSize}
-            containerRef = {canvasContainerRef}
-            onAddNode = {handleAddNode}
-            onDragNode = {handleDragNode}
-            onConnectClick = {handleConnectClick}
-            onDeleteNode = {handleDeleteNode}
-            onDeleteEdge = {handleDeleteEdge}
-            onEdgeWeightEdit = {handleEdgeWeightEdit}
-          />
-        </div>
+        {mode === 'graph' ? (
+          <div className = "flex flex-col flex-1 min-h-0">
+            <BuilderToolbar builderMode = {builderMode} onModeChange = {setBuilderMode} connectSource = {connectSource} />
+            <GraphCanvas
+              nodes = {graphNodes}
+              edges = {graphEdges}
+              nodePositions = {nodePositions}
+              weighted = {weighted}
+              directed = {directed}
+              algorithm = {algorithm}
+              source = {source}
+              target = {target}
+              builderMode = {builderMode}
+              connectSource = {connectSource}
+              canvasSize = {canvasSize}
+              containerRef = {canvasContainerRef}
+              onAddNode = {handleAddNode}
+              onDragNode = {handleDragNode}
+              onConnectClick = {handleConnectClick}
+              onDeleteNode = {handleDeleteNode}
+              onDeleteEdge = {handleDeleteEdge}
+              onEdgeWeightEdit = {handleEdgeWeightEdit}
+            />
+          </div>
+        ) : (
+          <div className = "flex flex-col flex-1 min-h-0">
+            <div ref = {canvasContainerRef} className = "flex-1 min-h-0 overflow-hidden">
+              <GridCanvas
+                rows = {gridState.rows}
+                cols = {gridState.cols}
+                walls = {gridState.walls}
+                startCell = {gridState.startCell}
+                endCell = {gridState.endCell}
+                onWallBatch = {gridState.handleWallBatch}
+                onStartPlace = {gridState.handleStartPlace}
+                onEndPlace = {gridState.handleEndPlace}
+                containerRef = {canvasContainerRef}
+                onDimensionsChange = {gridState.setDimensions}
+              />
+            </div>
+            <GridDataStructurePanel algorithm = {algorithm} />
+          </div>
+        )}
       </SimulationLayout>
     </>
   )
