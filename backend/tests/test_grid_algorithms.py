@@ -221,6 +221,26 @@ class TestDFSGrid:
         assert m["time_complexity"] == "O(R*C)"
         assert m["space_complexity"] == "O(R*C)"
 
+    def test_stack_depth_in_metrics_snapshot(self):
+        output = DFSGridAlgorithm().run(build_input(SIMPLE_GRID))
+        pop_steps = [s for s in output.timeline_steps if s.event_type == "POP"]
+        assert len(pop_steps) > 0
+        for step in pop_steps:
+            assert "stack_depth" in step.metrics_snapshot
+            assert isinstance(step.metrics_snapshot["stack_depth"], int)
+            assert step.metrics_snapshot["stack_depth"] >= 1
+
+    def test_stack_depth_changes_on_backtrack(self):
+        output = DFSGridAlgorithm().run(build_input(WALLED_GRID))
+        pop_steps = [s for s in output.timeline_steps if s.event_type == "POP"]
+        depths = [s.metrics_snapshot["stack_depth"] for s in pop_steps]
+        # Depths should vary (go up on push, down after backtrack)
+        assert len(set(depths)) > 1
+
+    def test_stack_depth_in_benchmark_mode(self):
+        output = DFSGridAlgorithm().run(build_input(SIMPLE_GRID, execution_mode = "benchmark"))
+        assert "stack_depth" in output.summary_metrics
+
 
 # ── Dijkstra Grid Tests ────────────────────────────────────
 
