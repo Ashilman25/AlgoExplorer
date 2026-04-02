@@ -932,8 +932,10 @@ export default function GraphLabPage() {
         }
       }
     }
+    const colCount = gp.grid?.[0]?.length ?? sz
     return {
-      gridSize: sz,
+      rows: sz,
+      cols: colCount,
       walls: wallSet,
       startCell: gp.source ? [gp.source.row, gp.source.col] : null,
       endCell: gp.target ? [gp.target.row, gp.target.col] : null,
@@ -1144,28 +1146,6 @@ export default function GraphLabPage() {
   }, [clearTimeline, clearRun, mode, gridState])
 
   const handleSave = useCallback(() => {
-    if (mode === 'grid') {
-      const payload = gridState.buildGridPayload()
-      if (!payload) return
-      const name = `Grid — ${algorithm.replace('_grid', '').toUpperCase()}`
-      saveScenario({
-        id: generateId(),
-        name,
-        module_type: 'graph',
-        algorithm_key: algorithm,
-        input_payload: {
-          ...payload,
-          gridSize: gridState.gridSize,
-          mazeType: gridState.mazeType,
-          density: gridState.density,
-        },
-        tags: [],
-        created_at: new Date().toISOString(),
-      })
-      toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
-      return
-    }
-
     const name = `Custom Graph — ${algorithm.toUpperCase()}`
     saveScenario({
       id: generateId(),
@@ -1177,7 +1157,7 @@ export default function GraphLabPage() {
       created_at: new Date().toISOString(),
     })
     toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
-  }, [saveScenario, toast, graphNodes, graphEdges, algorithm, source, target, weighted, directed, mode, nodePositions, gridState])
+  }, [saveScenario, toast, graphNodes, graphEdges, algorithm, source, target, weighted, directed, mode, nodePositions])
 
   return (
     <>
@@ -1225,8 +1205,8 @@ export default function GraphLabPage() {
             <GridConfig
               algorithm = {algorithm}
               onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
-              gridSize = {gridState.gridSize}
-              onGridSizeChange = {(e) => gridState.setGridSize(Number(e.target.value))}
+              rows = {gridState.rows}
+              cols = {gridState.cols}
               mazeType = {gridState.mazeType}
               onMazeTypeChange = {(e) => gridState.setMazeType(e.target.value)}
               density = {gridState.density}
@@ -1239,7 +1219,6 @@ export default function GraphLabPage() {
               onModeChange = {handleModeChange}
               onRun = {handleRun}
               onReset = {handleReset}
-              onSave = {handleSave}
               isRunning = {isRunning || isPlaying}
               error = {timelineError}
               canRun = {!!gridState.startCell && !!gridState.endCell}
@@ -1275,8 +1254,8 @@ export default function GraphLabPage() {
           <div className = "flex flex-col flex-1 min-h-0">
             <div ref = {canvasContainerRef} className = "flex-1 min-h-0 overflow-hidden">
               <GridCanvas
-                rows = {gridState.gridSize}
-                cols = {gridState.gridSize}
+                rows = {gridState.rows}
+                cols = {gridState.cols}
                 walls = {gridState.walls}
                 startCell = {gridState.startCell}
                 endCell = {gridState.endCell}
@@ -1284,6 +1263,7 @@ export default function GraphLabPage() {
                 onStartPlace = {gridState.handleStartPlace}
                 onEndPlace = {gridState.handleEndPlace}
                 containerRef = {canvasContainerRef}
+                onDimensionsChange = {gridState.setDimensions}
               />
             </div>
             <GridDataStructurePanel algorithm = {algorithm} />

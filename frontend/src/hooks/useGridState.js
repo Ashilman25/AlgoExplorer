@@ -10,14 +10,15 @@ function clearStores() {
   useRunStore.getState().clearRun()
 }
 
-function generateWalls(type, size, density, start, end) {
-  if (type === 'backtracker') return recursiveBacktracker(size, size, start, end)
-  if (type === 'scatter') return randomScatter(size, size, density, start, end)
+function generateWalls(type, rows, cols, density, start, end) {
+  if (type === 'backtracker') return recursiveBacktracker(rows, cols, start, end)
+  if (type === 'scatter') return randomScatter(rows, cols, density, start, end)
   return new Set()
 }
 
 export function useGridState(initialState) {
-  const [gridSize, setGridSizeRaw] = useState(initialState?.gridSize ?? 20)
+  const [rows, setRowsRaw] = useState(initialState?.rows ?? 20)
+  const [cols, setColsRaw] = useState(initialState?.cols ?? 20)
   const [walls, setWalls] = useState(() => initialState?.walls ?? new Set())
   const [startCell, setStartCell] = useState(initialState?.startCell ?? null)
   const [endCell, setEndCell] = useState(initialState?.endCell ?? null)
@@ -26,14 +27,14 @@ export function useGridState(initialState) {
   const [density, setDensityRaw] = useState(initialState?.density ?? 0.25)
 
   // Ref tracks latest values so memoized callbacks never go stale
-  const ref = useRef({ gridSize, walls, startCell, endCell, allowDiagonal, density, mazeType })
+  const ref = useRef({ rows, cols, walls, startCell, endCell, allowDiagonal, density, mazeType })
   useEffect(() => {
-    ref.current = { gridSize, walls, startCell, endCell, allowDiagonal, density, mazeType }
+    ref.current = { rows, cols, walls, startCell, endCell, allowDiagonal, density, mazeType }
   })
 
   const applyMaze = useCallback((type, d) => {
-    const { gridSize: sz, startCell: sc, endCell: ec } = ref.current
-    const newWalls = generateWalls(type, sz, d, sc, ec)
+    const { rows: r, cols: c, startCell: sc, endCell: ec } = ref.current
+    const newWalls = generateWalls(type, r, c, d, sc, ec)
     setWalls(newWalls)
     if (sc && newWalls.has(`${sc[0]},${sc[1]}`)) setStartCell(null)
     if (ec && newWalls.has(`${ec[0]},${ec[1]}`)) setEndCell(null)
@@ -61,8 +62,11 @@ export function useGridState(initialState) {
     clearStores()
   }, [])
 
-  const setGridSize = useCallback((n) => {
-    setGridSizeRaw(n)
+  const setDimensions = useCallback((newRows, newCols) => {
+    const { rows: curRows, cols: curCols } = ref.current
+    if (newRows === curRows && newCols === curCols) return
+    setRowsRaw(newRows)
+    setColsRaw(newCols)
     setWalls(new Set())
     setStartCell(null)
     setEndCell(null)
@@ -103,11 +107,11 @@ export function useGridState(initialState) {
   }, [])
 
   const buildGridPayload = useCallback(() => {
-    const { startCell: sc, endCell: ec, gridSize: sz, walls: w, allowDiagonal: diag } = ref.current
+    const { startCell: sc, endCell: ec, rows: r, cols: c, walls: w, allowDiagonal: diag } = ref.current
     if (!sc || !ec) return null
 
-    const grid = Array.from({ length: sz }, (_, r) =>
-      Array.from({ length: sz }, (_, c) => (w.has(`${r},${c}`) ? 1 : 0)),
+    const grid = Array.from({ length: r }, (_, row) =>
+      Array.from({ length: c }, (_, col) => (w.has(`${row},${col}`) ? 1 : 0)),
     )
 
     return {
@@ -121,9 +125,9 @@ export function useGridState(initialState) {
   }, [])
 
   return {
-    gridSize, walls, startCell, endCell, allowDiagonal, mazeType, density,
+    rows, cols, walls, startCell, endCell, allowDiagonal, mazeType, density,
     handleWallBatch, handleStartPlace, handleEndPlace,
-    setGridSize, setAllowDiagonal, setMazeType, setDensity,
+    setDimensions, setAllowDiagonal, setMazeType, setDensity,
     clearWalls, resetGrid, buildGridPayload,
   }
 }

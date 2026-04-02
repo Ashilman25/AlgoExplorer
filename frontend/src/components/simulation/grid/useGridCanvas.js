@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react'
 import { usePlaybackStore } from '../../../stores/usePlaybackStore'
-import { calcCellSize, calcGridOffset } from './gridMath'
+import { calcCellSize, calcGridOffset, computeGridDimensions } from './gridMath'
 import { drawBase } from './drawBase'
 import { drawHeatMap } from './drawHeatMap'
 import { drawFrontier } from './drawFrontier'
@@ -71,7 +71,7 @@ function computeDistFromPath(exploredKeys, path) {
  * - ResizeObserver for responsive sizing
  * - Static heat map computed on step change
  */
-export function useGridCanvas({ rows, cols, walls, startCell, endCell, containerRef }) {
+export function useGridCanvas({ rows, cols, walls, startCell, endCell, containerRef, onDimensionsChange }) {
   // ── Canvas refs ──
   const canvasRefs = useRef([null, null, null, null, null])
   const ctxRefs = useRef([null, null, null, null, null])
@@ -114,6 +114,10 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
   useEffect(() => {
     propsRef.current = { rows, cols, walls, startCell, endCell, currentStep, isBuildMode, previewPin: propsRef.current.previewPin }
   })
+
+  // ── onDimensionsChange ref (avoids stale closure in ResizeObserver) ──
+  const onDimensionsChangeRef = useRef(onDimensionsChange)
+  useEffect(() => { onDimensionsChangeRef.current = onDimensionsChange })
 
   // ── markDirty helper ──
   const markDirty = useCallback((layer) => {
@@ -225,6 +229,13 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
         const dpr = window.devicePixelRatio || 1
         const cw = rect.width
         const ch = rect.height
+
+        // Notify parent of computed grid dimensions (only in build mode —
+        // during playback, layout shifts must not recompute row/col count)
+        if (onDimensionsChangeRef.current && propsRef.current.isBuildMode) {
+          const dims = computeGridDimensions(cw, ch)
+          onDimensionsChangeRef.current(dims.rows, dims.cols)
+        }
 
         cellSizeRef.current = calcCellSize(cw, ch, rows, cols)
         gridOffsetRef.current = calcGridOffset(cw, ch, cellSizeRef.current, rows, cols)

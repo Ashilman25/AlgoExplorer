@@ -3,6 +3,14 @@ const ORANGE_400 = { r: 251, g: 146, b: 60 }
 const SLATE_500 = { r: 100, g: 116, b: 139 }
 const SLATE_600 = { r: 71, g: 85, b: 105 }
 
+export const TARGET_CELL_SIZE = 28
+
+export function computeGridDimensions(containerW, containerH) {
+  const cols = Math.max(5, Math.min(50, Math.round(containerW / TARGET_CELL_SIZE)))
+  const rows = Math.max(5, Math.min(50, Math.round(containerH / TARGET_CELL_SIZE)))
+  return { rows, cols }
+}
+
 export function calcCellSize(containerW, containerH, rows, cols) {
   // Fractional cell size — fills the constraining axis edge-to-edge
   return Math.max(1, Math.min(containerW / cols, containerH / rows))

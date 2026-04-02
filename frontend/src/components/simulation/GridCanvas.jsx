@@ -8,7 +8,7 @@ import { hitTestCell } from './grid/gridMath'
 export default function GridCanvas({
   rows, cols, walls, startCell, endCell,
   onWallBatch, onStartPlace, onEndPlace,
-  containerRef,
+  containerRef, onDimensionsChange,
 }) {
   const {
     canvasRefs,
@@ -18,7 +18,7 @@ export default function GridCanvas({
     gridOffsetRef,
     isBuildMode,
     setPreviewPin,
-  } = useGridCanvas({ rows, cols, walls, startCell, endCell, containerRef })
+  } = useGridCanvas({ rows, cols, walls, startCell, endCell, containerRef, onDimensionsChange })
 
   const dragRef = useRef({ active: false, mode: null, cells: [], lastCell: null })
 
@@ -253,114 +253,112 @@ export default function GridCanvas({
         flexDirection: 'column',
       }}
     >
-      {/* Pin tray — shows pin placement status */}
-      {isBuildMode && (
+      {/* Pin tray — always visible to avoid layout jumps */}
+      <div
+        data-testid = "pin-tray"
+        style = {{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '6px 10px',
+          background: 'rgba(15,23,42,0.6)',
+          borderBottom: '1px solid rgba(148,163,184,0.08)',
+          flexShrink: 0,
+        }}
+      >
+        {/* Start pin badge */}
         <div
-          data-testid = "pin-tray"
+          aria-label = {startCell ? 'Start pin placed' : 'Start pin — not placed'}
+          onPointerDown = {isBuildMode && !startCell ? handleTrayPinDown('start') : undefined}
           style = {{
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            padding: '6px 10px',
-            background: 'rgba(15,23,42,0.6)',
-            borderBottom: '1px solid rgba(148,163,184,0.08)',
-            flexShrink: 0,
+            gap: 5,
+            padding: '3px 8px',
+            borderRadius: 5,
+            border: startCell
+              ? '1px solid rgba(167,139,250,0.2)'
+              : '1px dashed rgba(167,139,250,0.5)',
+            background: startCell
+              ? 'rgba(167,139,250,0.08)'
+              : 'rgba(167,139,250,0.15)',
+            opacity: startCell ? 0.6 : 1,
+            cursor: isBuildMode && !startCell ? 'grab' : 'default',
+            transition: 'opacity 150ms',
+            userSelect: 'none',
           }}
         >
-          {/* Start pin badge */}
-          <div
-            aria-label = {startCell ? 'Start pin placed' : 'Start pin — not placed'}
-            onPointerDown = {!startCell ? handleTrayPinDown('start') : undefined}
-            style = {{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '3px 8px',
-              borderRadius: 5,
-              border: startCell
-                ? '1px solid rgba(167,139,250,0.2)'
-                : '1px dashed rgba(167,139,250,0.5)',
-              background: startCell
-                ? 'rgba(167,139,250,0.08)'
-                : 'rgba(167,139,250,0.15)',
-              opacity: startCell ? 0.6 : 1,
-              cursor: startCell ? 'default' : 'grab',
-              transition: 'opacity 150ms',
-              userSelect: 'none',
-            }}
-          >
-            <span style = {{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: '#a78bfa',
-              border: '1.5px solid #c4b5fd',
-              flexShrink: 0,
-            }} />
-            <span style = {{
-              fontSize: 11,
-              color: '#c4b5fd',
-              fontFamily: 'var(--font-mono)',
-              whiteSpace: 'nowrap',
-            }}>
-              {startCell ? `S (${startCell[0]},${startCell[1]})` : 'S — not placed'}
-            </span>
-          </div>
-
-          {/* End pin badge */}
-          <div
-            aria-label = {endCell ? 'End pin placed' : 'End pin — not placed'}
-            onPointerDown = {!endCell ? handleTrayPinDown('end') : undefined}
-            style = {{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '3px 8px',
-              borderRadius: 5,
-              border: endCell
-                ? '1px solid rgba(251,113,133,0.2)'
-                : '1px dashed rgba(251,113,133,0.5)',
-              background: endCell
-                ? 'rgba(251,113,133,0.08)'
-                : 'rgba(251,113,133,0.15)',
-              opacity: endCell ? 0.6 : 1,
-              cursor: endCell ? 'default' : 'grab',
-              transition: 'opacity 150ms',
-              userSelect: 'none',
-            }}
-          >
-            <span style = {{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: '#fb7185',
-              border: '1.5px solid #fda4af',
-              flexShrink: 0,
-            }} />
-            <span style = {{
-              fontSize: 11,
-              color: '#fda4af',
-              fontFamily: 'var(--font-mono)',
-              whiteSpace: 'nowrap',
-            }}>
-              {endCell ? `E (${endCell[0]},${endCell[1]})` : 'E — not placed'}
-            </span>
-          </div>
-
-          {/* Action hint */}
-          {actionHint && (
-            <span style = {{
-              marginLeft: 'auto',
-              fontSize: 11,
-              color: '#64748b',
-              fontFamily: 'var(--font-mono)',
-              whiteSpace: 'nowrap',
-            }}>
-              {actionHint}
-            </span>
-          )}
+          <span style = {{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            background: '#a78bfa',
+            border: '1.5px solid #c4b5fd',
+            flexShrink: 0,
+          }} />
+          <span style = {{
+            fontSize: 11,
+            color: '#c4b5fd',
+            fontFamily: 'var(--font-mono)',
+            whiteSpace: 'nowrap',
+          }}>
+            {startCell ? `S (${startCell[0]},${startCell[1]})` : 'S — not placed'}
+          </span>
         </div>
-      )}
+
+        {/* End pin badge */}
+        <div
+          aria-label = {endCell ? 'End pin placed' : 'End pin — not placed'}
+          onPointerDown = {isBuildMode && !endCell ? handleTrayPinDown('end') : undefined}
+          style = {{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '3px 8px',
+            borderRadius: 5,
+            border: endCell
+              ? '1px solid rgba(251,113,133,0.2)'
+              : '1px dashed rgba(251,113,133,0.5)',
+            background: endCell
+              ? 'rgba(251,113,133,0.08)'
+              : 'rgba(251,113,133,0.15)',
+            opacity: endCell ? 0.6 : 1,
+            cursor: isBuildMode && !endCell ? 'grab' : 'default',
+            transition: 'opacity 150ms',
+            userSelect: 'none',
+          }}
+        >
+          <span style = {{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            background: '#fb7185',
+            border: '1.5px solid #fda4af',
+            flexShrink: 0,
+          }} />
+          <span style = {{
+            fontSize: 11,
+            color: '#fda4af',
+            fontFamily: 'var(--font-mono)',
+            whiteSpace: 'nowrap',
+          }}>
+            {endCell ? `E (${endCell[0]},${endCell[1]})` : 'E — not placed'}
+          </span>
+        </div>
+
+        {/* Action hint — build mode only */}
+        {isBuildMode && actionHint && (
+          <span style = {{
+            marginLeft: 'auto',
+            fontSize: 11,
+            color: '#64748b',
+            fontFamily: 'var(--font-mono)',
+            whiteSpace: 'nowrap',
+          }}>
+            {actionHint}
+          </span>
+        )}
+      </div>
 
       {/* Canvas area */}
       <div style = {{ position: 'relative', flex: 1, minHeight: 0, cursor: isBuildMode ? 'crosshair' : 'default' }}>

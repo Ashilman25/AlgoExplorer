@@ -1,6 +1,6 @@
 // frontend/src/components/simulation/GridConfig.jsx
 
-import { Play, RotateCcw, Save } from 'lucide-react'
+import { Play, RotateCcw } from 'lucide-react'
 import { Button, Select, ErrorAlert } from '../ui'
 import ConfigPanel, { ConfigSection } from './ConfigPanel'
 import { EXPLANATION_LEVELS, MODE_OPTIONS } from '../../config/simulationConfig'
@@ -20,13 +20,13 @@ const MAZE_OPTIONS = [
 
 export default function GridConfig({
   algorithm, onAlgorithmChange,
-  gridSize, onGridSizeChange,
+  rows, cols,
   mazeType, onMazeTypeChange,
   density, onDensityChange,
   allowDiagonal, onAllowDiagonalChange,
   explanationLevel, onExplanationLevelChange,
   mode, onModeChange,
-  onRun, onReset, onSave,
+  onRun, onReset,
   isRunning, error,
   canRun,
 }) {
@@ -39,21 +39,6 @@ export default function GridConfig({
 
       <ConfigSection title = "Algorithm">
         <Select aria-label = "Algorithm" options = {GRID_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
-      </ConfigSection>
-
-      <ConfigSection title = "Grid Size">
-        <div className = "space-y-1.5">
-          <input
-            type = "range"
-            min = {5}
-            max = {50}
-            value = {gridSize}
-            onChange = {onGridSizeChange}
-            aria-label = "Grid size"
-            className = "w-full accent-brand-500 h-1.5 rounded-full bg-slate-700 cursor-pointer"
-          />
-          <p className = "font-mono text-xs text-slate-400 text-center">{gridSize} × {gridSize}</p>
-        </div>
       </ConfigSection>
 
       <ConfigSection title = "Maze Generation">
@@ -94,7 +79,7 @@ export default function GridConfig({
       <ConfigSection title = "Input Summary">
         <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
           <p className = "text-xs font-medium text-slate-300">
-            {gridSize} × {gridSize} grid
+            {rows} × {cols} grid
           </p>
           <p className = "font-mono text-[10px] text-slate-500">
             {allowDiagonal ? '8-dir' : '4-dir'}
@@ -118,17 +103,6 @@ export default function GridConfig({
           disabled = {!canRun || isRunning}
         >
           {isRunning ? 'Running…' : 'Run Simulation'}
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {Save}
-          className = "w-full text-slate-500"
-          onClick = {onSave}
-          disabled = {isRunning}
-        >
-          Save Scenario
         </Button>
 
         <Button
