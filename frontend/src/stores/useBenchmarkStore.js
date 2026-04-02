@@ -53,19 +53,25 @@ export const useBenchmarkStore = create((set, get) => ({
   },
 
   _poll: async (jobId) => {
+    let status
     try {
-      const status = await benchmarksService.getJob(jobId)
+      status = await benchmarksService.getJob(jobId)
       get().setJob(jobId, status)
+    } catch {
+      // Status polling error — keep trying, don't crash
+      return
+    }
 
-      if (status.status === 'completed') {
-        get().stopPolling()
+    if (status.status === 'completed') {
+      get().stopPolling()
+      try {
         const results = await benchmarksService.getResults(jobId)
         get().updateJob(jobId, { results })
-      } else if (status.status === 'failed') {
-        get().stopPolling()
+      } catch (err) {
+        get().updateJob(jobId, { resultsError: err })
       }
-    } catch {
-      // Polling error — keep trying, don't crash
+    } else if (status.status === 'failed') {
+      get().stopPolling()
     }
   },
 }))

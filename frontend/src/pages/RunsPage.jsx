@@ -34,12 +34,34 @@ const MODULE_META = {
 const MODULE_ORDER = ['graph', 'sorting', 'dp']
 
 const ALGO_LABELS = {
+  // graph
   bfs: 'BFS',
+  dfs: 'DFS',
   dijkstra: 'Dijkstra',
+  astar: 'A*',
+  bellman_ford: 'Bellman-Ford',
+  prims: "Prim's",
+  kruskals: "Kruskal's",
+  topological_sort: 'Topological Sort',
+  bfs_grid: 'BFS (Grid)',
+  dfs_grid: 'DFS (Grid)',
+  dijkstra_grid: 'Dijkstra (Grid)',
+  astar_grid: 'A* (Grid)',
+  // sorting
   quicksort: 'Quick Sort',
   mergesort: 'Merge Sort',
+  bubble_sort: 'Bubble Sort',
+  insertion_sort: 'Insertion Sort',
+  selection_sort: 'Selection Sort',
+  heap_sort: 'Heap Sort',
+  linear_search: 'Linear Search',
+  binary_search: 'Binary Search',
+  // dp
   lcs: 'LCS',
   edit_distance: 'Edit Distance',
+  fibonacci: 'Fibonacci',
+  coin_change: 'Coin Change',
+  knapsack_01: '0/1 Knapsack',
 }
 
 

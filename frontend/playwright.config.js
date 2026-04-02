@@ -12,6 +12,7 @@ const BROWSER_CHANNEL = process.env.PLAYWRIGHT_BROWSER_CHANNEL || 'chrome'
 const frontendDir = __dirname
 const backendDir = path.resolve(__dirname, '../backend')
 const backendPython = path.resolve(backendDir, '.venv/bin/python')
+const backendRq = path.resolve(backendDir, '.venv/bin/rq')
 
 export default defineConfig({
   testDir: './test/e2e',
@@ -37,7 +38,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `${backendPython} -m uvicorn app.main:app --host 127.0.0.1 --port 8015`,
+      command: `${backendRq} worker benchmarks --url redis://localhost:6379 & ${backendPython} -m uvicorn app.main:app --host 127.0.0.1 --port 8015`,
       url: `${BACKEND_URL}/api/health`,
       cwd: backendDir,
       timeout: 120_000,
