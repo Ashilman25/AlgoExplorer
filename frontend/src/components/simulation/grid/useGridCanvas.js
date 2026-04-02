@@ -2,24 +2,74 @@
 
 import { useEffect, useRef, useCallback } from 'react'
 import { usePlaybackStore } from '../../../stores/usePlaybackStore'
-import { calcCellSize, calcGridOffset, recencyColor, lerpColor } from './gridMath'
+import { calcCellSize, calcGridOffset } from './gridMath'
 import { drawBase } from './drawBase'
 import { drawHeatMap } from './drawHeatMap'
 import { drawFrontier } from './drawFrontier'
 import { drawPath } from './drawPath'
 import { drawInteraction } from './drawInteraction'
 
-const LERP_DURATION_MS = 150
 const PATH_DASH_SPEED = 40  // pixels per second
+
+/**
+ * Compute BFS distance from each explored cell to the nearest path cell.
+ * Returns { distMap: Map<string, number>, maxDist: number }
+ */
+function computeDistFromPath(exploredKeys, path) {
+  const distMap = new Map()
+  if (!path || path.length === 0) {
+    // No path — all explored cells get distance 0 (uniform color)
+    for (const key of exploredKeys) distMap.set(key, 0)
+    return { distMap, maxDist: 0 }
+  }
+
+  // Seed BFS from path cells
+  const queue = []
+  const pathSet = new Set()
+  for (const [r, c] of path) {
+    const key = `${r},${c}`
+    pathSet.add(key)
+    if (exploredKeys.has(key)) {
+      distMap.set(key, 0)
+      queue.push(key)
+    }
+  }
+
+  // BFS outward through explored cells only
+  let head = 0
+  let maxDist = 0
+  while (head < queue.length) {
+    const key = queue[head++]
+    const d = distMap.get(key)
+    const [r, c] = key.split(',').map(Number)
+
+    for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const nk = `${r + dr},${c + dc}`
+      if (exploredKeys.has(nk) && !distMap.has(nk)) {
+        const nd = d + 1
+        distMap.set(nk, nd)
+        if (nd > maxDist) maxDist = nd
+        queue.push(nk)
+      }
+    }
+  }
+
+  // Mark any unreached explored cells at max+1
+  for (const key of exploredKeys) {
+    if (!distMap.has(key)) {
+      distMap.set(key, maxDist + 1)
+    }
+  }
+
+  return { distMap, maxDist: maxDist + 1 }
+}
 
 /**
  * Core hook for GridCanvas. Manages:
  * - 5 canvas contexts + dirty flags
- * - Always-on rAF loop
+ * - rAF loop (only runs when animating)
  * - ResizeObserver for responsive sizing
- * - Heat map color interpolation
- * - Frontier pulse + path dash animation
- * - Step-change detection from playback store
+ * - Static heat map computed on step change
  */
 export function useGridCanvas({ rows, cols, walls, startCell, endCell, containerRef }) {
   // ── Canvas refs ──
@@ -35,11 +85,14 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
 
   // ── Animation state ──
   const animRef = useRef({
-    // Heat map: Map<coordKey, { current: {r,g,b}, start: {r,g,b}, target: {r,g,b}, startTime: number }>
-    heatMapColors: new Map(),
     pulseTime: 0,
     dashOffset: 0,
     lastTime: 0,
+    rafId: null,
+    // Pre-computed heat map data (static per step)
+    exploredKeys: new Set(),
+    distFromPath: new Map(),
+    maxDist: 0,
   })
 
   // ── Playback tracking ──
@@ -55,15 +108,108 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
 
   const isBuildMode = totalSteps === 0
 
+  // Mutable ref so the rAF callback always reads latest props/state
+  // (avoids stale closures when React re-renders between animation frames)
+  const propsRef = useRef({ rows, cols, walls, startCell, endCell, currentStep, isBuildMode, previewPin: null })
+  useEffect(() => {
+    propsRef.current = { rows, cols, walls, startCell, endCell, currentStep, isBuildMode, previewPin: propsRef.current.previewPin }
+  })
+
   // ── markDirty helper ──
   const markDirty = useCallback((layer) => {
     dirtyRef.current[layer] = true
+    ensureRaf()
   }, [])
 
   const markAllDirty = useCallback(() => {
     const d = dirtyRef.current
     d.base = true; d.heatMap = true; d.frontier = true; d.path = true; d.interaction = true
+    ensureRaf()
   }, [])
+
+  const setPreviewPin = useCallback((pin) => {
+    propsRef.current.previewPin = pin
+    markDirty('interaction')
+  }, [markDirty])
+
+  // ── rAF management — only runs when needed ──
+  function ensureRaf() {
+    if (animRef.current.rafId != null) return
+    animRef.current.rafId = requestAnimationFrame(tick)
+  }
+
+  function tick(timestamp) {
+    animRef.current.rafId = null // allow re-scheduling
+
+    // Read from ref so scheduled rAF always sees latest React state
+    const p = propsRef.current
+
+    const anim = animRef.current
+    const dt = anim.lastTime ? (timestamp - anim.lastTime) / 1000 : 0
+    anim.lastTime = timestamp
+
+    // Advance continuous animations
+    anim.pulseTime += dt
+    anim.dashOffset -= PATH_DASH_SPEED * dt
+
+    const dirty = dirtyRef.current
+    const cellSize = cellSizeRef.current
+    const offset = gridOffsetRef.current
+
+    // Layer 1: Base
+    if (dirty.base && ctxRefs.current[0]) {
+      drawBase(ctxRefs.current[0], cellSize, offset, p.rows, p.cols, p.walls)
+      dirty.base = false
+    }
+
+    // Layer 2: Heat Map (static — no animation, just redraws when data changes)
+    if (dirty.heatMap && ctxRefs.current[1]) {
+      drawHeatMap(
+        ctxRefs.current[1], cellSize, offset, p.rows, p.cols,
+        anim.exploredKeys, anim.distFromPath, anim.maxDist,
+      )
+      dirty.heatMap = false
+    }
+
+    // Layer 3: Frontier
+    const sp = p.currentStep?.state_payload
+    const frontierCells = sp?.frontier_cells ?? []
+    const cellStates = sp?.cell_states ?? {}
+    const activeKey = Object.entries(cellStates).find(([, v]) => v === 'active')?.[0] ?? null
+    const hasFrontier = frontierCells.length > 0 || activeKey
+
+    if (hasFrontier) dirty.frontier = true
+
+    if (dirty.frontier && ctxRefs.current[2]) {
+      drawFrontier(ctxRefs.current[2], cellSize, offset, frontierCells, activeKey, anim.pulseTime)
+      dirty.frontier = false
+    }
+
+    // Layer 4: Path
+    const pathData = sp?.path ?? null
+    const hasPath = pathData && pathData.length >= 2
+
+    if (hasPath) dirty.path = true
+
+    if (dirty.path && ctxRefs.current[3]) {
+      drawPath(ctxRefs.current[3], cellSize, offset, pathData, anim.dashOffset)
+      dirty.path = false
+    }
+
+    // Layer 5: Interaction
+    if (dirty.interaction && ctxRefs.current[4]) {
+      drawInteraction(
+        ctxRefs.current[4], cellSize, offset,
+        hoveredCellRef.current, p.startCell, p.endCell, p.isBuildMode, p.previewPin,
+      )
+      dirty.interaction = false
+    }
+
+    // Keep animating only if there's active animation (frontier pulse or path dash)
+    if (hasFrontier || hasPath) {
+      animRef.current.rafId = requestAnimationFrame(tick)
+    }
+  }
 
   // ── Resize handling ──
   useEffect(() => {
@@ -114,14 +260,18 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
     }
   }, [containerRef, rows, cols, markAllDirty])
 
-  // ── Step change detection ──
+  // ── Step change detection — compute heat map data once ──
   useEffect(() => {
     if (stepIndex === prevStepIndexRef.current) return
     prevStepIndexRef.current = stepIndex
 
+    const anim = animRef.current
+
     if (!currentStep) {
-      animRef.current.heatMapColors.clear()
-      animRef.current.dashOffset = 0
+      anim.exploredKeys = new Set()
+      anim.distFromPath = new Map()
+      anim.maxDist = 0
+      anim.dashOffset = 0
       markAllDirty()
       return
     }
@@ -129,131 +279,37 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
     const sp = currentStep.state_payload
     if (!sp) return
 
-    const now = performance.now()
+    // Build explored keys set from exploration_order
     const explorationOrder = sp.exploration_order ?? {}
-    const heatColors = animRef.current.heatMapColors
+    const exploredKeys = new Set(Object.keys(explorationOrder))
 
-    // Update heat map color targets
-    for (const [key, exploredAt] of Object.entries(explorationOrder)) {
-      const stepsSince = stepIndex - exploredAt
-      const targetColor = recencyColor(Math.max(0, stepsSince))
+    // Compute distance-from-path for wifi-signal coloring
+    const path = sp.path ?? null
+    const { distMap, maxDist } = computeDistFromPath(exploredKeys, path)
 
-      const existing = heatColors.get(key)
-      if (existing) {
-        existing.start = { ...existing.current }
-        existing.target = targetColor
-        existing.startTime = now
-      } else {
-        heatColors.set(key, {
-          current: { ...targetColor },
-          start: { ...targetColor },
-          target: targetColor,
-          startTime: now,
-        })
-      }
-    }
+    anim.exploredKeys = exploredKeys
+    anim.distFromPath = distMap
+    anim.maxDist = maxDist
 
     dirtyRef.current.heatMap = true
     dirtyRef.current.frontier = true
     dirtyRef.current.path = true
+    ensureRaf()
   }, [stepIndex, currentStep, markAllDirty])
 
   // ── Mark dirty on prop changes ──
-  useEffect(() => { dirtyRef.current.base = true }, [rows, cols, walls])
-  useEffect(() => { dirtyRef.current.interaction = true }, [startCell, endCell])
+  useEffect(() => { dirtyRef.current.base = true; ensureRaf() }, [rows, cols, walls])
+  useEffect(() => { dirtyRef.current.interaction = true; ensureRaf() }, [startCell, endCell])
 
-  // ── rAF loop ──
+  // ── Cleanup ──
   useEffect(() => {
-    let rafId = null
-
-    function tick(timestamp) {
-      rafId = requestAnimationFrame(tick)
-
-      const anim = animRef.current
-      const dt = anim.lastTime ? (timestamp - anim.lastTime) / 1000 : 0
-      anim.lastTime = timestamp
-
-      // Advance continuous animations
-      anim.pulseTime += dt
-      anim.dashOffset -= PATH_DASH_SPEED * dt
-
-      const dirty = dirtyRef.current
-      const cellSize = cellSizeRef.current
-      const offset = gridOffsetRef.current
-
-      // Check if heat map is still interpolating
-      let heatMapAnimating = false
-      const now = performance.now()
-      for (const entry of anim.heatMapColors.values()) {
-        const elapsed = now - entry.startTime
-        if (elapsed < LERP_DURATION_MS) {
-          const t = elapsed / LERP_DURATION_MS
-          entry.current = lerpColor(entry.start, entry.target, t)
-          heatMapAnimating = true
-        } else {
-          entry.current = { ...entry.target }
-        }
-      }
-      if (heatMapAnimating) dirty.heatMap = true
-
-      // Layer 1: Base
-      if (dirty.base && ctxRefs.current[0]) {
-        drawBase(ctxRefs.current[0], cellSize, offset, rows, cols, walls)
-        dirty.base = false
-      }
-
-      // Layer 2: Heat Map
-      if (dirty.heatMap && ctxRefs.current[1]) {
-        const currentColors = new Map()
-        for (const [key, entry] of anim.heatMapColors) {
-          currentColors.set(key, entry.current)
-        }
-        drawHeatMap(ctxRefs.current[1], cellSize, offset, rows, cols, currentColors)
-        dirty.heatMap = false
-      }
-
-      // Layer 3: Frontier (always dirty when frontier exists — pulse animation)
-      const sp = currentStep?.state_payload
-      const frontierCells = sp?.frontier_cells ?? []
-      const cellStates = sp?.cell_states ?? {}
-      const activeKey = Object.entries(cellStates).find(([, v]) => v === 'active')?.[0] ?? null
-
-      if (frontierCells.length > 0 || activeKey) {
-        dirty.frontier = true
-      }
-
-      if (dirty.frontier && ctxRefs.current[2]) {
-        drawFrontier(ctxRefs.current[2], cellSize, offset, frontierCells, activeKey, anim.pulseTime)
-        dirty.frontier = false
-      }
-
-      // Layer 4: Path (always dirty when path exists — dash animation)
-      const pathData = sp?.path ?? null
-      if (pathData && pathData.length >= 2) {
-        dirty.path = true
-      }
-
-      if (dirty.path && ctxRefs.current[3]) {
-        drawPath(ctxRefs.current[3], cellSize, offset, pathData, anim.dashOffset)
-        dirty.path = false
-      }
-
-      // Layer 5: Interaction
-      if (dirty.interaction && ctxRefs.current[4]) {
-        drawInteraction(
-          ctxRefs.current[4], cellSize, offset,
-          hoveredCellRef.current, startCell, endCell, isBuildMode,
-        )
-        dirty.interaction = false
-      }
-    }
-
-    rafId = requestAnimationFrame(tick)
-
     return () => {
-      if (rafId) cancelAnimationFrame(rafId)
+      if (animRef.current.rafId != null) {
+        cancelAnimationFrame(animRef.current.rafId)
+        animRef.current.rafId = null
+      }
     }
-  }, [rows, cols, walls, startCell, endCell, currentStep, isBuildMode])
+  }, [])
 
   return {
     canvasRefs,
@@ -262,5 +318,6 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
     cellSizeRef,
     gridOffsetRef,
     isBuildMode,
+    setPreviewPin,
   }
 }

@@ -1,5 +1,6 @@
 const GRID_LINE_COLOR = 'rgba(148,163,184,0.07)'
-const WALL_FILL_COLOR = '#1e293b'
+const WALL_FILL_COLOR = '#334155'
+const WALL_EDGE_COLOR = '#475569'
 
 /**
  * Draw Layer 1: grid lines + wall fills.
@@ -24,6 +25,11 @@ export function drawBase(ctx, cellSize, offset, rows, cols, walls) {
   for (const key of walls) {
     const [r, c] = key.split(',').map(Number)
     ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize)
+    // 3D raised edge: 1px highlight on top and left
+    ctx.fillStyle = WALL_EDGE_COLOR
+    ctx.fillRect(c * cellSize, r * cellSize, cellSize, 1)
+    ctx.fillRect(c * cellSize, r * cellSize, 1, cellSize)
+    ctx.fillStyle = WALL_FILL_COLOR
   }
 
   // Grid lines

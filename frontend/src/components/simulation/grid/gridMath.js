@@ -4,15 +4,17 @@ const SLATE_500 = { r: 100, g: 116, b: 139 }
 const SLATE_600 = { r: 71, g: 85, b: 105 }
 
 export function calcCellSize(containerW, containerH, rows, cols) {
-  return Math.max(1, Math.floor(Math.min(containerW / cols, containerH / rows)))
+  // Fractional cell size — fills the constraining axis edge-to-edge
+  return Math.max(1, Math.min(containerW / cols, containerH / rows))
 }
 
 export function calcGridOffset(containerW, containerH, cellSize, rows, cols) {
+  // Center on the non-constraining axis only (constraining axis has zero gap)
   const gridW = cols * cellSize
   const gridH = rows * cellSize
   return {
-    x: Math.floor((containerW - gridW) / 2),
-    y: Math.floor((containerH - gridH) / 2),
+    x: Math.max(0, (containerW - gridW) / 2),
+    y: Math.max(0, (containerH - gridH) / 2),
   }
 }
 
