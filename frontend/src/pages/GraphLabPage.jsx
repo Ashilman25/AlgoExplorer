@@ -2,7 +2,7 @@ import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast, ErrorAlert } from '../components/ui'
-import { SimulationLayout, ConfigPanel, ConfigSection, GridCanvas, GridConfig, GridDataStructurePanel } from '../components/simulation'
+import { SimulationLayout, ConfigPanel, ConfigSection, ModeToggle, GridCanvas, GridConfig, GridDataStructurePanel } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { useGridState } from '../hooks/useGridState'
 import { useReopenRun } from '../hooks/useReopenRun'
@@ -11,7 +11,7 @@ import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
 import { generateId } from '../services/guestService'
-import { EXPLANATION_LEVELS, MODE_OPTIONS } from '../config/simulationConfig'
+import { EXPLANATION_LEVELS } from '../config/simulationConfig'
 import { metadataService } from '../services/metadataService'
 import { useMetadataStore } from '../stores/useMetadataStore'
 import GuestPromptBanner from '../components/guest/GuestPromptBanner'
@@ -65,11 +65,7 @@ export function GraphConfig({
   const lockDirected = category === 'ordering'
 
   return (
-    <ConfigPanel title = "Graph Lab">
-
-      <ConfigSection title = "Mode">
-        <Select aria-label = "Mode" options = {MODE_OPTIONS} value = {mode} onChange = {onModeChange} />
-      </ConfigSection>
+    <ConfigPanel header = {<ModeToggle mode = {mode} onChange = {onModeChange} />}>
 
       <ConfigSection title = "Algorithm">
         <Select aria-label = "Algorithm" options = {GRAPH_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
@@ -958,8 +954,7 @@ export default function GraphLabPage() {
   }, [algorithm])
 
   // ── Mode switching ──────────────────────────────────────────────────────────
-  const handleModeChange = useCallback((e) => {
-    const newMode = e.target.value
+  const handleModeChange = useCallback((newMode) => {
     setMode(newMode)
     setAlgorithm(newMode === 'grid' ? 'bfs_grid' : 'bfs')
     clearTimeline()
