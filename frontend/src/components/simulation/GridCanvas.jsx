@@ -1,6 +1,6 @@
 // frontend/src/components/simulation/GridCanvas.jsx
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useGridCanvas } from './grid/useGridCanvas'
 import { hitTestCell } from './grid/gridMath'
@@ -9,6 +9,7 @@ export default function GridCanvas({
   rows, cols, walls, startCell, endCell,
   onWallBatch, onStartPlace, onEndPlace,
   containerRef, onDimensionsChange,
+  mazeType, onGenerate, onMazeTypeChange,
 }) {
   const {
     canvasRefs,
@@ -27,6 +28,21 @@ export default function GridCanvas({
   const snapCellRef = useRef(null)
   const pinHitRef = useRef(null) // tracks pin hit on pointerdown for click-vs-drag
   const [ghostPin, setGhostPin] = useState(null)
+
+  // Maze dropdown state
+  const [mazeDropdownOpen, setMazeDropdownOpen] = useState(false)
+  const mazeDropdownRef = useRef(null)
+
+  useEffect(() => {
+    if (!mazeDropdownOpen) return
+    const handleClickOutside = (e) => {
+      if (mazeDropdownRef.current && !mazeDropdownRef.current.contains(e.target)) {
+        setMazeDropdownOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', handleClickOutside)
+    return () => document.removeEventListener('pointerdown', handleClickOutside)
+  }, [mazeDropdownOpen])
 
   // Read offset coordinates from a pointer event, supporting both
   // real browsers (nativeEvent.offsetX) and jsdom test environments
@@ -345,6 +361,102 @@ export default function GridCanvas({
             {endCell ? `E (${endCell[0]},${endCell[1]})` : 'E — not placed'}
           </span>
         </div>
+
+        {/* Maze generate split button — build mode only */}
+        {isBuildMode && (
+          <div ref = {mazeDropdownRef} style = {{ position: 'relative' }}>
+            <div style = {{
+              display: 'flex',
+              alignItems: 'center',
+              borderRadius: 5,
+              border: '1px solid rgba(6,182,212,0.3)',
+              background: 'rgba(6,182,212,0.1)',
+              overflow: 'visible',
+            }}>
+              <button
+                type = "button"
+                onClick = {onGenerate}
+                style = {{
+                  padding: '3px 10px',
+                  fontSize: 11,
+                  color: '#22d3ee',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  background: 'none',
+                  border: 'none',
+                  fontFamily: 'var(--font-mono)',
+                }}
+              >
+                Generate
+              </button>
+              <div style = {{ width: 1, height: 16, background: 'rgba(6,182,212,0.2)' }} />
+              <button
+                type = "button"
+                aria-label = "Maze type menu"
+                onClick = {() => setMazeDropdownOpen((prev) => !prev)}
+                style = {{
+                  padding: '3px 6px',
+                  fontSize: 9,
+                  color: '#06b6d4',
+                  cursor: 'pointer',
+                  background: 'none',
+                  border: 'none',
+                  lineHeight: 1,
+                }}
+              >
+                {mazeDropdownOpen ? '\u25B4' : '\u25BE'}
+              </button>
+            </div>
+
+            {/* Dropdown menu */}
+            {mazeDropdownOpen && (
+              <div style = {{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                marginTop: 4,
+                background: '#0f172a',
+                border: '1px solid rgba(6,182,212,0.2)',
+                borderRadius: 6,
+                padding: '4px 0',
+                minWidth: 210,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                fontFamily: 'var(--font-mono)',
+                zIndex: 20,
+              }}>
+                {[
+                  { key: 'backtracker', name: 'Recursive Backtracker', desc: 'Carved maze with corridors' },
+                  { key: 'scatter', name: 'Random Scatter', desc: 'Randomly placed walls at 30%' },
+                ].map((opt) => (
+                  <div
+                    key = {opt.key}
+                    data-maze-option = {opt.key}
+                    onClick = {() => { onMazeTypeChange(opt.key); setMazeDropdownOpen(false) }}
+                    style = {{
+                      padding: '6px 12px',
+                      cursor: 'pointer',
+                      background: mazeType === opt.key ? 'rgba(6,182,212,0.06)' : 'transparent',
+                    }}
+                  >
+                    <div style = {{
+                      fontSize: 11,
+                      color: mazeType === opt.key ? '#22d3ee' : '#94a3b8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}>
+                      {opt.name}
+                      {mazeType === opt.key && (
+                        <span data-checkmark style = {{ fontSize: 10, color: '#06b6d4' }}>✓</span>
+                      )}
+                    </div>
+                    <div style = {{ fontSize: 9, color: '#475569', marginTop: 2 }}>{opt.desc}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Action hint — build mode only */}
         {isBuildMode && actionHint && (
