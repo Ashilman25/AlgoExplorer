@@ -15,9 +15,6 @@ function createHandlers() {
     onDirectedChange: vi.fn(),
     onExplanationLevelChange: vi.fn(),
     onModeChange: vi.fn(),
-    onRun: vi.fn(),
-    onReset: vi.fn(),
-    onSave: vi.fn(),
     onSizeChange: vi.fn(),
     onDuplicateDensityChange: vi.fn(),
     onManualInputChange: vi.fn(),
@@ -60,10 +57,6 @@ describe('module setup forms', () => {
           { value: 'F', label: 'F' },
         ]}
         edgeCount={7}
-        onRun={handlers.onRun}
-        onReset={handlers.onReset}
-        onSave={handlers.onSave}
-        isRunning={false}
         error={null}
       />,
     )
@@ -83,14 +76,12 @@ describe('module setup forms', () => {
     })
     fireEvent.click(screen.getByLabelText('Weighted edges'))
     fireEvent.click(screen.getByLabelText('Directed graph'))
-    fireEvent.click(screen.getByRole('button', { name: 'Run Simulation' }))
 
     expect(handlers.onAlgorithmChange).toHaveBeenCalledTimes(1)
     expect(handlers.onPresetChange).toHaveBeenCalledTimes(1)
     expect(handlers.onSourceChange).toHaveBeenCalledTimes(1)
     expect(handlers.onWeightedChange).toHaveBeenCalledTimes(1)
     expect(handlers.onDirectedChange).toHaveBeenCalledTimes(1)
-    expect(handlers.onRun).toHaveBeenCalledTimes(1)
   })
 
   it('renders graph errors and disables actions while a simulation is already running', () => {
@@ -123,18 +114,11 @@ describe('module setup forms', () => {
           { value: 'B', label: 'B' },
         ]}
         edgeCount={1}
-        onRun={handlers.onRun}
-        onReset={handlers.onReset}
-        onSave={handlers.onSave}
-        isRunning
         error="Graph input is invalid."
       />,
     )
 
     expect(screen.getByText('Graph input is invalid.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Running…' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Reset' })).toBeDisabled()
   })
 
   it('renders sorting controls for generated presets and dispatches form changes', () => {
@@ -158,9 +142,6 @@ describe('module setup forms', () => {
         array={[4, 1, 3, 2]}
         onGenerate={handlers.onGenerate}
         onShuffle={handlers.onShuffle}
-        onRun={handlers.onRun}
-        onReset={handlers.onReset}
-        onSave={handlers.onSave}
         isRunning={false}
         error={null}
       />,
@@ -207,9 +188,6 @@ describe('module setup forms', () => {
         array={[1]}
         onGenerate={handlers.onGenerate}
         onShuffle={handlers.onShuffle}
-        onRun={handlers.onRun}
-        onReset={handlers.onReset}
-        onSave={handlers.onSave}
         isRunning={false}
         error="Backend rejected the run."
       />,
@@ -219,8 +197,6 @@ describe('module setup forms', () => {
     expect(screen.getByText('"oops" is not a valid number')).toBeInTheDocument()
     expect(screen.getByText('Backend rejected the run.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Generate' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Run Simulation' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Manual Input' }), {
       target: { value: '1, 2, 3' },
@@ -249,10 +225,6 @@ describe('module setup forms', () => {
         explanationLevel="standard"
         onExplanationLevelChange={handlers.onExplanationLevelChange}
         inputError={null}
-        onRun={handlers.onRun}
-        onReset={handlers.onReset}
-        onSave={handlers.onSave}
-        isRunning={false}
         error={null}
       />,
     )
@@ -298,17 +270,11 @@ describe('module setup forms', () => {
         explanationLevel="none"
         onExplanationLevelChange={handlers.onExplanationLevelChange}
         inputError="At least one string must be non-empty"
-        onRun={handlers.onRun}
-        onReset={handlers.onReset}
-        onSave={handlers.onSave}
-        isRunning={false}
         error="Server validation failed."
       />,
     )
 
     expect(screen.getByText('At least one string must be non-empty')).toBeInTheDocument()
     expect(screen.getByText('Server validation failed.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Run Simulation' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
   })
 })
