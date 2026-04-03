@@ -21,7 +21,7 @@ test.describe('Phase 10.4 error UX', () => {
     await page.goto('/sorting')
 
     const bannerText = page.getByText(
-      'Unable to connect to the backend server. Features that require the API will not work.',
+      'Unable to connect to the server. Some features may not be available.',
     )
 
     await expect(bannerText).toBeVisible({ timeout: 12_000 })
