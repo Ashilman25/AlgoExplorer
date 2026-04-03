@@ -18,7 +18,7 @@ export default function PageHeader({
   children,
 }) {
   return (
-    <div className = "flex items-start justify-between gap-4 mb-8">
+    <div className = "flex items-start justify-between gap-4 mb-4">
 
       <div className = "flex items-start gap-4">
         {Icon && (

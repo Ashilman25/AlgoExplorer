@@ -1,7 +1,6 @@
 // frontend/src/components/simulation/GridConfig.jsx
 
-import { Play, RotateCcw } from 'lucide-react'
-import { Button, Select, ErrorAlert } from '../ui'
+import { Select, ErrorAlert } from '../ui'
 import ConfigPanel, { ConfigSection } from './ConfigPanel'
 import { EXPLANATION_LEVELS, MODE_OPTIONS } from '../../config/simulationConfig'
 
@@ -18,9 +17,7 @@ export default function GridConfig({
   allowDiagonal, onAllowDiagonalChange,
   explanationLevel, onExplanationLevelChange,
   mode, onModeChange,
-  onRun, onReset,
-  isRunning, error,
-  canRun,
+  error,
 }) {
   return (
     <ConfigPanel title = "Grid Lab">
@@ -50,46 +47,11 @@ export default function GridConfig({
         <Select aria-label = "Explanation" options = {EXPLANATION_LEVELS} value = {explanationLevel} onChange = {onExplanationLevelChange} />
       </ConfigSection>
 
-      <ConfigSection title = "Input Summary">
-        <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
-          <p className = "text-xs font-medium text-slate-300">
-            {rows} × {cols} grid
-          </p>
-          <p className = "font-mono text-[10px] text-slate-500">
-            {allowDiagonal ? '8-dir' : '4-dir'}
-          </p>
-        </div>
-      </ConfigSection>
-
       {error && (
         <ConfigSection>
           <ErrorAlert title = "Simulation failed" message = {error} />
         </ConfigSection>
       )}
-
-      <ConfigSection>
-        <Button
-          variant = "primary"
-          size = "md"
-          icon = {Play}
-          className = "w-full"
-          onClick = {onRun}
-          disabled = {!canRun || isRunning}
-        >
-          {isRunning ? 'Running…' : 'Run Simulation'}
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {RotateCcw}
-          className = "w-full text-slate-500"
-          onClick = {onReset}
-          disabled = {isRunning}
-        >
-          Reset
-        </Button>
-      </ConfigSection>
 
     </ConfigPanel>
   )

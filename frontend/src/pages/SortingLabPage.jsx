@@ -20,25 +20,18 @@ import {
 } from '../utils/arrayGenerators'
 
 
-const SORTING_SUBCATEGORIES = [
-  { value: 'sorting', label: 'Sorting' },
-  { value: 'searching', label: 'Searching' },
+const SORTING_ALGOS = [
+  { value: '_sorting',       label: '── Sorting ──',   disabled: true },
+  { value: 'bubble_sort',    label: 'Bubble Sort' },
+  { value: 'insertion_sort', label: 'Insertion Sort' },
+  { value: 'selection_sort', label: 'Selection Sort' },
+  { value: 'quicksort',      label: 'Quick Sort' },
+  { value: 'mergesort',      label: 'Merge Sort' },
+  { value: 'heap_sort',      label: 'Heap Sort' },
+  { value: '_searching',     label: '── Searching ──', disabled: true },
+  { value: 'binary_search',  label: 'Binary Search' },
+  { value: 'linear_search',  label: 'Linear Search' },
 ]
-
-const SUBCATEGORY_ALGORITHMS = {
-  sorting: [
-    { value: 'bubble_sort',    label: 'Bubble Sort' },
-    { value: 'insertion_sort', label: 'Insertion Sort' },
-    { value: 'selection_sort', label: 'Selection Sort' },
-    { value: 'quicksort',      label: 'Quick Sort' },
-    { value: 'mergesort',      label: 'Merge Sort' },
-    { value: 'heap_sort',      label: 'Heap Sort' },
-  ],
-  searching: [
-    { value: 'binary_search', label: 'Binary Search' },
-    { value: 'linear_search', label: 'Linear Search' },
-  ],
-}
 
 const SEARCH_ALGORITHMS = new Set(['binary_search', 'linear_search'])
 
@@ -51,10 +44,8 @@ const EXPLANATION_LEVELS = [
 
 
 export function SortingConfig({
-  subcategory = 'sorting', onSubcategoryChange,
   algorithm, onAlgorithmChange,
   searchTarget, onSearchTargetChange,
-  isSearching,
   preset, onPresetChange,
   size, onSizeChange,
   duplicateDensity, onDuplicateDensityChange,
@@ -63,28 +54,45 @@ export function SortingConfig({
   inputError,
   array,
   onGenerate, onShuffle,
-  onRun, onReset, onSave,
   isRunning, error,
 }) {
+  const isSearching = SEARCH_ALGORITHMS.has(algorithm)
   const showSizeControls = preset !== 'custom'
   const showDensityControl = preset !== 'custom' && preset !== 'duplicates'
 
   return (
-    <ConfigPanel title = "Sorting Lab">
-
-      <ConfigSection title = "Category">
-        <Select
-          aria-label = "Category"
-          options = {SORTING_SUBCATEGORIES}
-          value = {subcategory}
-          onChange = {onSubcategoryChange}
-        />
-      </ConfigSection>
+    <ConfigPanel
+      title = "Sorting Lab"
+      footer = {preset !== 'custom' && (
+        <div className = "flex gap-2">
+          <Button
+            variant = "secondary"
+            size = "sm"
+            icon = {Sparkles}
+            className = "flex-1"
+            onClick = {onGenerate}
+            disabled = {isRunning}
+          >
+            Generate
+          </Button>
+          <Button
+            variant = "secondary"
+            size = "sm"
+            icon = {Shuffle}
+            className = "flex-1"
+            onClick = {onShuffle}
+            disabled = {isRunning}
+          >
+            Shuffle
+          </Button>
+        </div>
+      )}
+    >
 
       <ConfigSection title = "Algorithm">
         <Select
           aria-label = "Algorithm"
-          options = {SUBCATEGORY_ALGORITHMS[subcategory]}
+          options = {SORTING_ALGOS}
           value = {algorithm}
           onChange = {onAlgorithmChange}
         />
@@ -161,98 +169,11 @@ export function SortingConfig({
         />
       </ConfigSection>
 
-      {/* input summary */}
-      <ConfigSection title = "Input Summary">
-        <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
-          <p className = "text-xs font-medium text-slate-300">
-            {SUBCATEGORY_ALGORITHMS[subcategory].find((a) => a.value === algorithm)?.label ?? algorithm}
-            {' · '}
-            {PRESETS.find((p) => p.value === preset)?.label ?? preset}
-          </p>
-
-          <p className = "font-mono text-[10px] text-slate-500">
-            {array.length} elements
-            {duplicateDensity !== 'none' && preset !== 'custom' && preset !== 'duplicates'
-              ? ` · ${DUPLICATE_DENSITIES.find((d) => d.value === duplicateDensity)?.label ?? duplicateDensity}`
-              : ''
-            }
-          </p>
-
-          <p
-            className = "font-mono text-[10px] text-slate-600 leading-relaxed truncate"
-            title = {array.join(', ')}
-          >
-            [{array.length <= 20 ? array.join(', ') : array.slice(0, 20).join(', ') + ', …'}]
-          </p>
-        </div>
-      </ConfigSection>
-
       {error && (
         <ConfigSection>
           <ErrorAlert title="Simulation failed" message={error} />
         </ConfigSection>
       )}
-
-      <ConfigSection>
-        {preset !== 'custom' && (
-          <div className = "flex gap-2">
-            <Button
-              variant = "secondary"
-              size = "sm"
-              icon = {Sparkles}
-              className = "flex-1"
-              onClick = {onGenerate}
-              disabled = {isRunning}
-            >
-              Generate
-            </Button>
-
-            <Button
-              variant = "secondary"
-              size = "sm"
-              icon = {Shuffle}
-              className = "flex-1"
-              onClick = {onShuffle}
-              disabled = {isRunning}
-            >
-              Shuffle
-            </Button>
-          </div>
-        )}
-
-        <Button
-          variant = "primary"
-          size = "md"
-          icon = {Play}
-          className = "w-full"
-          onClick = {onRun}
-          disabled = {isRunning || array.length < 2 || !!inputError}
-        >
-          {isRunning ? 'Running…' : 'Run Simulation'}
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {Save}
-          className = "w-full text-slate-500"
-          onClick = {onSave}
-          disabled = {isRunning || array.length < 2 || !!inputError}
-        >
-          Save Scenario
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {RotateCcw}
-          className = "w-full text-slate-500"
-          onClick = {onReset}
-          disabled = {isRunning}
-        >
-          Reset
-        </Button>
-      </ConfigSection>
 
     </ConfigPanel>
   )
@@ -631,7 +552,6 @@ export default function SortingLabPage() {
   })
   const lp = loadedScenario?.input_payload
 
-  const [subcategory, setSubcategory] = useState('sorting')
   const [algorithm, setAlgorithm] = useState(loadedScenario?.algorithm_key ?? 'bubble_sort')
   const [searchTarget, setSearchTarget] = useState(5)
   const [preset, setPreset] = useState(lp?.preset ?? (loadedScenario ? 'custom' : 'random'))
@@ -727,12 +647,6 @@ export default function SortingLabPage() {
 
   // --- handlers ---
 
-  const handleSubcategoryChange = useCallback((e) => {
-    const newSub = e.target.value
-    setSubcategory(newSub)
-    setAlgorithm(SUBCATEGORY_ALGORITHMS[newSub][0].value)
-  }, [])
-
   const handleGenerate = useCallback(() => {
     if (preset === 'custom') return
     setArray(generateFromPreset(preset, size, preset === 'duplicates' ? 'high' : duplicateDensity))
@@ -781,7 +695,7 @@ export default function SortingLabPage() {
 
 
   const handleSave = useCallback(() => {
-    const name = `${SUBCATEGORY_ALGORITHMS[subcategory].find((a) => a.value === algorithm)?.label ?? algorithm} — ${array.length} elements`
+    const name = `${SORTING_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm} — ${array.length} elements`
     saveScenario({
       id: generateId(),
       name,
@@ -796,7 +710,7 @@ export default function SortingLabPage() {
       created_at: new Date().toISOString(),
     })
     toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
-  }, [saveScenario, toast, algorithm, subcategory, array, preset, duplicateDensity])
+  }, [saveScenario, toast, algorithm, array, preset, duplicateDensity])
 
 
   return (
@@ -807,7 +721,20 @@ export default function SortingLabPage() {
         description = "Visualize sorting and searching algorithms with comparison, swap, and operation tracking."
         accent = "amber"
         badge = "Phase 6"
-      />
+      >
+        <div className = "flex items-center gap-1 bg-slate-900/50 border border-white/[0.06] rounded-lg p-1">
+          <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || array.length < 2 || !!inputError}>
+            {isRunning || isPlaying ? 'Running…' : 'Run'}
+          </Button>
+          <Button variant = "ghost" size = "sm" icon = {Save} onClick = {handleSave} disabled = {isRunning || isPlaying || array.length < 2 || !!inputError}>
+            Save
+          </Button>
+          <div className = "w-px h-4 bg-white/[0.08]" />
+          <Button variant = "ghost" size = "sm" icon = {RotateCcw} onClick = {handleReset} disabled = {isRunning || isPlaying}>
+            Reset
+          </Button>
+        </div>
+      </PageHeader>
 
       <GuestPromptBanner />
 
@@ -816,13 +743,10 @@ export default function SortingLabPage() {
         algorithmKey = {algorithm}
         configPanel = {
           <SortingConfig
-            subcategory = {subcategory}
-            onSubcategoryChange = {handleSubcategoryChange}
             algorithm = {algorithm}
             onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
             searchTarget = {searchTarget}
             onSearchTargetChange = {(e) => setSearchTarget(Number(e.target.value))}
-            isSearching = {isSearching}
             preset = {preset}
             onPresetChange = {(e) => setPreset(e.target.value)}
             size = {size}
@@ -837,9 +761,6 @@ export default function SortingLabPage() {
             array = {array}
             onGenerate = {handleGenerate}
             onShuffle = {handleShuffle}
-            onRun = {handleRun}
-            onReset = {handleReset}
-            onSave = {handleSave}
             isRunning = {isRunning || isPlaying}
             error = {timelineError}
           />
