@@ -49,7 +49,7 @@ export default function ConnectionBanner() {
     <div className="flex items-center justify-center gap-3 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20">
       <WifiOff size={14} strokeWidth={1.5} className="text-amber-400 shrink-0" />
       <p className="text-xs text-amber-300">
-        Unable to connect to the backend server. Features that require the API will not work.
+        Unable to connect to the server. Some features may not be available.
       </p>
       <button
         onClick={checkHealth}
