@@ -33,6 +33,44 @@ class BubbleSortAlgorithm(BaseAlgorithm):
         except ValidationError as e:
             raise DomainError("Invalid sorting input.", details = {"errors": e.errors()})
 
+        if benchmark_mode:
+            arr = list(sorting_input.array)
+            n = len(arr)
+            comparisons = 0
+            swaps = 0
+
+            for i in range(n - 1, 0, -1):
+                swapped = False
+                for j in range(0, i):
+                    comparisons += 1
+                    if arr[j] > arr[j + 1]:
+                        arr[j], arr[j + 1] = arr[j + 1], arr[j]
+                        swaps += 1
+                        swapped = True
+                if not swapped:
+                    break
+
+            metrics = {
+                "comparisons": comparisons,
+                "swaps": swaps,
+                "array_accesses": 0,
+                "passes": 0,
+                "array_length": n,
+            }
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"sorted_array": arr},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input) | {
+                    "time_complexity": "O(n²) average/worst, O(n) best",
+                    "space_complexity": "O(1)",
+                    "stable": True,
+                    "early_termination": True,
+                    "array_size": n,
+                },
+            )
+
         arr = list(sorting_input.array)
         n = len(arr)
 
