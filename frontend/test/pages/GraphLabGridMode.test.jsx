@@ -28,6 +28,7 @@ vi.mock('../../src/services/runsService', () => ({
 vi.mock('../../src/services/metadataService', () => ({
   metadataService: {
     getModules: vi.fn(() => Promise.resolve({ modules: [] })),
+    getPresets: vi.fn(() => Promise.resolve({ module_type: 'graph', groups: [] })),
   },
 }))
 

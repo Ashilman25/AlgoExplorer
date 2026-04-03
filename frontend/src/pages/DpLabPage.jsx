@@ -10,6 +10,8 @@ import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
 import { generateId } from '../services/guestService'
+import { metadataService } from '../services/metadataService'
+import { useMetadataStore } from '../stores/useMetadataStore'
 import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 
 
@@ -28,72 +30,6 @@ const EXPLANATION_LEVELS = [
   {value: 'detailed', label: 'Detailed'},
   {value: 'none', label: 'None'},
 ]
-
-const DP_PRESETS = [
-  { value: 'custom',          label: 'Custom' },
-  { value: 'short_match',     label: 'Short — obvious match' },
-  { value: 'no_match',        label: 'No common characters' },
-  { value: 'identical',       label: 'Identical strings' },
-  { value: 'single_char',     label: 'Single character each' },
-  { value: 'substitutions',   label: 'Substitution-heavy' },
-  { value: 'insert_delete',   label: 'Insert / delete mix' },
-  { value: 'medium',          label: 'Medium strings' },
-]
-
-const PRESET_DATA = {
-  short_match:   { string1: 'ABCDEF',    string2: 'ACBDFE' },
-  no_match:      { string1: 'ABC',       string2: 'XYZ' },
-  identical:     { string1: 'MATCH',     string2: 'MATCH' },
-  single_char:   { string1: 'A',         string2: 'B' },
-  substitutions: { string1: 'kitten',    string2: 'sitting' },
-  insert_delete: { string1: 'abcde',     string2: 'aebdc' },
-  medium:        { string1: 'ALGORITHM', string2: 'ALTRUISTIC' },
-}
-
-const KNAPSACK_PRESETS = [
-  { value: 'custom',          label: 'Custom' },
-  { value: 'textbook',        label: 'Textbook classic' },
-  { value: 'tight_fit',       label: 'Tight fit' },
-  { value: 'single_item',     label: 'Single item' },
-  { value: 'all_fit',         label: 'All fit' },
-]
-
-const KNAPSACK_PRESET_DATA = {
-  textbook:    { capacity: 10, items: [{weight: 2, value: 3}, {weight: 3, value: 4}, {weight: 4, value: 5}, {weight: 5, value: 6}] },
-  tight_fit:   { capacity: 7,  items: [{weight: 3, value: 4}, {weight: 4, value: 5}, {weight: 5, value: 7}] },
-  single_item: { capacity: 5,  items: [{weight: 3, value: 10}] },
-  all_fit:     { capacity: 50, items: [{weight: 2, value: 3}, {weight: 3, value: 4}, {weight: 5, value: 8}] },
-}
-
-const COIN_PRESETS = [
-  { value: 'custom',      label: 'Custom' },
-  { value: 'us_coins',    label: 'US coins' },
-  { value: 'greedy_fails', label: 'Greedy fails' },
-  { value: 'impossible',  label: 'Impossible' },
-  { value: 'powers_of_2', label: 'Powers of 2' },
-]
-
-const COIN_PRESET_DATA = {
-  us_coins:    { coins: [1, 5, 10, 25], target: 41 },
-  greedy_fails: { coins: [1, 3, 4], target: 6 },
-  impossible:  { coins: [3, 7], target: 5 },
-  powers_of_2: { coins: [1, 2, 4, 8, 16], target: 31 },
-}
-
-const FIB_PRESETS = [
-  { value: 'custom',   label: 'Custom' },
-  { value: 'small',    label: 'Small (n=8)' },
-  { value: 'medium',   label: 'Medium (n=15)' },
-  { value: 'large',    label: 'Large (n=30)' },
-  { value: 'max_tab',  label: 'Max tabulation (n=50)' },
-]
-
-const FIB_PRESET_DATA = {
-  small:   { n: 8 },
-  medium:  { n: 15 },
-  large:   { n: 30 },
-  max_tab: { n: 50 },
-}
 
 const FIB_MODES = [
   { value: 'tabulation',      label: 'Tabulation' },
@@ -184,7 +120,7 @@ export function validateFibonacci(n, mode) {
 // ─── Config Panel ───────────────────────────────────────
 
 export function DpConfig({
-  algorithm, onAlgorithmChange,
+  algorithm, onAlgorithmChange, presetOptions,
   // string-pair (LCS / Edit Distance)
   preset, onPresetChange,
   string1, onString1Change,
@@ -217,16 +153,16 @@ export function DpConfig({
 
       <ConfigSection title = "Preset">
         {(algorithm === 'lcs' || algorithm === 'edit_distance') && (
-          <Select aria-label = "Preset" options = {DP_PRESETS} value = {preset} onChange = {onPresetChange} />
+          <Select aria-label = "Preset" options = {presetOptions} value = {preset} onChange = {onPresetChange} />
         )}
         {algorithm === 'knapsack_01' && (
-          <Select aria-label = "Preset" options = {KNAPSACK_PRESETS} value = {knapsackPreset} onChange = {onKnapsackPresetChange} />
+          <Select aria-label = "Preset" options = {presetOptions} value = {knapsackPreset} onChange = {onKnapsackPresetChange} />
         )}
         {algorithm === 'coin_change' && (
-          <Select aria-label = "Preset" options = {COIN_PRESETS} value = {coinPreset} onChange = {onCoinPresetChange} />
+          <Select aria-label = "Preset" options = {presetOptions} value = {coinPreset} onChange = {onCoinPresetChange} />
         )}
         {algorithm === 'fibonacci' && (
-          <Select aria-label = "Preset" options = {FIB_PRESETS} value = {fibPreset} onChange = {onFibPresetChange} />
+          <Select aria-label = "Preset" options = {presetOptions} value = {fibPreset} onChange = {onFibPresetChange} />
         )}
       </ConfigSection>
 
@@ -704,26 +640,29 @@ export default function DpLabPage() {
   })
 
   const [algorithm, setAlgorithm] = useState(loadedScenario?.algorithm_key ?? 'lcs')
-  const [preset, setPreset] = useState(loadedScenario ? 'custom' : 'short_match')
-  const [string1, setString1] = useState(loadedScenario?.input_payload?.string1 ?? PRESET_DATA.short_match.string1)
-  const [string2, setString2] = useState(loadedScenario?.input_payload?.string2 ?? PRESET_DATA.short_match.string2)
+  const [dpPresets, setDpPresets] = useState([])
+  const needsInitialPreset = useRef(!loadedScenario)
+
+  const [preset, setPreset] = useState(loadedScenario ? 'custom' : '')
+  const [string1, setString1] = useState(loadedScenario?.input_payload?.string1 ?? '')
+  const [string2, setString2] = useState(loadedScenario?.input_payload?.string2 ?? '')
   const [explanationLevel, setExplanationLevel] = useState('standard')
 
   // knapsack state
-  const [capacity, setCapacity] = useState(KNAPSACK_PRESET_DATA.textbook.capacity)
-  const [items, setItems] = useState(KNAPSACK_PRESET_DATA.textbook.items)
-  const [knapsackPreset, setKnapsackPreset] = useState('textbook')
+  const [capacity, setCapacity] = useState(10)
+  const [items, setItems] = useState([{ weight: 1, value: 1 }])
+  const [knapsackPreset, setKnapsackPreset] = useState('')
 
   // coin change state
-  const [coins, setCoins] = useState(COIN_PRESET_DATA.us_coins.coins)
-  const [coinTarget, setCoinTarget] = useState(COIN_PRESET_DATA.us_coins.target)
-  const [coinPreset, setCoinPreset] = useState('us_coins')
-  const [coinsText, setCoinsText] = useState('1, 5, 10, 25')
+  const [coins, setCoins] = useState([1])
+  const [coinTarget, setCoinTarget] = useState(1)
+  const [coinPreset, setCoinPreset] = useState('')
+  const [coinsText, setCoinsText] = useState('1')
 
   // fibonacci state
   const [fibN, setFibN] = useState(8)
   const [fibMode, setFibMode] = useState('tabulation')
-  const [fibPreset, setFibPreset] = useState('small')
+  const [fibPreset, setFibPreset] = useState('')
 
   useEffect(() => {
     if (loadedScenario) {
@@ -737,6 +676,57 @@ export default function DpLabPage() {
 
   // Reopen run: fetch stored timeline if navigated from Run History
   useReopenRun(loadedScenario?._reopenRunId)
+
+  // ── Preset fetching ──
+  useEffect(() => {
+    const cached = useMetadataStore.getState().getPresets('dp', algorithm)
+    if (cached) {
+      setDpPresets(cached)
+      return
+    }
+
+    let cancelled = false
+    metadataService.getPresets('dp', algorithm).then((resp) => {
+      if (cancelled) return
+      const fetchedItems = resp.groups.flatMap((g) => g.presets)
+      useMetadataStore.getState().setPresets('dp', algorithm, fetchedItems)
+      setDpPresets(fetchedItems)
+    }).catch(() => {
+      // Graceful degradation — presets dropdown will just show "Custom"
+    })
+    return () => { cancelled = true }
+  }, [algorithm])
+
+  // Apply first preset when presets arrive after algorithm change (or initial load)
+  useEffect(() => {
+    if (!needsInitialPreset.current || dpPresets.length === 0) return
+    needsInitialPreset.current = false
+    const first = dpPresets[0]
+    const p = first.input_payload
+
+    if (algorithm === 'lcs' || algorithm === 'edit_distance') {
+      setPreset(first.key)
+      setString1(p.string1)
+      setString2(p.string2)
+    } else if (algorithm === 'knapsack_01') {
+      setKnapsackPreset(first.key)
+      setCapacity(p.capacity)
+      setItems(p.items.map((it) => ({ ...it })))
+    } else if (algorithm === 'coin_change') {
+      setCoinPreset(first.key)
+      setCoins(p.coins)
+      setCoinTarget(p.target)
+      setCoinsText(p.coins.join(', '))
+    } else if (algorithm === 'fibonacci') {
+      setFibPreset(first.key)
+      setFibN(p.n)
+    }
+  }, [dpPresets, algorithm])
+
+  const presetOptions = useMemo(() => [
+    { value: 'custom', label: 'Custom' },
+    ...dpPresets.map((p) => ({ value: p.key, label: p.label })),
+  ], [dpPresets])
 
   // --- validation ---
   const inputError = useMemo(() => {
@@ -822,12 +812,12 @@ export default function DpLabPage() {
     clearTimeline()
     clearRun()
 
-    if (key !== 'custom') {
-      const data = PRESET_DATA[key]
-      setString1(data.string1)
-      setString2(data.string2)
+    const found = dpPresets.find((pr) => pr.key === key)
+    if (found) {
+      setString1(found.input_payload.string1)
+      setString2(found.input_payload.string2)
     }
-  }, [clearTimeline, clearRun])
+  }, [dpPresets, clearTimeline, clearRun])
 
 
   const handleString1Change = useCallback((e) => {
@@ -932,35 +922,36 @@ export default function DpLabPage() {
     setKnapsackPreset(key)
     clearTimeline()
     clearRun()
-    if (key !== 'custom') {
-      const data = KNAPSACK_PRESET_DATA[key]
-      setCapacity(data.capacity)
-      setItems(data.items.map((it) => ({ ...it })))
+    const found = dpPresets.find((pr) => pr.key === key)
+    if (found) {
+      setCapacity(found.input_payload.capacity)
+      setItems(found.input_payload.items.map((it) => ({ ...it })))
     }
-  }, [clearTimeline, clearRun])
+  }, [dpPresets, clearTimeline, clearRun])
 
   const handleCoinPresetChange = useCallback((e) => {
     const key = e.target.value
     setCoinPreset(key)
     clearTimeline()
     clearRun()
-    if (key !== 'custom') {
-      const data = COIN_PRESET_DATA[key]
-      setCoins(data.coins)
-      setCoinTarget(data.target)
-      setCoinsText(data.coins.join(', '))
+    const found = dpPresets.find((pr) => pr.key === key)
+    if (found) {
+      setCoins(found.input_payload.coins)
+      setCoinTarget(found.input_payload.target)
+      setCoinsText(found.input_payload.coins.join(', '))
     }
-  }, [clearTimeline, clearRun])
+  }, [dpPresets, clearTimeline, clearRun])
 
   const handleFibPresetChange = useCallback((e) => {
     const key = e.target.value
     setFibPreset(key)
     clearTimeline()
     clearRun()
-    if (key !== 'custom') {
-      setFibN(FIB_PRESET_DATA[key].n)
+    const found = dpPresets.find((pr) => pr.key === key)
+    if (found) {
+      setFibN(found.input_payload.n)
     }
-  }, [clearTimeline, clearRun])
+  }, [dpPresets, clearTimeline, clearRun])
 
   const handleFibModeChange = useCallback((e) => {
     const mode = e.target.value
@@ -974,26 +965,12 @@ export default function DpLabPage() {
   const handleAlgorithmChange = useCallback((e) => {
     const key = e.target.value
     setAlgorithm(key)
+    setDpPresets([])
     clearTimeline()
     clearRun()
+    needsInitialPreset.current = true
 
-    // select first preset for the new algorithm
-    if (key === 'lcs' || key === 'edit_distance') {
-      setPreset('short_match')
-      setString1(PRESET_DATA.short_match.string1)
-      setString2(PRESET_DATA.short_match.string2)
-    } else if (key === 'knapsack_01') {
-      setKnapsackPreset('textbook')
-      setCapacity(KNAPSACK_PRESET_DATA.textbook.capacity)
-      setItems(KNAPSACK_PRESET_DATA.textbook.items)
-    } else if (key === 'coin_change') {
-      setCoinPreset('us_coins')
-      setCoins(COIN_PRESET_DATA.us_coins.coins)
-      setCoinTarget(COIN_PRESET_DATA.us_coins.target)
-      setCoinsText(COIN_PRESET_DATA.us_coins.coins.join(', '))
-    } else if (key === 'fibonacci') {
-      setFibPreset('small')
-      setFibN(FIB_PRESET_DATA.small.n)
+    if (key === 'fibonacci') {
       setFibMode('tabulation')
     }
   }, [clearTimeline, clearRun])
@@ -1018,6 +995,7 @@ export default function DpLabPage() {
           <DpConfig
             algorithm = {algorithm}
             onAlgorithmChange = {handleAlgorithmChange}
+            presetOptions = {presetOptions}
             preset = {preset}
             onPresetChange = {handlePresetChange}
             string1 = {string1}

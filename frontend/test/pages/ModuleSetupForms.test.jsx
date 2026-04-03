@@ -38,6 +38,11 @@ describe('module setup forms', () => {
         onAlgorithmChange={handlers.onAlgorithmChange}
         preset="bfs-demo"
         onPresetChange={handlers.onPresetChange}
+        presetOptions={[
+          { value: 'custom', label: 'Custom (loaded scenario)' },
+          { value: 'bfs-demo', label: 'BFS Demo — 6 nodes' },
+          { value: 'weighted-diamond', label: 'Weighted Diamond — 5 nodes' },
+        ]}
         source="A"
         onSourceChange={handlers.onSourceChange}
         target="F"
@@ -97,6 +102,10 @@ describe('module setup forms', () => {
         onAlgorithmChange={handlers.onAlgorithmChange}
         preset="custom"
         onPresetChange={handlers.onPresetChange}
+        presetOptions={[
+          { value: 'custom', label: 'Custom (loaded scenario)' },
+          { value: 'bfs-demo', label: 'BFS Demo — 6 nodes' },
+        ]}
         source="A"
         onSourceChange={handlers.onSourceChange}
         target="B"
@@ -226,6 +235,11 @@ describe('module setup forms', () => {
       <DpConfig
         algorithm="lcs"
         onAlgorithmChange={handlers.onAlgorithmChange}
+        presetOptions={[
+          { value: 'custom', label: 'Custom' },
+          { value: 'short_match', label: 'Short — obvious match' },
+          { value: 'medium', label: 'Medium strings' },
+        ]}
         preset="short_match"
         onPresetChange={handlers.onPresetChange}
         string1="ABCDEF"
@@ -271,6 +285,10 @@ describe('module setup forms', () => {
       <DpConfig
         algorithm="edit_distance"
         onAlgorithmChange={handlers.onAlgorithmChange}
+        presetOptions={[
+          { value: 'custom', label: 'Custom' },
+          { value: 'short_match', label: 'Short — obvious match' },
+        ]}
         preset="custom"
         onPresetChange={handlers.onPresetChange}
         string1=""
