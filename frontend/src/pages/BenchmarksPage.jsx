@@ -591,9 +591,12 @@ export default function BenchmarksPage() {
   const [workerHealthy, setWorkerHealthy] = useState(true)
   const [isCancelling, setIsCancelling] = useState(false)
   const benchmarkStartTime = useRef(null)
+  const etaTarget = useRef(null)
+  const prevProgress = useRef({ value: 0, time: null })
 
   // Active job tracking
   const activeJob = activeJobId != null ? jobs[activeJobId] : null
+  const progress = activeJob?.progress ?? 0
 
   // Check worker health on mount
   useEffect(() => {
@@ -670,6 +673,33 @@ export default function BenchmarksPage() {
     }
   }, [activeJob?.status, activeJob?.results])
 
+  // Recalculate ETA only when progress actually changes
+  useEffect(() => {
+    if (progress > 0 && progress < 1 && benchmarkStartTime.current) {
+      const now = Date.now()
+      const elapsed = now - benchmarkStartTime.current
+      const overallRate = elapsed / progress
+
+      // Use the slower of overall rate vs most recent interval rate
+      let rate = overallRate
+      const prev = prevProgress.current
+      if (prev.time !== null && prev.value < progress) {
+        const intervalRate = (now - prev.time) / (progress - prev.value)
+        rate = Math.max(overallRate, intervalRate)
+      }
+
+      // 30% buffer — better to overestimate than underestimate
+      const remaining = rate * (1 - progress) * 1.3
+      etaTarget.current = now + remaining
+      prevProgress.current = { value: progress, time: now }
+    } else {
+      etaTarget.current = null
+      if (progress <= 0) {
+        prevProgress.current = { value: 0, time: null }
+      }
+    }
+  }, [progress])
+
   // Cleanup polling on unmount
   useEffect(() => {
     return () => stopPolling()
@@ -737,6 +767,8 @@ export default function BenchmarksPage() {
     setResultData(null)
     setBenchmarkError(null)
     benchmarkStartTime.current = Date.now()
+    etaTarget.current = null
+    prevProgress.current = { value: 0, time: null }
 
     try {
       const body = {
@@ -775,13 +807,10 @@ export default function BenchmarksPage() {
     await cancelJob(activeJobId)
   }, [activeJobId, cancelJob])
 
-  const progress = activeJob?.progress ?? 0
-
   const etaLabel = (() => {
-    if (!benchmarkStartTime.current || progress <= 0 || progress >= 1) return null
-    const elapsed = (Date.now() - benchmarkStartTime.current) / 1000
-    const remaining = (elapsed / progress) * (1 - progress)
-    if (remaining < 1) return '< 1s remaining'
+    if (!etaTarget.current || progress <= 0 || progress >= 1) return null
+    const remaining = (etaTarget.current - Date.now()) / 1000
+    if (remaining < 1) return null
     if (remaining < 60) return `~${Math.round(remaining)}s remaining`
     return `~${Math.round(remaining / 60)} min remaining`
   })()
