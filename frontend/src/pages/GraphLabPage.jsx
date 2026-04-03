@@ -2,7 +2,7 @@ import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast, ErrorAlert } from '../components/ui'
-import { SimulationLayout, ConfigPanel, ConfigSection, GridCanvas, GridConfig, GridDataStructurePanel } from '../components/simulation'
+import { SimulationLayout, ConfigPanel, ConfigSection, ModeToggle, GridCanvas, GridConfig, GridDataStructurePanel } from '../components/simulation'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { useGridState } from '../hooks/useGridState'
 import { useReopenRun } from '../hooks/useReopenRun'
@@ -11,7 +11,7 @@ import { useRunStore } from '../stores/useRunStore'
 import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
 import { generateId } from '../services/guestService'
-import { EXPLANATION_LEVELS, MODE_OPTIONS } from '../config/simulationConfig'
+import { EXPLANATION_LEVELS } from '../config/simulationConfig'
 import { metadataService } from '../services/metadataService'
 import { useMetadataStore } from '../stores/useMetadataStore'
 import GuestPromptBanner from '../components/guest/GuestPromptBanner'
@@ -54,8 +54,7 @@ export function GraphConfig({
   explanationLevel, onExplanationLevelChange,
   mode, onModeChange,
   nodeOptions, edgeCount,
-  onRun, onReset, onSave,
-  isRunning, error,
+  error,
 }) {
   const category = ALGORITHM_CATEGORY[algorithm] ?? 'pathfinding'
   const showSource = category === 'pathfinding' || (category === 'mst' && algorithm === 'prims')
@@ -66,11 +65,7 @@ export function GraphConfig({
   const lockDirected = category === 'ordering'
 
   return (
-    <ConfigPanel title = "Graph Lab">
-
-      <ConfigSection title = "Mode">
-        <Select aria-label = "Mode" options = {MODE_OPTIONS} value = {mode} onChange = {onModeChange} />
-      </ConfigSection>
+    <ConfigPanel header = {<ModeToggle mode = {mode} onChange = {onModeChange} />}>
 
       <ConfigSection title = "Algorithm">
         <Select aria-label = "Algorithm" options = {GRAPH_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
@@ -134,69 +129,11 @@ export function GraphConfig({
         <Select aria-label = "Explanation" options = {EXPLANATION_LEVELS} value = {explanationLevel} onChange = {onExplanationLevelChange} />
       </ConfigSection>
 
-      <ConfigSection title = "Input Summary">
-        <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
-          <p className = "text-xs font-medium text-slate-300">
-            {presetOptions.find((p) => p.value === preset)?.label ?? 'Custom'}
-          </p>
-
-          <p className = "font-mono text-[10px] text-slate-500">
-            {nodeOptions.length} nodes · {edgeCount} edges
-            {weighted ? ' · weighted' : ''}
-            {directed ? ' · directed' : ''}
-          </p>
-
-          {showSource && source && (
-            <p className = "font-mono text-[10px] text-slate-500">
-              Source: <span className = "text-state-source">{source}</span>
-              {showTarget && target && (
-                <>{'  '}Target: <span className = "text-state-target">{target}</span></>
-              )}
-            </p>
-          )}
-        </div>
-      </ConfigSection>
-
       {error && (
         <ConfigSection>
           <ErrorAlert title="Simulation failed" message={error} />
         </ConfigSection>
       )}
-
-      <ConfigSection>
-        <Button
-          variant = "primary"
-          size = "md"
-          icon = {Play}
-          className = "w-full"
-          onClick = {onRun}
-          disabled = {isRunning}
-        >
-          {isRunning ? 'Running…' : 'Run Simulation'}
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {Save}
-          className = "w-full text-slate-500"
-          onClick = {onSave}
-          disabled = {isRunning}
-        >
-          Save Scenario
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {RotateCcw}
-          className = "w-full text-slate-500"
-          onClick = {onReset}
-          disabled = {isRunning}
-        >
-          Reset
-        </Button>
-      </ConfigSection>
 
     </ConfigPanel>
   )
@@ -1017,8 +954,7 @@ export default function GraphLabPage() {
   }, [algorithm])
 
   // ── Mode switching ──────────────────────────────────────────────────────────
-  const handleModeChange = useCallback((e) => {
-    const newMode = e.target.value
+  const handleModeChange = useCallback((newMode) => {
     setMode(newMode)
     setAlgorithm(newMode === 'grid' ? 'bfs_grid' : 'bfs')
     clearTimeline()
@@ -1095,7 +1031,20 @@ export default function GraphLabPage() {
         description = "Interactive graph traversal and pathfinding simulations."
         accent = "brand"
         badge = "Phase 5"
-      />
+      >
+        <div className = "flex items-center gap-1 bg-slate-900/50 border border-white/[0.06] rounded-lg p-1">
+          <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || (mode === 'grid' && (!gridState.startCell || !gridState.endCell))}>
+            {isRunning || isPlaying ? 'Running…' : 'Run'}
+          </Button>
+          <Button variant = "ghost" size = "sm" icon = {Save} onClick = {handleSave} disabled = {isRunning || isPlaying}>
+            Save
+          </Button>
+          <div className = "w-px h-4 bg-white/[0.08]" />
+          <Button variant = "ghost" size = "sm" icon = {RotateCcw} onClick = {handleReset} disabled = {isRunning || isPlaying}>
+            Reset
+          </Button>
+        </div>
+      </PageHeader>
 
       <GuestPromptBanner />
 
@@ -1124,10 +1073,6 @@ export default function GraphLabPage() {
               onModeChange = {handleModeChange}
               nodeOptions = {nodeOptions}
               edgeCount = {graphEdges.length}
-              onRun = {handleRun}
-              onReset = {handleReset}
-              onSave = {handleSave}
-              isRunning = {isRunning || isPlaying}
               error = {timelineError}
             />
           ) : (
@@ -1142,11 +1087,7 @@ export default function GraphLabPage() {
               onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
               mode = {mode}
               onModeChange = {handleModeChange}
-              onRun = {handleRun}
-              onReset = {handleReset}
-              isRunning = {isRunning || isPlaying}
               error = {timelineError}
-              canRun = {!!gridState.startCell && !!gridState.endCell}
             />
           )
         }

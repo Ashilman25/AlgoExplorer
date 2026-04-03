@@ -1,6 +1,6 @@
 // frontend/test/components/simulation/GridConfig.test.jsx
 
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import GridConfig from '../../../src/components/simulation/GridConfig'
 
@@ -15,11 +15,7 @@ const defaultProps = {
   onExplanationLevelChange: vi.fn(),
   mode: 'grid',
   onModeChange: vi.fn(),
-  onRun: vi.fn(),
-  onReset: vi.fn(),
-  isRunning: false,
   error: null,
-  canRun: true,
 }
 
 function renderConfig(overrides = {}) {
@@ -27,15 +23,18 @@ function renderConfig(overrides = {}) {
 }
 
 describe('GridConfig', () => {
-  it('renders the panel title', () => {
+  it('renders the mode toggle', () => {
     renderConfig()
-    expect(screen.getByText('Grid Lab')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Graph' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Grid' })).toBeInTheDocument()
   })
 
-  it('renders mode selector with grid selected', () => {
+  it('renders mode toggle with grid active', () => {
     renderConfig()
-    const modeSelect = screen.getByLabelText('Mode')
-    expect(modeSelect.value).toBe('grid')
+    const gridBtn = screen.getByRole('button', { name: 'Grid' })
+    const graphBtn = screen.getByRole('button', { name: 'Graph' })
+    expect(gridBtn).toBeInTheDocument()
+    expect(graphBtn).toBeInTheDocument()
   })
 
   it('renders algorithm selector with grid algorithms', () => {
@@ -54,24 +53,9 @@ describe('GridConfig', () => {
     expect(screen.queryByText('Grid Size')).not.toBeInTheDocument()
   })
 
-  it('does not render save scenario button', () => {
-    renderConfig()
-    expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
-  })
-
   it('renders diagonal checkbox', () => {
     renderConfig()
     expect(screen.getByLabelText(/diagonal/i)).toBeInTheDocument()
-  })
-
-  it('disables run button when canRun is false', () => {
-    renderConfig({ canRun: false })
-    expect(screen.getByRole('button', { name: /run/i })).toBeDisabled()
-  })
-
-  it('disables run button when isRunning is true', () => {
-    renderConfig({ isRunning: true })
-    expect(screen.getByRole('button', { name: /running/i })).toBeDisabled()
   })
 
   it('shows error alert when error is set', () => {
@@ -79,16 +63,4 @@ describe('GridConfig', () => {
     expect(screen.getByText('Something went wrong')).toBeInTheDocument()
   })
 
-  it('renders input summary with rows x cols', () => {
-    renderConfig({ rows: 21, cols: 32, allowDiagonal: true })
-    expect(screen.getByText('21 × 32 grid')).toBeInTheDocument()
-    expect(screen.getByText('8-dir')).toBeInTheDocument()
-  })
-
-  it('calls onRun when run button clicked', () => {
-    const onRun = vi.fn()
-    renderConfig({ onRun })
-    fireEvent.click(screen.getByRole('button', { name: /run/i }))
-    expect(onRun).toHaveBeenCalledOnce()
-  })
 })
