@@ -235,6 +235,11 @@ describe('module setup forms', () => {
       <DpConfig
         algorithm="lcs"
         onAlgorithmChange={handlers.onAlgorithmChange}
+        presetOptions={[
+          { value: 'custom', label: 'Custom' },
+          { value: 'short_match', label: 'Short — obvious match' },
+          { value: 'medium', label: 'Medium strings' },
+        ]}
         preset="short_match"
         onPresetChange={handlers.onPresetChange}
         string1="ABCDEF"
@@ -280,6 +285,10 @@ describe('module setup forms', () => {
       <DpConfig
         algorithm="edit_distance"
         onAlgorithmChange={handlers.onAlgorithmChange}
+        presetOptions={[
+          { value: 'custom', label: 'Custom' },
+          { value: 'short_match', label: 'Short — obvious match' },
+        ]}
         preset="custom"
         onPresetChange={handlers.onPresetChange}
         string1=""
