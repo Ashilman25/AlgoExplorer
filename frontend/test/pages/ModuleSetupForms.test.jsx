@@ -38,6 +38,11 @@ describe('module setup forms', () => {
         onAlgorithmChange={handlers.onAlgorithmChange}
         preset="bfs-demo"
         onPresetChange={handlers.onPresetChange}
+        presetOptions={[
+          { value: 'custom', label: 'Custom (loaded scenario)' },
+          { value: 'bfs-demo', label: 'BFS Demo — 6 nodes' },
+          { value: 'weighted-diamond', label: 'Weighted Diamond — 5 nodes' },
+        ]}
         source="A"
         onSourceChange={handlers.onSourceChange}
         target="F"
@@ -97,6 +102,10 @@ describe('module setup forms', () => {
         onAlgorithmChange={handlers.onAlgorithmChange}
         preset="custom"
         onPresetChange={handlers.onPresetChange}
+        presetOptions={[
+          { value: 'custom', label: 'Custom (loaded scenario)' },
+          { value: 'bfs-demo', label: 'BFS Demo — 6 nodes' },
+        ]}
         source="A"
         onSourceChange={handlers.onSourceChange}
         target="B"
