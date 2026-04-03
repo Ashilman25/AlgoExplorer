@@ -9,6 +9,7 @@ from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
 from app.simulation.explanation_builder import ExplanationBuilder
+from app.benchmark.graph_inputs import parse_benchmark_graph
 
 @register("graph", "bfs")
 class BFSAlgorithm(BaseAlgorithm):
@@ -22,45 +23,18 @@ class BFSAlgorithm(BaseAlgorithm):
     
     
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        eb = ExplanationBuilder(algo_input.explanation_level)
-
-        # payload parse + validation
-        try:
-            graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
-            
-        except ValidationError as e:
-            raise DomainError("Invalid graph input.", details = {"errors": e.errors()})
-
-        node_ids: list[str] = []
-        for n in graph_input.nodes:
-            node_ids.append(str(n.id))
-        
-        source: str = str(graph_input.source)
-        target: str | None = str(graph_input.target) if graph_input.target is not None else None
-
-        if source not in node_ids:
-            raise DomainError(f"Source node '{source}' not found in node list")
-
-        if target and target not in node_ids:
-            raise DomainError(f"Target node '{target}' not found in node list")
-
-        #adjacency list
-        adj: dict[str, list[str]] = {}
-        for n in node_ids:
-            adj[n] = []
-                    
-        for e in graph_input.edges:
-            u = str(e.source)
-            v = str(e.target)
-            
-            adj[u].append(v)
-            
-            if not graph_input.directed:
-                adj[v].append(u)
-            
-        
         # ── benchmark fast path ─────────────────────────────
         if algo_input.execution_mode == "benchmark":
+            bg = parse_benchmark_graph(algo_input.input_payload)
+
+            adj: dict[str, list[str]] = {n: [] for n in bg.node_ids}
+            for u, v, _ in bg.edges:
+                adj[u].append(v)
+                if not bg.directed:
+                    adj[v].append(u)
+
+            source = bg.source
+            target = bg.target
             queue: deque[str] = deque([source])
             visited: set[str] = {source}
             metrics = {"nodes_visited": 0, "edges_explored": 0, "frontier_size": 1}
@@ -86,6 +60,44 @@ class BFSAlgorithm(BaseAlgorithm):
                 summary_metrics = metrics,
                 algorithm_metadata = self.build_metadata(algo_input),
             )
+
+        # ── simulation path ─────────────────────────────────
+        eb = ExplanationBuilder(algo_input.explanation_level)
+
+        # payload parse + validation
+        try:
+            graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
+
+        except ValidationError as e:
+            raise DomainError("Invalid graph input.", details = {"errors": e.errors()})
+
+        node_ids: list[str] = []
+        for n in graph_input.nodes:
+            node_ids.append(str(n.id))
+
+        source: str = str(graph_input.source)
+        target: str | None = str(graph_input.target) if graph_input.target is not None else None
+
+        if source not in node_ids:
+            raise DomainError(f"Source node '{source}' not found in node list")
+
+        if target and target not in node_ids:
+            raise DomainError(f"Target node '{target}' not found in node list")
+
+        #adjacency list
+        adj: dict[str, list[str]] = {}
+        for n in node_ids:
+            adj[n] = []
+
+        for e in graph_input.edges:
+            u = str(e.source)
+            v = str(e.target)
+
+            adj[u].append(v)
+
+            if not graph_input.directed:
+                adj[v].append(u)
+
 
         #simulation state
         node_states: dict[str, str] = {}

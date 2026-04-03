@@ -10,6 +10,7 @@ from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
 from app.simulation.explanation_builder import ExplanationBuilder
+from app.benchmark.graph_inputs import parse_benchmark_graph
 
 
 @register("graph", "astar")
@@ -23,6 +24,66 @@ class AStarAlgorithm(BaseAlgorithm):
         return "astar"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            bg = parse_benchmark_graph(algo_input.input_payload)
+
+            adj: dict[str, list[tuple[str, float]]] = {n: [] for n in bg.node_ids}
+            for u, v, w in bg.edges:
+                adj[u].append((v, w))
+                if not bg.directed:
+                    adj[v].append((u, w))
+
+            coords = bg.coords
+
+            def heuristic(node_id: str) -> float:
+                if bg.target is None:
+                    return 0.0
+                nx, ny = coords[node_id]
+                tx, ty = coords[bg.target]
+                return math.sqrt((nx - tx) ** 2 + (ny - ty) ** 2)
+
+            g_scores: dict[str, float] = {n: math.inf for n in bg.node_ids}
+            g_scores[bg.source] = 0
+            visited: set[str] = set()
+            counter = 0
+            heap: list[tuple[float, int, str]] = [(heuristic(bg.source), counter, bg.source)]
+            metrics = {"nodes_visited": 0, "edges_explored": 0, "heuristic_evaluations": len(bg.node_ids), "heap_max_size": 1}
+            path_found = False
+
+            while heap:
+                _, _, current = heapq.heappop(heap)
+
+                if current in visited:
+                    continue
+
+                visited.add(current)
+                metrics["nodes_visited"] += 1
+
+                if bg.target and current == bg.target:
+                    path_found = True
+                    break
+
+                for neighbor, weight in adj[current]:
+                    metrics["edges_explored"] += 1
+                    if neighbor in visited:
+                        continue
+                    new_g = g_scores[current] + weight
+                    if new_g < g_scores[neighbor]:
+                        g_scores[neighbor] = new_g
+                        counter += 1
+                        heapq.heappush(heap, (new_g + heuristic(neighbor), counter, neighbor))
+                        if len(heap) > metrics["heap_max_size"]:
+                            metrics["heap_max_size"] = len(heap)
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"path_found": path_found, "path": [], "nodes_visited": metrics["nodes_visited"]},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
+        # ── simulation path ─────────────────────────────────
         eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
@@ -63,48 +124,6 @@ class AStarAlgorithm(BaseAlgorithm):
             adj[u].append((v, w))
             if not graph_input.directed:
                 adj[v].append((u, w))
-
-        # ── benchmark fast path ─────────────────────────────
-        if algo_input.execution_mode == "benchmark":
-            g_scores: dict[str, float] = {n: math.inf for n in node_ids}
-            g_scores[source] = 0
-            visited: set[str] = set()
-            counter = 0
-            heap: list[tuple[float, int, str]] = [(heuristic(source), counter, source)]
-            metrics = {"nodes_visited": 0, "edges_explored": 0, "heuristic_evaluations": len(node_ids), "heap_max_size": 1}
-            path_found = False
-
-            while heap:
-                _, _, current = heapq.heappop(heap)
-
-                if current in visited:
-                    continue
-
-                visited.add(current)
-                metrics["nodes_visited"] += 1
-
-                if target and current == target:
-                    path_found = True
-                    break
-
-                for neighbor, weight in adj[current]:
-                    metrics["edges_explored"] += 1
-                    if neighbor in visited:
-                        continue
-                    new_g = g_scores[current] + weight
-                    if new_g < g_scores[neighbor]:
-                        g_scores[neighbor] = new_g
-                        counter += 1
-                        heapq.heappush(heap, (new_g + heuristic(neighbor), counter, neighbor))
-                        if len(heap) > metrics["heap_max_size"]:
-                            metrics["heap_max_size"] = len(heap)
-
-            return AlgorithmOutput(
-                timeline_steps = [],
-                final_result = {"path_found": path_found, "path": [], "nodes_visited": metrics["nodes_visited"]},
-                summary_metrics = metrics,
-                algorithm_metadata = self.build_metadata(algo_input),
-            )
 
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}
