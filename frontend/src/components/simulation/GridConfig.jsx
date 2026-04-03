@@ -12,17 +12,9 @@ const GRID_ALGOS = [
   { value: 'astar_grid',    label: 'A* — Heuristic Search' },
 ]
 
-const MAZE_OPTIONS = [
-  { value: 'none',        label: 'None' },
-  { value: 'backtracker', label: 'Recursive Backtracker' },
-  { value: 'scatter',     label: 'Random Scatter' },
-]
-
 export default function GridConfig({
   algorithm, onAlgorithmChange,
   rows, cols,
-  mazeType, onMazeTypeChange,
-  density, onDensityChange,
   allowDiagonal, onAllowDiagonalChange,
   explanationLevel, onExplanationLevelChange,
   mode, onModeChange,
@@ -39,24 +31,6 @@ export default function GridConfig({
 
       <ConfigSection title = "Algorithm">
         <Select aria-label = "Algorithm" options = {GRID_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
-      </ConfigSection>
-
-      <ConfigSection title = "Maze Generation">
-        <Select aria-label = "Maze" options = {MAZE_OPTIONS} value = {mazeType} onChange = {onMazeTypeChange} />
-        {mazeType === 'scatter' && (
-          <div className = "space-y-1.5 mt-2">
-            <input
-              type = "range"
-              min = {10}
-              max = {40}
-              value = {Math.round(density * 100)}
-              onChange = {onDensityChange}
-              aria-label = "Density"
-              className = "w-full accent-brand-500 h-1.5 rounded-full bg-slate-700 cursor-pointer"
-            />
-            <p className = "font-mono text-xs text-slate-400 text-center">{Math.round(density * 100)}%</p>
-          </div>
-        )}
       </ConfigSection>
 
       <ConfigSection title = "Options">

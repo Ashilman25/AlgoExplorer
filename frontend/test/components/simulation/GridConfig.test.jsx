@@ -9,10 +9,6 @@ const defaultProps = {
   onAlgorithmChange: vi.fn(),
   rows: 20,
   cols: 30,
-  mazeType: 'none',
-  onMazeTypeChange: vi.fn(),
-  density: 0.25,
-  onDensityChange: vi.fn(),
   allowDiagonal: false,
   onAllowDiagonalChange: vi.fn(),
   explanationLevel: 'standard',
@@ -61,20 +57,6 @@ describe('GridConfig', () => {
   it('does not render save scenario button', () => {
     renderConfig()
     expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
-  })
-
-  it('renders maze generation dropdown', () => {
-    renderConfig()
-    const mazeSelect = screen.getByLabelText('Maze')
-    expect(mazeSelect.value).toBe('none')
-  })
-
-  it('shows density slider only when maze type is scatter', () => {
-    const { rerender } = render(<GridConfig {...defaultProps} mazeType="none" />)
-    expect(screen.queryByLabelText('Density')).not.toBeInTheDocument()
-
-    rerender(<GridConfig {...defaultProps} mazeType="scatter" />)
-    expect(screen.getByLabelText('Density')).toBeInTheDocument()
   })
 
   it('renders diagonal checkbox', () => {

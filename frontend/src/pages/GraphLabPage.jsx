@@ -1207,10 +1207,6 @@ export default function GraphLabPage() {
               onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
               rows = {gridState.rows}
               cols = {gridState.cols}
-              mazeType = {gridState.mazeType}
-              onMazeTypeChange = {(e) => gridState.setMazeType(e.target.value)}
-              density = {gridState.density}
-              onDensityChange = {(e) => gridState.setDensity(Number(e.target.value) / 100)}
               allowDiagonal = {gridState.allowDiagonal}
               onAllowDiagonalChange = {(e) => gridState.setAllowDiagonal(e.target.checked)}
               explanationLevel = {explanationLevel}
@@ -1262,6 +1258,9 @@ export default function GraphLabPage() {
                 onWallBatch = {gridState.handleWallBatch}
                 onStartPlace = {gridState.handleStartPlace}
                 onEndPlace = {gridState.handleEndPlace}
+                mazeType = {gridState.mazeType}
+                onGenerate = {gridState.generateMaze}
+                onMazeTypeChange = {gridState.setMazeType}
                 containerRef = {canvasContainerRef}
                 onDimensionsChange = {gridState.setDimensions}
               />

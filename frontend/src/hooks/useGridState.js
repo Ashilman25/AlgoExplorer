@@ -10,9 +10,9 @@ function clearStores() {
   useRunStore.getState().clearRun()
 }
 
-function generateWalls(type, rows, cols, density, start, end) {
+function generateWalls(type, rows, cols, start, end) {
   if (type === 'backtracker') return recursiveBacktracker(rows, cols, start, end)
-  if (type === 'scatter') return randomScatter(rows, cols, density, start, end)
+  if (type === 'scatter') return randomScatter(rows, cols, 0.30, start, end)
   return new Set()
 }
 
@@ -24,17 +24,16 @@ export function useGridState(initialState) {
   const [endCell, setEndCell] = useState(initialState?.endCell ?? null)
   const [allowDiagonal, setAllowDiagonalRaw] = useState(initialState?.allowDiagonal ?? false)
   const [mazeType, setMazeTypeRaw] = useState('none')
-  const [density, setDensityRaw] = useState(initialState?.density ?? 0.25)
 
   // Ref tracks latest values so memoized callbacks never go stale
-  const ref = useRef({ rows, cols, walls, startCell, endCell, allowDiagonal, density, mazeType })
+  const ref = useRef({ rows, cols, walls, startCell, endCell, allowDiagonal, mazeType })
   useEffect(() => {
-    ref.current = { rows, cols, walls, startCell, endCell, allowDiagonal, density, mazeType }
+    ref.current = { rows, cols, walls, startCell, endCell, allowDiagonal, mazeType }
   })
 
-  const applyMaze = useCallback((type, d) => {
+  const applyMaze = useCallback((type) => {
     const { rows: r, cols: c, startCell: sc, endCell: ec } = ref.current
-    const newWalls = generateWalls(type, r, c, d, sc, ec)
+    const newWalls = generateWalls(type, r, c, sc, ec)
     setWalls(newWalls)
     if (sc && newWalls.has(`${sc[0]},${sc[1]}`)) setStartCell(null)
     if (ec && newWalls.has(`${ec[0]},${ec[1]}`)) setEndCell(null)
@@ -81,15 +80,12 @@ export function useGridState(initialState) {
 
   const setMazeType = useCallback((type) => {
     setMazeTypeRaw(type)
-    applyMaze(type, ref.current.density)
+    applyMaze(type)
     clearStores()
   }, [applyMaze])
 
-  const setDensity = useCallback((d) => {
-    setDensityRaw(d)
-    if (ref.current.mazeType === 'scatter') {
-      applyMaze('scatter', d)
-    }
+  const generateMaze = useCallback(() => {
+    applyMaze(ref.current.mazeType)
     clearStores()
   }, [applyMaze])
 
@@ -125,9 +121,9 @@ export function useGridState(initialState) {
   }, [])
 
   return {
-    rows, cols, walls, startCell, endCell, allowDiagonal, mazeType, density,
+    rows, cols, walls, startCell, endCell, allowDiagonal, mazeType,
     handleWallBatch, handleStartPlace, handleEndPlace,
-    setDimensions, setAllowDiagonal, setMazeType, setDensity,
-    clearWalls, resetGrid, buildGridPayload,
+    setDimensions, setAllowDiagonal, setMazeType,
+    clearWalls, resetGrid, buildGridPayload, generateMaze,
   }
 }

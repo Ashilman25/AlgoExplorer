@@ -129,6 +129,9 @@ function renderCanvas(props = {}) {
     onStartPlace: vi.fn(),
     onEndPlace: vi.fn(),
     containerRef,
+    mazeType: 'backtracker',
+    onGenerate: vi.fn(),
+    onMazeTypeChange: vi.fn(),
     ...props,
   }
 
@@ -319,5 +322,63 @@ describe('GridCanvas — pin drag-and-drop', () => {
     pu(topCanvas, { offsetX: 420, offsetY: 420, pointerId: 1 })
 
     expect(onEndPlace).toHaveBeenCalledWith(null, null)
+  })
+})
+
+// ── Split button (maze generation) tests ─────────────────────────────────────
+
+describe('GridCanvas — maze generate split button', () => {
+  it('renders Generate button in build mode', () => {
+    renderCanvas({ mazeType: 'backtracker', onGenerate: vi.fn(), onMazeTypeChange: vi.fn() })
+    expect(screen.getByText('Generate')).toBeInTheDocument()
+  })
+
+  it('hides Generate button in playback mode', () => {
+    usePlaybackStore.setState({ totalSteps: 5 })
+    renderCanvas({ mazeType: 'backtracker', onGenerate: vi.fn(), onMazeTypeChange: vi.fn() })
+    expect(screen.queryByText('Generate')).not.toBeInTheDocument()
+  })
+
+  it('calls onGenerate when Generate button is clicked', () => {
+    const onGenerate = vi.fn()
+    renderCanvas({ mazeType: 'backtracker', onGenerate, onMazeTypeChange: vi.fn() })
+    fireEvent.click(screen.getByText('Generate'))
+    expect(onGenerate).toHaveBeenCalledOnce()
+  })
+
+  it('opens dropdown when chevron is clicked', () => {
+    renderCanvas({ mazeType: 'backtracker', onGenerate: vi.fn(), onMazeTypeChange: vi.fn() })
+    fireEvent.click(screen.getByLabelText('Maze type menu'))
+    expect(screen.getByText('Recursive Backtracker')).toBeInTheDocument()
+    expect(screen.getByText('Random Scatter')).toBeInTheDocument()
+  })
+
+  it('closes dropdown when chevron is clicked again', () => {
+    renderCanvas({ mazeType: 'backtracker', onGenerate: vi.fn(), onMazeTypeChange: vi.fn() })
+    fireEvent.click(screen.getByLabelText('Maze type menu'))
+    expect(screen.getByText('Recursive Backtracker')).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Maze type menu'))
+    expect(screen.queryByText('Recursive Backtracker')).not.toBeInTheDocument()
+  })
+
+  it('calls onMazeTypeChange and closes dropdown when option is clicked', () => {
+    const onMazeTypeChange = vi.fn()
+    renderCanvas({ mazeType: 'backtracker', onGenerate: vi.fn(), onMazeTypeChange })
+    fireEvent.click(screen.getByLabelText('Maze type menu'))
+    fireEvent.click(screen.getByText('Random Scatter'))
+    expect(onMazeTypeChange).toHaveBeenCalledWith('scatter')
+    // Dropdown should close
+    expect(screen.queryByText('Carved maze with corridors')).not.toBeInTheDocument()
+  })
+
+  it('shows checkmark on the active maze type', () => {
+    renderCanvas({ mazeType: 'scatter', onGenerate: vi.fn(), onMazeTypeChange: vi.fn() })
+    fireEvent.click(screen.getByLabelText('Maze type menu'))
+    // The active option (scatter) should have the checkmark
+    const scatterRow = screen.getByText('Random Scatter').closest('[data-maze-option]')
+    expect(scatterRow.querySelector('[data-checkmark]')).toBeInTheDocument()
+    // The inactive option (backtracker) should not
+    const backtrackerRow = screen.getByText('Recursive Backtracker').closest('[data-maze-option]')
+    expect(backtrackerRow.querySelector('[data-checkmark]')).not.toBeInTheDocument()
   })
 })
