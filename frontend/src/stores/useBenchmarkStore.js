@@ -52,14 +52,34 @@ export const useBenchmarkStore = create((set, get) => ({
     }
   },
 
+  cancelJob: async (jobId) => {
+    try {
+      const status = await benchmarksService.cancelJob(jobId)
+      get().setJob(jobId, status)
+    } catch {
+      // Cancel request failed — keep polling, don't crash
+    }
+  },
+
   _poll: async (jobId) => {
     let status
     try {
       status = await benchmarksService.getJob(jobId)
       get().setJob(jobId, status)
     } catch {
-      // Status polling error — keep trying, don't crash
       return
+    }
+
+    // Fetch partial results while running
+    if (status.status === 'running' && status.progress > 0) {
+      try {
+        const results = await benchmarksService.getResults(jobId)
+        if (results.table?.length > 0) {
+          get().updateJob(jobId, { results })
+        }
+      } catch {
+        // Results not ready yet — ignore
+      }
     }
 
     if (status.status === 'completed') {
@@ -70,8 +90,19 @@ export const useBenchmarkStore = create((set, get) => ({
       } catch (err) {
         get().updateJob(jobId, { resultsError: err })
       }
-    } else if (status.status === 'failed') {
+    } else if (status.status === 'failed' || status.status === 'cancelled') {
       get().stopPolling()
+      // For cancelled, try to get partial results
+      if (status.status === 'cancelled') {
+        try {
+          const results = await benchmarksService.getResults(jobId)
+          if (results.table?.length > 0) {
+            get().updateJob(jobId, { results })
+          }
+        } catch {
+          // No results available
+        }
+      }
     }
   },
 }))

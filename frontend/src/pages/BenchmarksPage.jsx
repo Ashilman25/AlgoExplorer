@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   Gauge, Play, Check, X, ChevronDown, ChevronUp,
   Clock, Hash, ArrowUpDown, PenTool, Loader2,
-  Download, FileJson, FileSpreadsheet,
+  Download, FileJson, FileSpreadsheet, StopCircle,
 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Card, MetricCard, Badge, Spinner, Select, Slider, useToast, ErrorAlert } from '../components/ui'
@@ -19,6 +19,8 @@ import {
   BENCHMARK_LIMITS,
   BENCHMARK_SIZE_PRESETS,
   BENCHMARK_SIZE_LIMITS,
+  estimateBenchmarkDuration,
+  formatEstimate,
 } from '../config/benchmarkConfig'
 import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 
@@ -283,6 +285,16 @@ function BenchmarkConfig({
           >
             {isRunning ? 'Running...' : 'Launch Benchmark'}
           </Button>
+
+          {!isRunning && moduleType === 'sorting' && algorithms.length > 0 && sizes.length > 0 && (() => {
+            const est = estimateBenchmarkDuration(algorithms, sizes, trials)
+            const { text, color } = formatEstimate(est)
+            return (
+              <p className={`text-[10px] text-center font-mono ${color}`}>
+                Estimated: {text}
+              </p>
+            )
+          })()}
 
         </div>
       </Card>
@@ -554,7 +566,7 @@ function ExportBar({ resultData }) {
 
 export default function BenchmarksPage() {
   const toast = useToast()
-  const { setJob, setActiveJob, pollJob, stopPolling, jobs, activeJobId } = useBenchmarkStore()
+  const { setJob, setActiveJob, pollJob, stopPolling, cancelJob, jobs, activeJobId } = useBenchmarkStore()
 
   // Module / category state
   const [moduleType, setModuleType] = useState('sorting')
@@ -577,6 +589,7 @@ export default function BenchmarksPage() {
   const [resultData, setResultData] = useState(null)
   const [benchmarkError, setBenchmarkError] = useState(null)
   const [workerHealthy, setWorkerHealthy] = useState(true)
+  const [isCancelling, setIsCancelling] = useState(false)
 
   // Active job tracking
   const activeJob = activeJobId != null ? jobs[activeJobId] : null
@@ -594,6 +607,7 @@ export default function BenchmarksPage() {
 
     if (activeJob.status === 'completed') {
       setIsRunning(false)
+      setIsCancelling(false)
 
       if (activeJob.resultsError) {
         const parsed = parseApiError(activeJob.resultsError)
@@ -618,6 +632,7 @@ export default function BenchmarksPage() {
       }
     } else if (activeJob.status === 'failed') {
       setIsRunning(false)
+      setIsCancelling(false)
       setBenchmarkError({
         title: 'Benchmark failed',
         message: activeJob.summary?.error || 'An unexpected error occurred during benchmarking.',
@@ -627,8 +642,32 @@ export default function BenchmarksPage() {
         title: 'Benchmark failed',
         message: activeJob.summary?.error || 'An unexpected error occurred.',
       })
+    } else if (activeJob.status === 'cancelled') {
+      setIsRunning(false)
+      setIsCancelling(false)
+      if (activeJob.results) {
+        setResultData({
+          status: 'cancelled',
+          summary: activeJob.results?.summary || activeJob.summary || {},
+          series: activeJob.results?.series || {},
+          table: activeJob.results?.table || [],
+        })
+      }
+      toast({
+        type: 'warning',
+        title: 'Benchmark cancelled',
+        message: 'Benchmark was cancelled. Partial results may be available.',
+      })
+    } else if (activeJob.status === 'running' && activeJob.results) {
+      // Progressive results — update display while still running
+      setResultData({
+        status: 'running',
+        summary: activeJob.summary || {},
+        series: activeJob.results?.series || {},
+        table: activeJob.results?.table || [],
+      })
     }
-  }, [activeJob?.status])
+  }, [activeJob?.status, activeJob?.results])
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -728,6 +767,12 @@ export default function BenchmarksPage() {
     }
   }, [moduleType, category, algorithms, inputFamily, sizes, trials, metrics, setJob, setActiveJob, pollJob, toast])
 
+  const handleCancel = useCallback(async () => {
+    if (!activeJobId) return
+    setIsCancelling(true)
+    await cancelJob(activeJobId)
+  }, [activeJobId, cancelJob])
+
   const progress = activeJob?.progress ?? 0
   const statusLabel = activeJob?.status === 'pending'
     ? 'Queued...'
@@ -735,7 +780,7 @@ export default function BenchmarksPage() {
       ? `Running benchmarks... ${Math.round(progress * 100)}%`
       : null
 
-  const hasResults = resultData && resultData.status === 'completed'
+  const hasResults = resultData && (resultData.series && Object.keys(resultData.series).length > 0)
 
   return (
     <>
@@ -746,7 +791,12 @@ export default function BenchmarksPage() {
         accent="emerald"
       >
         {activeJob && (
-          <Badge variant={activeJob.status === 'completed' ? 'success' : activeJob.status === 'failed' ? 'error' : 'info'}>
+          <Badge variant={
+            activeJob.status === 'completed' ? 'success'
+            : activeJob.status === 'failed' ? 'error'
+            : activeJob.status === 'cancelled' ? 'warning'
+            : 'info'
+          }>
             {activeJob.status}
           </Badge>
         )}
@@ -790,12 +840,23 @@ export default function BenchmarksPage() {
                   <div className="flex items-center gap-3">
                     <Spinner size="md" />
                     <span className="text-sm text-slate-400">
-                      {statusLabel || `Running benchmark (${algorithms.length} algorithms x ${sizes.length} sizes x ${trials} trials)...`}
+                      {statusLabel || `Running benchmark (${algorithms.length} algorithms × ${sizes.length} sizes × ${trials} trials)...`}
                     </span>
                   </div>
-                  <span className="text-xs font-mono text-slate-500">
-                    {Math.round(progress * 100)}%
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-slate-500">
+                      {Math.round(progress * 100)}%
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={StopCircle}
+                      onClick={handleCancel}
+                      disabled={isCancelling}
+                    >
+                      {isCancelling ? 'Cancelling...' : 'Cancel'}
+                    </Button>
+                  </div>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-1.5">
                   <div
