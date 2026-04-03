@@ -11,7 +11,7 @@ from app.config import settings
 from app.exceptions import AuthenticationError, ConflictError, DomainError, NotFoundException, PermissionError
 from app.observability import configure_logging, get_logger, compact_context, request_context
 from app.schemas.errors import ErrorDetail, ErrorResponse
-from app.routes import auth, metadata, runs, benchmarks
+from app.routes import auth, metadata, presets, runs, benchmarks
 from app.db import init_db
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -68,6 +68,7 @@ app.add_middleware(
 )
 
 app.include_router(metadata.router)
+app.include_router(presets.router)
 app.include_router(auth.router)
 app.include_router(runs.router)
 app.include_router(benchmarks.router)

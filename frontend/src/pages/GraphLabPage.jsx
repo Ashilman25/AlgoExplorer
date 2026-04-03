@@ -12,127 +12,10 @@ import { useGuestStore } from '../stores/useGuestStore'
 import { useScenarioStore } from '../stores/useScenarioStore'
 import { generateId } from '../services/guestService'
 import { EXPLANATION_LEVELS, MODE_OPTIONS } from '../config/simulationConfig'
+import { metadataService } from '../services/metadataService'
+import { useMetadataStore } from '../stores/useMetadataStore'
 import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 
-
-const GRAPH_PRESETS = [
-  {
-    value: 'bfs-demo',
-    label: 'BFS Demo — 6 nodes',
-    nodes: [{id:'A'},{id:'B'},{id:'C'},{id:'D'},{id:'E'},{id:'F'}],
-    edges: [
-      {source:'A',target:'B'},{source:'A',target:'C'},
-      {source:'B',target:'D'},{source:'C',target:'E'},
-      {source:'D',target:'F'},{source:'E',target:'F'},
-    ],
-    source: 'A',
-    target: 'F',
-    weighted: false,
-  },
-  {
-    value: 'weighted-diamond',
-    label: 'Weighted Diamond — 5 nodes',
-    nodes: [{id:'S'},{id:'A'},{id:'B'},{id:'C'},{id:'T'}],
-    edges: [
-      {source:'S',target:'A',weight:1},{source:'S',target:'B',weight:4},
-      {source:'A',target:'C',weight:2},{source:'B',target:'C',weight:1},
-      {source:'C',target:'T',weight:3},{source:'A',target:'B',weight:2},
-    ],
-    source: 'S',
-    target: 'T',
-    weighted: true,
-  },
-  {
-    value: 'weighted-grid',
-    label: 'Weighted 4x4 Grid — 8 nodes',
-    nodes: [{id:'1'},{id:'2'},{id:'3'},{id:'4'},{id:'5'},{id:'6'},{id:'7'},{id:'8'}],
-    edges:  [
-      {source:'1',target:'2',weight:2},{source:'1',target:'3',weight:5},
-      {source:'2',target:'4',weight:3},{source:'2',target:'5',weight:1},
-      {source:'3',target:'5',weight:2},{source:'3',target:'6',weight:4},
-      {source:'4',target:'7',weight:1},{source:'5',target:'7',weight:6},
-      {source:'5',target:'8',weight:3},{source:'6',target:'8',weight:2},
-      {source:'7',target:'8',weight:1},
-    ],
-    source: '1',
-    target: '8',
-    weighted: true,
-  },
-  {
-    value: 'astar-coords',
-    label: 'A* with Coordinates — 6 nodes',
-    nodes: [
-      {id:'S',x:0,y:100},{id:'A',x:80,y:30},{id:'B',x:80,y:170},
-      {id:'C',x:180,y:50},{id:'D',x:180,y:150},{id:'T',x:280,y:100},
-    ],
-    edges: [
-      {source:'S',target:'A',weight:3},{source:'S',target:'B',weight:4},
-      {source:'A',target:'C',weight:4},{source:'B',target:'D',weight:3},
-      {source:'A',target:'D',weight:5},{source:'C',target:'T',weight:4},
-      {source:'D',target:'T',weight:3},
-    ],
-    source: 'S',
-    target: 'T',
-    weighted: true,
-  },
-  {
-    value: 'neg-weight',
-    label: 'Negative Weights — 5 nodes',
-    nodes: [{id:'S'},{id:'A'},{id:'B'},{id:'C'},{id:'T'}],
-    edges: [
-      {source:'S',target:'A',weight:4},{source:'S',target:'B',weight:5},
-      {source:'A',target:'B',weight:-3},{source:'A',target:'C',weight:6},
-      {source:'B',target:'C',weight:2},{source:'C',target:'T',weight:1},
-    ],
-    source: 'S',
-    target: 'T',
-    weighted: true,
-    directed: true,
-  },
-  {
-    value: 'mst-demo',
-    label: 'MST Demo — 6 nodes',
-    nodes: [{id:'A'},{id:'B'},{id:'C'},{id:'D'},{id:'E'},{id:'F'}],
-    edges: [
-      {source:'A',target:'B',weight:1},{source:'A',target:'C',weight:4},
-      {source:'B',target:'C',weight:2},{source:'B',target:'D',weight:6},
-      {source:'C',target:'D',weight:3},{source:'C',target:'E',weight:5},
-      {source:'D',target:'E',weight:7},{source:'D',target:'F',weight:4},
-      {source:'E',target:'F',weight:2},
-    ],
-    source: 'A',
-    weighted: true,
-  },
-  {
-    value: 'dag-prereqs',
-    label: 'DAG — Course Prerequisites',
-    nodes: [{id:'CS101'},{id:'CS201'},{id:'CS301'},{id:'MATH'},{id:'CS202'},{id:'CS401'},{id:'CS402'}],
-    edges: [
-      {source:'CS101',target:'CS201'},{source:'CS101',target:'CS202'},
-      {source:'MATH',target:'CS301'},{source:'CS201',target:'CS301'},
-      {source:'CS202',target:'CS401'},{source:'CS301',target:'CS401'},
-      {source:'CS301',target:'CS402'},
-    ],
-    weighted: false,
-    directed: true,
-  },
-  {
-    value: 'dag-cycle',
-    label: 'DAG with Cycle — 4 nodes',
-    nodes: [{id:'A'},{id:'B'},{id:'C'},{id:'D'}],
-    edges: [
-      {source:'A',target:'B'},{source:'B',target:'C'},
-      {source:'C',target:'A'},{source:'C',target:'D'},
-    ],
-    weighted: false,
-    directed: true,
-  },
-]
-
-const GRAPH_PRESET_OPTIONS = [
-  { value: 'custom', label: 'Custom (loaded scenario)' },
-  ...GRAPH_PRESETS.map((p) => ({ value: p.value, label: p.label })),
-]
 
 const ALGORITHM_CATEGORY = {
   bfs: 'pathfinding',
@@ -163,7 +46,7 @@ const GRAPH_ALGOS = [
 
 export function GraphConfig({
   algorithm, onAlgorithmChange,
-  preset, onPresetChange,
+  preset, onPresetChange, presetOptions,
   source, onSourceChange,
   target, onTargetChange,
   weighted, onWeightedChange,
@@ -196,7 +79,7 @@ export function GraphConfig({
       <ConfigSection title = "Preset">
         <Select
           aria-label = "Preset"
-          options = {GRAPH_PRESET_OPTIONS}
+          options = {presetOptions}
           value = {preset}
           onChange = {onPresetChange}
         />
@@ -254,7 +137,7 @@ export function GraphConfig({
       <ConfigSection title = "Input Summary">
         <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
           <p className = "text-xs font-medium text-slate-300">
-            {GRAPH_PRESETS.find((p) => p.value === preset)?.label ?? 'Custom'}
+            {presetOptions.find((p) => p.value === preset)?.label ?? 'Custom'}
           </p>
 
           <p className = "font-mono text-[10px] text-slate-500">
@@ -909,12 +792,12 @@ export default function GraphLabPage() {
     return s?.module_type === 'graph' ? s : null
   })
   const gp = loadedScenario?.input_payload
-  const initPreset = GRAPH_PRESETS[0]
 
   const [algorithm, setAlgorithm] = useState(loadedScenario?.algorithm_key ?? 'bfs')
-  const [presetKey, setPresetKey] = useState(loadedScenario ? 'custom' : 'bfs-demo')
-  const [source, setSource] = useState(gp?.source != null ? String(gp.source) : GRAPH_PRESETS[0].source)
-  const [target, setTarget] = useState(gp?.target != null ? String(gp.target) : GRAPH_PRESETS[0].target)
+  const [presetKey, setPresetKey] = useState(loadedScenario ? 'custom' : '')
+  const [graphPresets, setGraphPresets] = useState([])
+  const [source, setSource] = useState(gp?.source != null ? String(gp.source) : '')
+  const [target, setTarget] = useState(gp?.target != null ? String(gp.target) : '')
   const [weighted, setWeighted] = useState(gp?.weighted ?? false)
   const [directed, setDirected] = useState(gp?.directed ?? false)
   const [explanationLevel, setExplanationLevel] = useState('standard')
@@ -961,10 +844,10 @@ export default function GraphLabPage() {
     return () => ro.disconnect()
   }, [])
 
-  const [graphNodes, setGraphNodes] = useState(gp?.nodes ?? initPreset.nodes)
-  const [graphEdges, setGraphEdges] = useState(gp?.edges ?? initPreset.edges)
+  const [graphNodes, setGraphNodes] = useState(gp?.nodes ?? [])
+  const [graphEdges, setGraphEdges] = useState(gp?.edges ?? [])
   const [nodePositions, setNodePositions] = useState(() =>
-    gp?.nodePositions ?? computeNodePositions(gp?.nodes ?? initPreset.nodes),
+    gp?.nodePositions ?? (gp?.nodes ? computeNodePositions(gp.nodes) : {}),
   )
   const hasInitialized = useRef(!!gp?.nodePositions)
 
@@ -1000,14 +883,59 @@ export default function GraphLabPage() {
     [graphNodes],
   )
 
+  // ── Preset fetching ──
+  useEffect(() => {
+    if (mode !== 'graph') return
+
+    const cached = useMetadataStore.getState().getPresets('graph', algorithm)
+    if (cached) {
+      setGraphPresets(cached)
+      return
+    }
+
+    let cancelled = false
+    metadataService.getPresets('graph', algorithm).then((resp) => {
+      if (cancelled) return
+      const items = resp.groups.flatMap((g) => g.presets)
+      useMetadataStore.getState().setPresets('graph', algorithm, items)
+      setGraphPresets(items)
+    }).catch(() => {
+      // Graceful degradation — presets dropdown will just show "Custom"
+    })
+    return () => { cancelled = true }
+  }, [algorithm, mode])
+
+  // Apply first preset on initial load (once presets arrive and no scenario is loaded)
+  const appliedInitialPreset = useRef(!!loadedScenario)
+  useEffect(() => {
+    if (appliedInitialPreset.current || graphPresets.length === 0) return
+    appliedInitialPreset.current = true
+    const first = graphPresets[0]
+    const p = first.input_payload
+    setPresetKey(first.key)
+    setGraphNodes(p.nodes)
+    setGraphEdges(p.edges)
+    setNodePositions(computeNodePositions(p.nodes, canvasSize.w / 2, canvasSize.h / 2, Math.min(canvasSize.w, canvasSize.h) * 0.3))
+    setSource(p.source ? String(p.source) : '')
+    setTarget(p.target ? String(p.target) : '')
+    setWeighted(p.weighted ?? false)
+    setDirected(p.directed ?? false)
+  }, [graphPresets, canvasSize])
+
+  const presetOptions = useMemo(() => [
+    { value: 'custom', label: 'Custom (loaded scenario)' },
+    ...graphPresets.map((p) => ({ value: p.key, label: p.label })),
+  ], [graphPresets])
+
   // presets
   const handlePresetChange = useCallback((e) => {
     const key = e.target.value
     setPresetKey(key)
     clearTimeline()
     clearRun()
-    const p = GRAPH_PRESETS.find((pr) => pr.value === key)
-    if (p) {
+    const found = graphPresets.find((pr) => pr.key === key)
+    if (found) {
+      const p = found.input_payload
       setGraphNodes(p.nodes)
       setGraphEdges(p.edges)
       setNodePositions(computeNodePositions(p.nodes, canvasSize.w / 2, canvasSize.h / 2, Math.min(canvasSize.w, canvasSize.h) * 0.3))
@@ -1017,7 +945,7 @@ export default function GraphLabPage() {
       setDirected(p.directed ?? false)
       setConnectSource(null)
     }
-  }, [canvasSize, clearTimeline, clearRun])
+  }, [graphPresets, canvasSize, clearTimeline, clearRun])
 
   //build actions
   const handleAddNode = useCallback((cx, cy) => {
@@ -1181,6 +1109,7 @@ export default function GraphLabPage() {
               onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
               preset = {presetKey}
               onPresetChange = {handlePresetChange}
+              presetOptions = {presetOptions}
               source = {source}
               onSourceChange = {(e) => setSource(e.target.value)}
               target = {target}
