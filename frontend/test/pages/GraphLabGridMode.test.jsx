@@ -200,8 +200,9 @@ describe('GraphLabPage — mode switch', () => {
     const modeSelect = screen.getByLabelText('Mode')
     fireEvent.change(modeSelect, { target: { value: 'grid' } })
 
-    // GridConfig has "Maze" dropdown, not "Preset"
-    expect(screen.getByLabelText('Maze')).toBeInTheDocument()
+    // GridConfig no longer has Maze dropdown — maze generation moved to pin tray
+    // Just check that Preset (graph-only) is gone and Algorithm (grid) is present
+    expect(screen.getByLabelText('Algorithm').value).toBe('bfs_grid')
     expect(screen.queryByLabelText('Preset')).not.toBeInTheDocument()
   })
 

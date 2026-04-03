@@ -24,7 +24,6 @@ describe('useGridState', () => {
       expect(result.current.endCell).toBeNull()
       expect(result.current.allowDiagonal).toBe(false)
       expect(result.current.mazeType).toBe('none')
-      expect(result.current.density).toBe(0.25)
     })
 
     it('hydrates from initialState', () => {
@@ -35,7 +34,6 @@ describe('useGridState', () => {
         startCell: [0, 0],
         endCell: [9, 14],
         allowDiagonal: true,
-        density: 0.3,
       }
       const { result } = renderHook(() => useGridState(initial))
       expect(result.current.rows).toBe(10)
@@ -46,7 +44,6 @@ describe('useGridState', () => {
       expect(result.current.allowDiagonal).toBe(true)
       // mazeType always defaults to 'none' on hydration
       expect(result.current.mazeType).toBe('none')
-      expect(result.current.density).toBe(0.3)
     })
   })
 
@@ -161,7 +158,7 @@ describe('useGridState', () => {
       const { result } = renderHook(() => useGridState())
       act(() => result.current.setMazeType('scatter'))
       expect(result.current.mazeType).toBe('scatter')
-      // With default density 0.25 on 20x20, expect some walls
+      // With hardcoded density 0.30 on 20x20, expect some walls
       expect(result.current.walls.size).toBeGreaterThan(0)
     })
 
@@ -186,21 +183,31 @@ describe('useGridState', () => {
     })
   })
 
-  describe('setDensity', () => {
-    it('regenerates scatter maze when mazeType is scatter', () => {
-      const { result } = renderHook(() => useGridState())
-      act(() => result.current.setMazeType('scatter'))
-      act(() => result.current.setDensity(0.40))
-      expect(result.current.density).toBe(0.40)
-      expect(result.current.walls.size).toBeGreaterThanOrEqual(0)
-    })
-
-    it('does not regenerate when mazeType is not scatter', () => {
+  describe('generateMaze', () => {
+    it('regenerates walls with current mazeType', () => {
       const { result } = renderHook(() => useGridState())
       act(() => result.current.setMazeType('backtracker'))
-      const wallsAfterBacktracker = new Set(result.current.walls)
-      act(() => result.current.setDensity(0.40))
-      expect(result.current.walls).toEqual(wallsAfterBacktracker)
+      const firstWalls = new Set(result.current.walls)
+      expect(firstWalls.size).toBeGreaterThan(0)
+
+      let changed = false
+      for (let i = 0; i < 5; i++) {
+        act(() => result.current.generateMaze())
+        if (result.current.walls.size !== firstWalls.size ||
+            ![...result.current.walls].every(w => firstWalls.has(w))) {
+          changed = true
+          break
+        }
+      }
+      expect(changed).toBe(true)
+    })
+
+    it('clears walls when mazeType is none', () => {
+      const { result } = renderHook(() => useGridState())
+      act(() => result.current.handleWallBatch(['1,1', '2,2'], true))
+      expect(result.current.walls.size).toBe(2)
+      act(() => result.current.generateMaze())
+      expect(result.current.walls.size).toBe(0)
     })
   })
 
