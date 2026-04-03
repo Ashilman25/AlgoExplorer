@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import TopNav from './TopNav'
 import Sidebar from './Sidebar'
@@ -10,6 +10,7 @@ export default function AppShell() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('ax-theme') || 'dark'
   })
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
 
   useEffect(() => {
@@ -23,12 +24,14 @@ export default function AppShell() {
     setTheme(t => (t === 'dark' ? 'light' : 'dark'))
   }
 
+  const toggleSidebar = useCallback(() => setIsCollapsed(c => !c), [])
+
   return (
     <>
       <TopNav theme = {theme} onToggleTheme = {toggleTheme} />
-      <Sidebar />
+      <Sidebar isCollapsed = {isCollapsed} onToggle = {toggleSidebar} />
 
-      <main className = "pl-[240px] pt-[52px] min-h-screen">
+      <main className = "pt-[52px] min-h-screen transition-[padding-left] duration-200 ease-out" style = {{ paddingLeft: isCollapsed ? '56px' : '240px' }}>
         <ConnectionBanner />
         <div className = "px-6 py-7">
           <ErrorBoundary>
