@@ -78,10 +78,11 @@ def test_graph_progress_callback():
         "metrics": ["runtime_ms"],
     }
     run_benchmark("graph", config, progress_callback = callback)
-    assert callback.call_count == 2
+    # With parallel execution, callback fires per-algorithm completion
+    # 1 algorithm = 1 call
+    assert callback.call_count == 1
     calls = [c.args for c in callback.call_args_list]
-    assert calls[0] == (2, 4)
-    assert calls[1] == (4, 4)
+    assert calls[0] == (4, 4)
 
 
 def test_null_metric_for_unmapped_algorithm():

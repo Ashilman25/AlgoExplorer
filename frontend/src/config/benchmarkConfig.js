@@ -188,3 +188,42 @@ export const BENCHMARK_SIZE_PRESETS = {
     ],
   },
 }
+
+export const ALGO_COMPLEXITY = {
+  quicksort: 'nlogn',
+  mergesort: 'nlogn',
+  heap_sort: 'nlogn',
+  bubble_sort: 'n2',
+  selection_sort: 'n2',
+  insertion_sort: 'n2',
+}
+
+export function estimateBenchmarkDuration(algorithms, sizes, trials) {
+  const PER_OP_NS = 50
+  const SAFETY_MULTIPLIER = 1.5
+
+  let maxAlgoTime = 0
+  for (const algo of algorithms) {
+    let algoTime = 0
+    const complexity = ALGO_COMPLEXITY[algo]
+    if (!complexity) continue
+    for (const size of sizes) {
+      const ops = complexity === 'n2'
+        ? size * size
+        : size * Math.log2(size)
+      const timePerTrial = (ops * PER_OP_NS) / 1e9
+      algoTime += timePerTrial * trials
+    }
+    maxAlgoTime = Math.max(maxAlgoTime, algoTime)
+  }
+
+  return maxAlgoTime * SAFETY_MULTIPLIER
+}
+
+export function formatEstimate(seconds) {
+  if (seconds < 1) return { text: '< 1s', color: 'text-emerald-400' }
+  if (seconds < 30) return { text: `~${Math.round(seconds)}s`, color: 'text-emerald-400' }
+  if (seconds < 60) return { text: `~${Math.round(seconds)}s`, color: 'text-amber-400' }
+  if (seconds < 120) return { text: `~${Math.round(seconds / 60)} min`, color: 'text-amber-400' }
+  return { text: `~${Math.round(seconds / 60)} min`, color: 'text-rose-400' }
+}

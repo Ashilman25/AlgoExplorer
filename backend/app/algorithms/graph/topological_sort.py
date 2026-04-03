@@ -9,6 +9,7 @@ from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
 from app.simulation.explanation_builder import ExplanationBuilder
+from app.benchmark.graph_inputs import parse_benchmark_graph
 
 
 @register("graph", "topological_sort")
@@ -22,6 +23,39 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
         return "topological_sort"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            bg = parse_benchmark_graph(algo_input.input_payload)
+
+            adj: dict[str, list[str]] = {n: [] for n in bg.node_ids}
+            in_degree: dict[str, int] = {n: 0 for n in bg.node_ids}
+            for u, v, _ in bg.edges:
+                adj[u].append(v)
+                in_degree[v] += 1
+
+            queue: deque[str] = deque(n for n in bg.node_ids if in_degree[n] == 0)
+            ordered = 0
+            metrics = {"nodes_ordered": 0, "edges_processed": 0, "in_degree_updates": 0}
+
+            while queue:
+                current = queue.popleft()
+                ordered += 1
+                metrics["nodes_ordered"] = ordered
+
+                for neighbor in adj[current]:
+                    metrics["edges_processed"] += 1
+                    in_degree[neighbor] -= 1
+                    metrics["in_degree_updates"] += 1
+                    if in_degree[neighbor] == 0:
+                        queue.append(neighbor)
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"ordering": [], "cycle_detected": ordered < len(bg.node_ids), "nodes_ordered": ordered},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
@@ -41,32 +75,6 @@ class TopologicalSortAlgorithm(BaseAlgorithm):
             u, v = str(e.source), str(e.target)
             adj[u].append(v)
             in_degree[v] += 1
-
-        # ── benchmark fast path ─────────────────────────────
-        if algo_input.execution_mode == "benchmark":
-            in_deg = dict(in_degree)
-            queue: deque[str] = deque(n for n in node_ids if in_deg[n] == 0)
-            ordered = 0
-            metrics = {"nodes_ordered": 0, "edges_processed": 0, "in_degree_updates": 0}
-
-            while queue:
-                current = queue.popleft()
-                ordered += 1
-                metrics["nodes_ordered"] = ordered
-
-                for neighbor in adj[current]:
-                    metrics["edges_processed"] += 1
-                    in_deg[neighbor] -= 1
-                    metrics["in_degree_updates"] += 1
-                    if in_deg[neighbor] == 0:
-                        queue.append(neighbor)
-
-            return AlgorithmOutput(
-                timeline_steps = [],
-                final_result = {"ordering": [], "cycle_detected": ordered < len(node_ids), "nodes_ordered": ordered},
-                summary_metrics = metrics,
-                algorithm_metadata = self.build_metadata(algo_input),
-            )
 
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}

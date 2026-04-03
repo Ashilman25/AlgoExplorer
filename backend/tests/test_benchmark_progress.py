@@ -15,16 +15,18 @@ def test_progress_callback_called_for_each_algo_size_combo():
 
     result = run_benchmark("sorting", config, progress_callback = callback)
 
-    # 2 algorithms x 2 sizes = 4 combos
-    assert callback.call_count == 4
+    # With parallel execution, callback fires per-algorithm completion
+    # 2 algorithms = 2 calls
+    assert callback.call_count == 2
 
-    # Each call receives (completed_runs, total_runs)
+    # Each call reports completed trials: algo completes = sizes * trials done
     # total_runs = 2 algos * 2 sizes * 2 trials = 8
     calls = [c.args for c in callback.call_args_list]
-    assert calls[0] == (2, 8)    # quicksort @ size 10: 2 trials done
-    assert calls[1] == (4, 8)    # quicksort @ size 20: 4 trials done
-    assert calls[2] == (6, 8)    # mergesort @ size 10: 6 trials done
-    assert calls[3] == (8, 8)    # mergesort @ size 20: 8 trials done
+    # Order is non-deterministic with parallel execution, but final call should be (8, 8)
+    total_runs_reported = [c[1] for c in calls]
+    assert all(t == 8 for t in total_runs_reported)
+    completed_runs = sorted([c[0] for c in calls])
+    assert completed_runs == [4, 8]
 
     assert result["summary"]["total_runs"] == 8
 

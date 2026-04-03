@@ -33,6 +33,66 @@ class QuickSortAlgorithm(BaseAlgorithm):
         except ValidationError as e:
             raise DomainError("Invalid sorting input.", details = {"errors": e.errors()})
 
+        if benchmark_mode:
+            arr = list(sorting_input.array)
+            n = len(arr)
+            comparisons = 0
+            swaps = 0
+            writes = 0
+            max_depth = 0
+
+            def qs(low, high, depth):
+                nonlocal comparisons, swaps, writes, max_depth
+                if depth > max_depth:
+                    max_depth = depth
+                if low >= high:
+                    return
+                pivot = arr[high]
+                i = low - 1
+                for j in range(low, high):
+                    comparisons += 1
+                    if arr[j] <= pivot:
+                        i += 1
+                        if i != j:
+                            arr[i], arr[j] = arr[j], arr[i]
+                            swaps += 1
+                final_pos = i + 1
+                if final_pos != high:
+                    arr[final_pos], arr[high] = arr[high], arr[final_pos]
+                    swaps += 1
+                qs(low, final_pos - 1, depth + 1)
+                qs(final_pos + 1, high, depth + 1)
+
+            qs(0, n - 1, 0)
+
+            metrics = {
+                "comparisons": comparisons,
+                "swaps": swaps,
+                "writes": writes,
+                "array_accesses": 0,
+                "recursion_depth": 0,
+                "max_recursion_depth": max_depth,
+                "array_length": n,
+                "runtime_ms": 0,
+            }
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {
+                    "sorted_array": arr,
+                    "comparisons": comparisons,
+                    "swaps": swaps,
+                    "max_recursion_depth": max_depth,
+                },
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input) | {
+                    "time_complexity": "O(n log n) average, O(n²) worst",
+                    "space_complexity": "O(log n) average",
+                    "partition_scheme": "lomuto",
+                    "array_size": n,
+                },
+            )
+
         arr = list(sorting_input.array)
         n = len(arr)
 

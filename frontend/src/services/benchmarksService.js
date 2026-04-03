@@ -20,6 +20,9 @@ export const benchmarksService = {
   // { id, status, summary, series: { [metric]: AlgorithmSeries[] }, table: TableRow[] }
   getResults: (benchmarkId) => client.get(`/api/benchmarks/${benchmarkId}/results`),
 
+  // POST /api/benchmarks/:benchmarkId/cancel → BenchmarkStatusResponse
+  cancelJob: (benchmarkId) => client.post(`/api/benchmarks/${benchmarkId}/cancel`),
+
   // GET /api/benchmarks/workers/health → WorkerHealthResponse
   getWorkerHealth: () => client.get('/api/benchmarks/workers/health'),
 }

@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Gauge, Play, Check, X, ChevronDown, ChevronUp,
   Clock, Hash, ArrowUpDown, PenTool, Loader2,
-  Download, FileJson, FileSpreadsheet,
+  Download, FileJson, FileSpreadsheet, StopCircle,
 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Card, MetricCard, Badge, Spinner, Select, Slider, useToast, ErrorAlert } from '../components/ui'
@@ -19,6 +19,8 @@ import {
   BENCHMARK_LIMITS,
   BENCHMARK_SIZE_PRESETS,
   BENCHMARK_SIZE_LIMITS,
+  estimateBenchmarkDuration,
+  formatEstimate,
 } from '../config/benchmarkConfig'
 import GuestPromptBanner from '../components/guest/GuestPromptBanner'
 
@@ -283,6 +285,16 @@ function BenchmarkConfig({
           >
             {isRunning ? 'Running...' : 'Launch Benchmark'}
           </Button>
+
+          {!isRunning && moduleType === 'sorting' && algorithms.length > 0 && sizes.length > 0 && (() => {
+            const est = estimateBenchmarkDuration(algorithms, sizes, trials)
+            const { text, color } = formatEstimate(est)
+            return (
+              <p className={`text-[10px] text-center font-mono ${color}`}>
+                Estimated: {text}
+              </p>
+            )
+          })()}
 
         </div>
       </Card>
@@ -554,7 +566,7 @@ function ExportBar({ resultData }) {
 
 export default function BenchmarksPage() {
   const toast = useToast()
-  const { setJob, setActiveJob, pollJob, stopPolling, jobs, activeJobId } = useBenchmarkStore()
+  const { setJob, setActiveJob, pollJob, stopPolling, cancelJob, jobs, activeJobId } = useBenchmarkStore()
 
   // Module / category state
   const [moduleType, setModuleType] = useState('sorting')
@@ -577,9 +589,14 @@ export default function BenchmarksPage() {
   const [resultData, setResultData] = useState(null)
   const [benchmarkError, setBenchmarkError] = useState(null)
   const [workerHealthy, setWorkerHealthy] = useState(true)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const benchmarkStartTime = useRef(null)
+  const etaTarget = useRef(null)
+  const prevProgress = useRef({ value: 0, time: null })
 
   // Active job tracking
   const activeJob = activeJobId != null ? jobs[activeJobId] : null
+  const progress = activeJob?.progress ?? 0
 
   // Check worker health on mount
   useEffect(() => {
@@ -594,6 +611,7 @@ export default function BenchmarksPage() {
 
     if (activeJob.status === 'completed') {
       setIsRunning(false)
+      setIsCancelling(false)
 
       if (activeJob.resultsError) {
         const parsed = parseApiError(activeJob.resultsError)
@@ -618,6 +636,7 @@ export default function BenchmarksPage() {
       }
     } else if (activeJob.status === 'failed') {
       setIsRunning(false)
+      setIsCancelling(false)
       setBenchmarkError({
         title: 'Benchmark failed',
         message: activeJob.summary?.error || 'An unexpected error occurred during benchmarking.',
@@ -627,8 +646,59 @@ export default function BenchmarksPage() {
         title: 'Benchmark failed',
         message: activeJob.summary?.error || 'An unexpected error occurred.',
       })
+    } else if (activeJob.status === 'cancelled') {
+      setIsRunning(false)
+      setIsCancelling(false)
+      if (activeJob.results) {
+        setResultData({
+          status: 'cancelled',
+          summary: activeJob.results?.summary || activeJob.summary || {},
+          series: activeJob.results?.series || {},
+          table: activeJob.results?.table || [],
+        })
+      }
+      toast({
+        type: 'warning',
+        title: 'Benchmark cancelled',
+        message: 'Benchmark was cancelled. Partial results may be available.',
+      })
+    } else if (activeJob.status === 'running' && activeJob.results) {
+      // Progressive results — update display while still running
+      setResultData({
+        status: 'running',
+        summary: activeJob.summary || {},
+        series: activeJob.results?.series || {},
+        table: activeJob.results?.table || [],
+      })
     }
-  }, [activeJob?.status])
+  }, [activeJob?.status, activeJob?.results])
+
+  // Recalculate ETA only when progress actually changes
+  useEffect(() => {
+    if (progress > 0 && progress < 1 && benchmarkStartTime.current) {
+      const now = Date.now()
+      const elapsed = now - benchmarkStartTime.current
+      const overallRate = elapsed / progress
+
+      // Use the slower of overall rate vs most recent interval rate
+      let rate = overallRate
+      const prev = prevProgress.current
+      if (prev.time !== null && prev.value < progress) {
+        const intervalRate = (now - prev.time) / (progress - prev.value)
+        rate = Math.max(overallRate, intervalRate)
+      }
+
+      // 30% buffer — better to overestimate than underestimate
+      const remaining = rate * (1 - progress) * 1.3
+      etaTarget.current = now + remaining
+      prevProgress.current = { value: progress, time: now }
+    } else {
+      etaTarget.current = null
+      if (progress <= 0) {
+        prevProgress.current = { value: 0, time: null }
+      }
+    }
+  }, [progress])
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -696,6 +766,9 @@ export default function BenchmarksPage() {
     setIsRunning(true)
     setResultData(null)
     setBenchmarkError(null)
+    benchmarkStartTime.current = Date.now()
+    etaTarget.current = null
+    prevProgress.current = { value: 0, time: null }
 
     try {
       const body = {
@@ -728,14 +801,29 @@ export default function BenchmarksPage() {
     }
   }, [moduleType, category, algorithms, inputFamily, sizes, trials, metrics, setJob, setActiveJob, pollJob, toast])
 
-  const progress = activeJob?.progress ?? 0
-  const statusLabel = activeJob?.status === 'pending'
-    ? 'Queued...'
-    : activeJob?.status === 'running'
-      ? `Running benchmarks... ${Math.round(progress * 100)}%`
-      : null
+  const handleCancel = useCallback(async () => {
+    if (!activeJobId) return
+    setIsCancelling(true)
+    await cancelJob(activeJobId)
+  }, [activeJobId, cancelJob])
 
-  const hasResults = resultData && resultData.status === 'completed'
+  const etaLabel = (() => {
+    if (!etaTarget.current || progress <= 0 || progress >= 1) return null
+    const remaining = (etaTarget.current - Date.now()) / 1000
+    if (remaining < 1) return null
+    if (remaining < 60) return `~${Math.round(remaining)}s remaining`
+    return `~${Math.round(remaining / 60)} min remaining`
+  })()
+
+  const statusLabel = isCancelling || activeJob?.status === 'cancelling'
+    ? 'Cancelling...'
+    : activeJob?.status === 'pending'
+      ? 'Queued...'
+      : activeJob?.status === 'running'
+        ? `Running benchmarks... ${Math.round(progress * 100)}%`
+        : null
+
+  const hasResults = resultData && (resultData.series && Object.keys(resultData.series).length > 0)
 
   return (
     <>
@@ -746,7 +834,12 @@ export default function BenchmarksPage() {
         accent="emerald"
       >
         {activeJob && (
-          <Badge variant={activeJob.status === 'completed' ? 'success' : activeJob.status === 'failed' ? 'error' : 'info'}>
+          <Badge variant={
+            activeJob.status === 'completed' ? 'success'
+            : activeJob.status === 'failed' ? 'error'
+            : activeJob.status === 'cancelled' ? 'warning'
+            : 'info'
+          }>
             {activeJob.status}
           </Badge>
         )}
@@ -790,12 +883,23 @@ export default function BenchmarksPage() {
                   <div className="flex items-center gap-3">
                     <Spinner size="md" />
                     <span className="text-sm text-slate-400">
-                      {statusLabel || `Running benchmark (${algorithms.length} algorithms x ${sizes.length} sizes x ${trials} trials)...`}
+                      {statusLabel || `Running benchmark (${algorithms.length} algorithms × ${sizes.length} sizes × ${trials} trials)...`}
                     </span>
                   </div>
-                  <span className="text-xs font-mono text-slate-500">
-                    {Math.round(progress * 100)}%
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-slate-500">
+                      {Math.round(progress * 100)}%{!isCancelling && etaLabel && ` \u2014 ${etaLabel}`}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={StopCircle}
+                      onClick={handleCancel}
+                      disabled={isCancelling}
+                    >
+                      {isCancelling ? 'Cancelling...' : 'Cancel'}
+                    </Button>
+                  </div>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-1.5">
                   <div

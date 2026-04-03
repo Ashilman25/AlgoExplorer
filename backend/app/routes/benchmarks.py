@@ -147,6 +147,44 @@ def update_benchmark_status(request: Request, benchmark_id: int, body: UpdateBen
     return BenchmarkStatusResponse.model_validate(job)
 
 
+@router.post("/{benchmark_id}/cancel", response_model = BenchmarkStatusResponse)
+@limiter.limit(settings.rate_limit_general)
+def cancel_benchmark_job(request: Request, benchmark_id: int, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
+    job = db.query(BenchmarkJob).filter(BenchmarkJob.id == benchmark_id).first()
+    if not job:
+        raise NotFoundException(f"Benchmark Job '{benchmark_id}' not found.")
+
+    _check_benchmark_access(job, user)
+
+    if job.status == "running":
+        connection = get_redis()
+        connection.set(f"benchmark:{benchmark_id}:cancel", "1", ex = 3600)
+        job.status = "cancelling"
+        db.commit()
+        db.refresh(job)
+
+        logger.info(
+            "benchmark.job.cancel_requested %s",
+            compact_context(benchmark_id = benchmark_id),
+        )
+
+    elif job.status == "pending":
+        connection = get_redis()
+        connection.set(f"benchmark:{benchmark_id}:cancel", "1", ex = 3600)
+        job.status = "cancelled"
+        db.commit()
+        db.refresh(job)
+
+        logger.info(
+            "benchmark.job.cancelled_pending %s",
+            compact_context(benchmark_id = benchmark_id),
+        )
+
+    # cancelling, cancelled, completed, failed — no-op, return current state
+
+    return BenchmarkStatusResponse.model_validate(job)
+
+
 @router.get("/{benchmark_id}/results", response_model = BenchmarkResultsResponse)
 @limiter.limit(settings.rate_limit_readonly)
 def get_benchmark_results(request: Request, benchmark_id: int, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):

@@ -251,7 +251,7 @@ class CreateBenchmarkRequest(BaseModel):
     
     
 
-BenchmarkStatus = Literal["pending", "running", "completed", "failed"]
+BenchmarkStatus = Literal["pending", "running", "completed", "failed", "cancelling", "cancelled"]
 
 
 class UpdateBenchmarkStatusRequest(BaseModel):

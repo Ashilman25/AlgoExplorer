@@ -2,7 +2,7 @@ import re
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.benchmarks import CreateBenchmarkRequest
+from app.schemas.benchmarks import CreateBenchmarkRequest, UpdateBenchmarkStatusRequest
 
 
 def _base_sorting(**overrides):
@@ -46,3 +46,13 @@ def test_search_algorithms_rejected():
 def test_unknown_sorting_algorithm_rejected():
     with pytest.raises(ValidationError, match = re.compile(r"not supported.*sorting", re.IGNORECASE)):
         CreateBenchmarkRequest(**_base_sorting(algorithm_keys = ["bogosort"]))
+
+
+def test_cancelled_status_accepted():
+    req = UpdateBenchmarkStatusRequest(status = "cancelled", progress = 0.5)
+    assert req.status == "cancelled"
+
+
+def test_cancelling_status_accepted():
+    req = UpdateBenchmarkStatusRequest(status = "cancelling", progress = 0.3)
+    assert req.status == "cancelling"

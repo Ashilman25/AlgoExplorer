@@ -6,7 +6,8 @@ from app.data.models import BenchmarkJob
 from app.db import SessionLocal
 from app.observability import get_logger, compact_context, summarize_benchmark_config, summarize_summary_metrics
 from app.persistence import safe_json_value
-from app.config import settings
+from sqlalchemy.orm.attributes import flag_modified
+from app.worker.connection import get_redis
 
 logger = get_logger("benchmark.worker")
 
@@ -25,6 +26,13 @@ def execute_benchmark(benchmark_id: int) -> None:
             )
             return
 
+        if job.status == "cancelled":
+            logger.info(
+                "benchmark.worker.job_already_cancelled %s",
+                compact_context(benchmark_id = benchmark_id),
+            )
+            return
+
         job.status = "running"
         db.commit()
 
@@ -37,32 +45,28 @@ def execute_benchmark(benchmark_id: int) -> None:
             ),
         )
 
-        progress_interval = settings.benchmark_progress_interval
-        combo_count = 0
+        redis_conn = get_redis()
 
-        def progress_callback(completed_runs: int, total_runs: int) -> None:
-            nonlocal combo_count
-            combo_count += 1
+        def update_job_results(partial_results, progress):
+            job.results = safe_json_value(partial_results, label = "benchmark partial results")
+            flag_modified(job, "results")
+            job.progress = round(progress, 4)
+            db.commit()
 
-            if combo_count % progress_interval == 0 or completed_runs == total_runs:
-                job.progress = round(completed_runs / total_runs, 4) if total_runs > 0 else 0.0
-                db.commit()
-
-                logger.info(
-                    "benchmark.worker.progress %s",
-                    compact_context(
-                        benchmark_id = benchmark_id,
-                        progress = job.progress,
-                        completed_runs = completed_runs,
-                        total_runs = total_runs,
-                    ),
-                )
+            logger.info(
+                "benchmark.worker.progress %s",
+                compact_context(
+                    benchmark_id = benchmark_id,
+                    progress = job.progress,
+                ),
+            )
 
         result = run_benchmark(
             job.module_type,
             job.config,
             benchmark_id = benchmark_id,
-            progress_callback = progress_callback,
+            redis_conn = redis_conn,
+            db_job_updater = update_job_results,
         )
 
         job.results = safe_json_value(
@@ -70,8 +74,11 @@ def execute_benchmark(benchmark_id: int) -> None:
             label = "benchmark results",
         )
         job.summary = safe_json_value(result["summary"], label = "benchmark summary")
-        job.status = "completed"
-        job.progress = 1.0
+        if result["summary"].get("cancelled"):
+            job.status = "cancelled"
+        else:
+            job.status = "completed"
+            job.progress = 1.0
         job.completed_at = datetime.utcnow()
         db.commit()
 

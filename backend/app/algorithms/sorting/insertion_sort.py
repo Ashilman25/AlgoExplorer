@@ -33,6 +33,49 @@ class InsertionSortAlgorithm(BaseAlgorithm):
         except ValidationError as e:
             raise DomainError("Invalid sorting input.", details = {"errors": e.errors()})
 
+        if benchmark_mode:
+            arr = list(sorting_input.array)
+            n = len(arr)
+            comparisons = 0
+            shifts = 0
+            writes = 0
+
+            for i in range(1, n):
+                key = arr[i]
+                j = i - 1
+                while j >= 0:
+                    comparisons += 1
+                    if arr[j] > key:
+                        arr[j + 1] = arr[j]
+                        shifts += 1
+                        writes += 1
+                        j -= 1
+                    else:
+                        break
+                arr[j + 1] = key
+                writes += 1
+
+            metrics = {
+                "comparisons": comparisons,
+                "shifts": shifts,
+                "writes": writes,
+                "array_accesses": 0,
+                "array_length": n,
+            }
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"sorted_array": arr},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input) | {
+                    "time_complexity": "O(n²) average/worst, O(n) best",
+                    "space_complexity": "O(1)",
+                    "stable": True,
+                    "adaptive": True,
+                    "array_size": n,
+                },
+            )
+
         arr = list(sorting_input.array)
         n = len(arr)
 

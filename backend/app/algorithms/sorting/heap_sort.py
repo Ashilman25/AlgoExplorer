@@ -33,6 +33,59 @@ class HeapSortAlgorithm(BaseAlgorithm):
         except ValidationError as e:
             raise DomainError("Invalid sorting input.", details = {"errors": e.errors()})
 
+        if benchmark_mode:
+            arr = list(sorting_input.array)
+            n = len(arr)
+            comparisons = 0
+            swaps = 0
+
+            def sift(heap_size, root):
+                nonlocal comparisons, swaps
+                largest = root
+                left = 2 * root + 1
+                right = 2 * root + 2
+                if left < heap_size:
+                    comparisons += 1
+                    if arr[left] > arr[largest]:
+                        largest = left
+                if right < heap_size:
+                    comparisons += 1
+                    if arr[right] > arr[largest]:
+                        largest = right
+                if largest != root:
+                    arr[root], arr[largest] = arr[largest], arr[root]
+                    swaps += 1
+                    sift(heap_size, largest)
+
+            # Build max heap
+            for i in range(n // 2 - 1, -1, -1):
+                sift(n, i)
+            # Extract max repeatedly
+            for i in range(n - 1, 0, -1):
+                arr[0], arr[i] = arr[i], arr[0]
+                swaps += 1
+                sift(i, 0)
+
+            metrics = {
+                "comparisons": comparisons,
+                "swaps": swaps,
+                "array_accesses": 0,
+                "heapify_ops": 0,
+                "array_length": n,
+            }
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"sorted_array": arr},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input) | {
+                    "time_complexity": "O(n log n) all cases",
+                    "space_complexity": "O(1)",
+                    "stable": False,
+                    "array_size": n,
+                },
+            )
+
         arr = list(sorting_input.array)
         n = len(arr)
 
