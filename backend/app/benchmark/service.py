@@ -140,7 +140,70 @@ def _aggregate_metric(trial_metrics: list[dict], metric_key: str) -> dict:
     }
 
 
-def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = None, progress_callback: Callable[[int, int], None] | None = None) -> dict:
+def _is_cancelled(benchmark_id, redis_conn):
+    """Check if a benchmark has been cancelled via Redis signal."""
+    if redis_conn is None or benchmark_id is None:
+        return False
+    return redis_conn.exists(f"benchmark:{benchmark_id}:cancel")
+
+
+def _run_single_algorithm(module_type, algo_key, sizes, inputs_by_size, trials_per_size, metrics_list):
+    """Run all sizes x trials for one algorithm in a subprocess. Returns partial results."""
+    import app.algorithms.sorting
+    import app.algorithms.graph
+
+    algorithm = registry.get_algorithm(module_type, algo_key)
+    series_points = {metric: [] for metric in metrics_list}
+    table_rows = []
+
+    for size in sizes:
+        trial_metrics = []
+        for trial_idx in range(trials_per_size):
+            input_payload = inputs_by_size[size][trial_idx]
+            if module_type == "sorting":
+                input_payload = {"array": list(input_payload["array"])}
+
+            algo_input = AlgorithmInput(
+                input_payload = input_payload,
+                execution_mode = "benchmark",
+                explanation_level = "none",
+            )
+
+            t0 = time.perf_counter()
+            output = algorithm.run(algo_input)
+            t1 = time.perf_counter()
+
+            raw = dict(output.summary_metrics)
+            raw["runtime_ms"] = round((t1 - t0) * 1000, 3)
+            trial_metrics.append(raw)
+
+        # Aggregate metrics for this algo x size
+        aggregated = {}
+        for metric_key in metrics_list:
+            resolved = _resolve_metric_key(module_type, algo_key, metric_key)
+            if resolved is not None:
+                aggregated[metric_key] = _aggregate_metric(trial_metrics, resolved)
+            else:
+                aggregated[metric_key] = _null_aggregate()
+
+        for metric_key in metrics_list:
+            point = {"size": size, **aggregated[metric_key]}
+            series_points[metric_key].append(point)
+
+        row = {"algorithm_key": algo_key, "size": size}
+        for metric_key in metrics_list:
+            prefix = _METRIC_TABLE_PREFIX.get(metric_key, metric_key)
+            row[f"{prefix}_mean"] = aggregated[metric_key]["mean"]
+            row[f"{prefix}_median"] = aggregated[metric_key]["median"]
+        table_rows.append(row)
+
+    return {"algo_key": algo_key, "series": series_points, "table": table_rows}
+
+
+def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = None, progress_callback: Callable[[int, int], None] | None = None, redis_conn = None, db_job_updater: Callable | None = None) -> dict:
+    import os
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+
     algorithm_keys = config["algorithm_keys"]
     input_family = config["input_family"]
     sizes = config["sizes"]
@@ -148,7 +211,6 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
     metrics = config["metrics"]
 
     total_runs = len(algorithm_keys) * len(sizes) * trials_per_size
-    completed_runs = 0
 
     t_start = time.perf_counter()
 
@@ -161,72 +223,63 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
         ),
     )
 
+    # Pre-generate all inputs — shared across algorithms for fairness
+    inputs_by_size = {}
+    for size in sizes:
+        inputs_by_size[size] = [
+            _generate_input(module_type, config, size)
+            for _ in range(trials_per_size)
+        ]
 
-    series_data: dict[str, dict[str, list]] = {}
-    for metric_key in metrics:
-        series_data[metric_key] = {algo_key: [] for algo_key in algorithm_keys}
+    # Run algorithms in parallel
+    worker_count = min(len(algorithm_keys), os.cpu_count() or 4)
 
-    table = []
+    all_series: dict[str, list] = {m: [] for m in metrics}
+    all_table: list[dict] = []
+    completed_algos = 0
 
-    for algo_key in algorithm_keys:
-        algorithm = registry.get_algorithm(module_type, algo_key)
+    with ProcessPoolExecutor(max_workers = worker_count) as executor:
+        futures = {
+            executor.submit(
+                _run_single_algorithm,
+                module_type, algo_key, sizes, inputs_by_size, trials_per_size, metrics,
+            ): algo_key
+            for algo_key in algorithm_keys
+        }
 
-        for size in sizes:
-            trial_results = []
+        cancelled = False
+        for future in as_completed(futures):
+            algo_result = future.result()
+            completed_algos += 1
 
-            for _ in range(trials_per_size):
-                input_payload = _generate_input(module_type, config, size)
+            # Merge this algorithm's results
+            for metric_key in metrics:
+                all_series[metric_key].append({
+                    "algorithm_key": algo_result["algo_key"],
+                    "points": algo_result["series"][metric_key],
+                })
+            all_table.extend(algo_result["table"])
 
-                algo_input = AlgorithmInput(
-                    input_payload = input_payload,
-                    execution_mode = "benchmark",
-                    explanation_level = "none",
-                )
-
-                t0 = time.perf_counter()
-                output = algorithm.run(algo_input)
-                t1 = time.perf_counter()
-                raw_metrics = dict(output.summary_metrics)
-                raw_metrics["runtime_ms"] = round((t1 - t0) * 1000, 3)
-                trial_results.append(raw_metrics)
-
-            completed_runs += trials_per_size
-
+            # Progress callback
             if progress_callback is not None:
+                completed_runs = completed_algos * len(sizes) * trials_per_size
                 progress_callback(completed_runs, total_runs)
 
-            aggregated = {}
-            for metric_key in metrics:
-                resolved = _resolve_metric_key(module_type, algo_key, metric_key)
-                if resolved is not None:
-                    aggregated[metric_key] = _aggregate_metric(trial_results, resolved)
-                else:
-                    aggregated[metric_key] = _null_aggregate()
+            # Progressive update — write partial results to DB
+            if db_job_updater is not None:
+                partial = {"series": dict(all_series), "table": list(all_table)}
+                progress = completed_algos / len(algorithm_keys)
+                db_job_updater(partial, progress)
 
+            # Check cancellation after processing — don't discard computed work
+            if _is_cancelled(benchmark_id, redis_conn):
+                cancelled = True
+                for f in futures:
+                    f.cancel()
+                break
 
-            for metric_key in metrics:
-                point = {"size": size, **aggregated[metric_key]}
-                series_data[metric_key][algo_key].append(point)
-
-
-            row = {"algorithm_key": algo_key, "size": size}
-            for metric_key in metrics:
-                prefix = _METRIC_TABLE_PREFIX.get(metric_key, metric_key)
-                row[f"{prefix}_mean"] = aggregated[metric_key]["mean"]
-                row[f"{prefix}_median"] = aggregated[metric_key]["median"]
-                
-            table.append(row)
-
-
-    series = {}
-    for metric_key in metrics:
-        series[metric_key] = [
-            {
-                "algorithm_key": algo_key,
-                "points": series_data[metric_key][algo_key],
-            }
-            for algo_key in algorithm_keys
-        ]
+    if cancelled and redis_conn is not None:
+        redis_conn.delete(f"benchmark:{benchmark_id}:cancel")
 
     t_end = time.perf_counter()
     elapsed_ms = round((t_end - t_start) * 1000, 2)
@@ -238,6 +291,7 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
         "total_runs": total_runs,
         "input_family": input_family,
         "elapsed_ms": elapsed_ms,
+        "cancelled": cancelled,
     }
 
     logger.info(
@@ -246,12 +300,12 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
             benchmark_id = benchmark_id,
             module_type = module_type,
             summary = summarize_summary_metrics(summary),
-            table_rows = len(table),
+            table_rows = len(all_table),
         ),
     )
 
     return {
-        "series": series,
-        "table": table,
+        "series": all_series,
+        "table": all_table,
         "summary": summary,
     }
