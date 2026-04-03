@@ -62,9 +62,6 @@ describe('module setup forms', () => {
     )
 
     expect(screen.getByText('Graph Lab')).toBeInTheDocument()
-    expect(screen.getByText('2 nodes · 7 edges · directed')).toBeInTheDocument()
-    expect(screen.getByText(/source:/i)).toBeInTheDocument()
-
     fireEvent.change(screen.getByRole('combobox', { name: 'Algorithm' }), {
       target: { value: 'dijkstra' },
     })
@@ -228,8 +225,6 @@ describe('module setup forms', () => {
         error={null}
       />,
     )
-
-    expect(screen.getByText('|A| = 6, |B| = 6 · table 7 × 7')).toBeInTheDocument()
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Algorithm' }), {
       target: { value: 'edit_distance' },

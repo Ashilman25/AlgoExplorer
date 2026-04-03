@@ -60,9 +60,4 @@ describe('GridConfig', () => {
     expect(screen.getByText('Something went wrong')).toBeInTheDocument()
   })
 
-  it('renders input summary with rows x cols', () => {
-    renderConfig({ rows: 21, cols: 32, allowDiagonal: true })
-    expect(screen.getByText('21 × 32 grid')).toBeInTheDocument()
-    expect(screen.getByText('8-dir')).toBeInTheDocument()
-  })
 })

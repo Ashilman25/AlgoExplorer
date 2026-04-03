@@ -6,13 +6,18 @@ import { cn } from '../../utils/cn'
  *     <ConfigSection title="Input">     … </ConfigSection>
  *   </ConfigPanel>
  */
-export default function ConfigPanel({title = 'Configuration', children, className}) {
+export default function ConfigPanel({title = 'Configuration', children, footer, className}) {
   return (
     <>
       <div className = "panel-header shrink-0">{title}</div>
       <div className = {cn('flex-1 overflow-y-auto min-h-0 p-4 space-y-5', className)}>
         {children}
       </div>
+      {footer && (
+        <div className = "shrink-0 border-t border-white/[0.06] bg-slate-800/80 p-3">
+          {footer}
+        </div>
+      )}
     </>
   )
 }

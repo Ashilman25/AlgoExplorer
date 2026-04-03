@@ -275,34 +275,6 @@ export function DpConfig({
         />
       </ConfigSection>
 
-      <ConfigSection title = "Input Summary">
-        <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
-          <p className = "text-xs font-medium text-slate-300">
-            {DP_ALGOS.find((a) => a.value === algorithm)?.label ?? algorithm}
-          </p>
-          {(algorithm === 'lcs' || algorithm === 'edit_distance') && string1.length + string2.length > 0 && (
-            <p className = "font-mono text-[10px] text-slate-500">
-              |A| = {string1.length}, |B| = {string2.length} &middot; table {string1.length + 1} &times; {string2.length + 1}
-            </p>
-          )}
-          {algorithm === 'knapsack_01' && (
-            <p className = "font-mono text-[10px] text-slate-500">
-              cap={capacity}, {items.length} items &middot; table {items.length + 1} &times; {capacity + 1}
-            </p>
-          )}
-          {algorithm === 'coin_change' && (
-            <p className = "font-mono text-[10px] text-slate-500">
-              coins=[{coins.join(',')}], target={coinTarget} &middot; array length {coinTarget + 1}
-            </p>
-          )}
-          {algorithm === 'fibonacci' && (
-            <p className = "font-mono text-[10px] text-slate-500">
-              F({fibN}), mode={fibMode}
-            </p>
-          )}
-        </div>
-      </ConfigSection>
-
       {inputError && (
         <ConfigSection>
           <ErrorAlert message={inputError} />

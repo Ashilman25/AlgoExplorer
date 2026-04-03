@@ -47,17 +47,6 @@ export default function GridConfig({
         <Select aria-label = "Explanation" options = {EXPLANATION_LEVELS} value = {explanationLevel} onChange = {onExplanationLevelChange} />
       </ConfigSection>
 
-      <ConfigSection title = "Input Summary">
-        <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
-          <p className = "text-xs font-medium text-slate-300">
-            {rows} × {cols} grid
-          </p>
-          <p className = "font-mono text-[10px] text-slate-500">
-            {allowDiagonal ? '8-dir' : '4-dir'}
-          </p>
-        </div>
-      </ConfigSection>
-
       {error && (
         <ConfigSection>
           <ErrorAlert title = "Simulation failed" message = {error} />

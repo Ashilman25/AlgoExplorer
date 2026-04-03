@@ -133,29 +133,6 @@ export function GraphConfig({
         <Select aria-label = "Explanation" options = {EXPLANATION_LEVELS} value = {explanationLevel} onChange = {onExplanationLevelChange} />
       </ConfigSection>
 
-      <ConfigSection title = "Input Summary">
-        <div className = "rounded-lg bg-slate-800/50 border border-white/[0.06] px-3 py-2.5 space-y-1">
-          <p className = "text-xs font-medium text-slate-300">
-            {presetOptions.find((p) => p.value === preset)?.label ?? 'Custom'}
-          </p>
-
-          <p className = "font-mono text-[10px] text-slate-500">
-            {nodeOptions.length} nodes · {edgeCount} edges
-            {weighted ? ' · weighted' : ''}
-            {directed ? ' · directed' : ''}
-          </p>
-
-          {showSource && source && (
-            <p className = "font-mono text-[10px] text-slate-500">
-              Source: <span className = "text-state-source">{source}</span>
-              {showTarget && target && (
-                <>{'  '}Target: <span className = "text-state-target">{target}</span></>
-              )}
-            </p>
-          )}
-        </div>
-      </ConfigSection>
-
       {error && (
         <ConfigSection>
           <ErrorAlert title="Simulation failed" message={error} />
