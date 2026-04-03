@@ -9,6 +9,7 @@ from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
 from app.simulation.explanation_builder import ExplanationBuilder
+from app.benchmark.graph_inputs import parse_benchmark_graph
 
 
 @register("graph", "prims")
@@ -22,33 +23,16 @@ class PrimsAlgorithm(BaseAlgorithm):
         return "prims"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        eb = ExplanationBuilder(algo_input.explanation_level)
-
-        try:
-            graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
-        except ValidationError as e:
-            raise DomainError("Invalid graph input.", details = {"errors": e.errors()})
-
-        node_ids: list[str] = [str(n.id) for n in graph_input.nodes]
-
-        if graph_input.source is None:
-            raise DomainError("Prim's algorithm requires a source node.")
-
-        source: str = str(graph_input.source)
-
-        if source not in node_ids:
-            raise DomainError(f"Source node '{source}' not found in node list")
-
-        # adjacency list (always undirected for MST)
-        adj: dict[str, list[tuple[str, float]]] = {n: [] for n in node_ids}
-        for e in graph_input.edges:
-            u, v = str(e.source), str(e.target)
-            w = e.weight if e.weight is not None else 1.0
-            adj[u].append((v, w))
-            adj[v].append((u, w))
-
         # ── benchmark fast path ─────────────────────────────
         if algo_input.execution_mode == "benchmark":
+            bg = parse_benchmark_graph(algo_input.input_payload)
+
+            adj: dict[str, list[tuple[str, float]]] = {n: [] for n in bg.node_ids}
+            for u, v, w in bg.edges:
+                adj[u].append((v, w))
+                adj[v].append((u, w))
+
+            source = bg.source
             in_tree: set[str] = {source}
             counter = 0
             heap: list[tuple[float, int, str, str]] = []
@@ -87,6 +71,31 @@ class PrimsAlgorithm(BaseAlgorithm):
                 summary_metrics = metrics,
                 algorithm_metadata = self.build_metadata(algo_input),
             )
+
+        eb = ExplanationBuilder(algo_input.explanation_level)
+
+        try:
+            graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
+        except ValidationError as e:
+            raise DomainError("Invalid graph input.", details = {"errors": e.errors()})
+
+        node_ids: list[str] = [str(n.id) for n in graph_input.nodes]
+
+        if graph_input.source is None:
+            raise DomainError("Prim's algorithm requires a source node.")
+
+        source: str = str(graph_input.source)
+
+        if source not in node_ids:
+            raise DomainError(f"Source node '{source}' not found in node list")
+
+        # adjacency list (always undirected for MST)
+        adj: dict[str, list[tuple[str, float]]] = {n: [] for n in node_ids}
+        for e in graph_input.edges:
+            u, v = str(e.source), str(e.target)
+            w = e.weight if e.weight is not None else 1.0
+            adj[u].append((v, w))
+            adj[v].append((u, w))
 
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}

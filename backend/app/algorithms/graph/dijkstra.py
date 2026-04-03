@@ -10,6 +10,7 @@ from app.simulation.types import AlgorithmInput, AlgorithmOutput
 from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
+from app.benchmark.graph_inputs import parse_benchmark_graph
 
 
 @register("graph", "dijkstra")
@@ -24,52 +25,21 @@ class DijkstraAlgorithm(BaseAlgorithm):
     
     
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
-        eb = ExplanationBuilder(algo_input.explanation_level)
-        
-        # parse + validate
-        try:
-            graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
-            
-        except ValidationError as e:
-            raise DomainError("Invalid graph input", details = {"errors" : e.errors()})
-        
-        node_ids: list[str] = []
-        for n in graph_input.nodes:
-            node_ids.append(str(n.id))
-            
-        source: str = str(graph_input.source)
-        target: str | None = str(graph_input.target) if graph_input.target is not None else None
-        directed: bool = graph_input.directed
-        
-        if source not in node_ids:
-            raise DomainError(f"Source node '{source}' not found in node list")
-        
-        if target and target not in node_ids:
-            raise DomainError(f"Target node '{target}' not found in node list")
-        
-        
-        #adj list
-        adj: dict[str, list[tuple[str, float]]] = {}
-        for n in node_ids:
-            adj[n] = []
-            
-        for e in graph_input.edges:
-            u = str(e.source)
-            v = str(e.target)
-            w = e.weight if e.weight is not None else 1.0
-            
-            adj[u].append((v, w))
-            if not directed:
-                adj[v].append((u, w))
-                
-                
         # ── benchmark fast path ─────────────────────────────
         if algo_input.execution_mode == "benchmark":
-            dist: dict[str, float] = {n: math.inf for n in node_ids}
-            dist[source] = 0
+            bg = parse_benchmark_graph(algo_input.input_payload)
+
+            adj: dict[str, list[tuple[str, float]]] = {n: [] for n in bg.node_ids}
+            for u, v, w in bg.edges:
+                adj[u].append((v, w))
+                if not bg.directed:
+                    adj[v].append((u, w))
+
+            dist: dict[str, float] = {n: math.inf for n in bg.node_ids}
+            dist[bg.source] = 0
             visited: set[str] = set()
             counter = 0
-            heap: list[tuple[float, int, str]] = [(0, counter, source)]
+            heap: list[tuple[float, int, str]] = [(0, counter, bg.source)]
             metrics = {"nodes_visited": 0, "edges_explored": 0, "relaxations": 0, "frontier_size": 1}
             path_found = False
 
@@ -83,7 +53,7 @@ class DijkstraAlgorithm(BaseAlgorithm):
                 visited.add(current)
                 metrics["nodes_visited"] += 1
 
-                if target and current == target:
+                if bg.target and current == bg.target:
                     path_found = True
                     break
 
@@ -105,6 +75,45 @@ class DijkstraAlgorithm(BaseAlgorithm):
                 summary_metrics = metrics,
                 algorithm_metadata = self.build_metadata(algo_input),
             )
+
+        # ── simulation path ─────────────────────────────────
+        eb = ExplanationBuilder(algo_input.explanation_level)
+
+        # parse + validate
+        try:
+            graph_input = GraphInputPayload.model_validate(algo_input.input_payload)
+
+        except ValidationError as e:
+            raise DomainError("Invalid graph input", details = {"errors" : e.errors()})
+
+        node_ids: list[str] = []
+        for n in graph_input.nodes:
+            node_ids.append(str(n.id))
+
+        source: str = str(graph_input.source)
+        target: str | None = str(graph_input.target) if graph_input.target is not None else None
+        directed: bool = graph_input.directed
+
+        if source not in node_ids:
+            raise DomainError(f"Source node '{source}' not found in node list")
+
+        if target and target not in node_ids:
+            raise DomainError(f"Target node '{target}' not found in node list")
+
+
+        #adj list
+        adj: dict[str, list[tuple[str, float]]] = {}
+        for n in node_ids:
+            adj[n] = []
+
+        for e in graph_input.edges:
+            u = str(e.source)
+            v = str(e.target)
+            w = e.weight if e.weight is not None else 1.0
+
+            adj[u].append((v, w))
+            if not directed:
+                adj[v].append((u, w))
 
         #simulation stuff
         node_states: dict[str, str] = {}

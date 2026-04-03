@@ -9,6 +9,7 @@ from app.schemas.timeline import TimelineStep, HighlightedEntity
 from app.schemas.payloads import GraphInputPayload
 from app.exceptions import DomainError
 from app.simulation.explanation_builder import ExplanationBuilder
+from app.benchmark.graph_inputs import parse_benchmark_graph
 
 
 @register("graph", "bellman_ford")
@@ -22,6 +23,40 @@ class BellmanFordAlgorithm(BaseAlgorithm):
         return "bellman_ford"
 
     def run(self, algo_input: AlgorithmInput) -> AlgorithmOutput:
+        # ── benchmark fast path ─────────────────────────────
+        if algo_input.execution_mode == "benchmark":
+            bg = parse_benchmark_graph(algo_input.input_payload)
+
+            all_edges: list[tuple[str, str, float]] = list(bg.edges)
+            if not bg.directed:
+                all_edges.extend([(v, u, w) for u, v, w in bg.edges])
+
+            dist: dict[str, float] = {n: math.inf for n in bg.node_ids}
+            dist[bg.source] = 0
+            V = len(bg.node_ids)
+            metrics = {"edges_processed": 0, "relaxation_count": 0, "passes_completed": 0}
+
+            for pass_num in range(1, V):
+                metrics["passes_completed"] += 1
+                for u, v, w in all_edges:
+                    metrics["edges_processed"] += 1
+                    if dist[u] != math.inf and dist[u] + w < dist[v]:
+                        dist[v] = dist[u] + w
+                        metrics["relaxation_count"] += 1
+
+            # negative cycle detection pass
+            for u, v, w in all_edges:
+                metrics["edges_processed"] += 1
+                if dist[u] != math.inf and dist[u] + w < dist[v]:
+                    break
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {"path_found": False, "path": []},
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input),
+            )
+
         eb = ExplanationBuilder(algo_input.explanation_level)
 
         try:
@@ -47,34 +82,6 @@ class BellmanFordAlgorithm(BaseAlgorithm):
             all_edges.append((u, v, w))
             if not directed:
                 all_edges.append((v, u, w))
-
-        # ── benchmark fast path ─────────────────────────────
-        if algo_input.execution_mode == "benchmark":
-            dist: dict[str, float] = {n: math.inf for n in node_ids}
-            dist[source] = 0
-            V = len(node_ids)
-            metrics = {"edges_processed": 0, "relaxation_count": 0, "passes_completed": 0}
-
-            for pass_num in range(1, V):
-                metrics["passes_completed"] += 1
-                for u, v, w in all_edges:
-                    metrics["edges_processed"] += 1
-                    if dist[u] != math.inf and dist[u] + w < dist[v]:
-                        dist[v] = dist[u] + w
-                        metrics["relaxation_count"] += 1
-
-            # negative cycle detection pass
-            for u, v, w in all_edges:
-                metrics["edges_processed"] += 1
-                if dist[u] != math.inf and dist[u] + w < dist[v]:
-                    break
-
-            return AlgorithmOutput(
-                timeline_steps = [],
-                final_result = {"path_found": False, "path": []},
-                summary_metrics = metrics,
-                algorithm_metadata = self.build_metadata(algo_input),
-            )
 
         # simulation state
         node_states: dict[str, str] = {n: "default" for n in node_ids}
