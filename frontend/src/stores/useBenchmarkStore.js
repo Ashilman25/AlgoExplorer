@@ -65,13 +65,18 @@ export const useBenchmarkStore = create((set, get) => ({
     let status
     try {
       status = await benchmarksService.getJob(jobId)
+      // Don't downgrade from "cancelling" back to "running" (poll race)
+      const current = get().jobs[jobId]
+      if (current?.status === 'cancelling' && status.status === 'running') {
+        status = { ...status, status: 'cancelling' }
+      }
       get().setJob(jobId, status)
     } catch {
       return
     }
 
-    // Fetch partial results while running
-    if (status.status === 'running' && status.progress > 0) {
+    // Fetch partial results while running or cancelling
+    if ((status.status === 'running' || status.status === 'cancelling') && status.progress > 0) {
       try {
         const results = await benchmarksService.getResults(jobId)
         if (results.table?.length > 0) {

@@ -147,18 +147,36 @@ def _is_cancelled(benchmark_id, redis_conn):
     return redis_conn.exists(f"benchmark:{benchmark_id}:cancel")
 
 
-def _run_single_algorithm(module_type, algo_key, sizes, inputs_by_size, trials_per_size, metrics_list):
+def _run_single_algorithm(module_type, algo_key, sizes, inputs_by_size, trials_per_size, metrics_list, benchmark_id = None):
     """Run all sizes x trials for one algorithm in a subprocess. Returns partial results."""
     import app.algorithms.sorting
     import app.algorithms.graph
+
+    # Connect to Redis for cancel detection (fail-open if unavailable)
+    redis_conn = None
+    if benchmark_id is not None:
+        try:
+            from app.worker.connection import get_redis
+            redis_conn = get_redis()
+        except Exception:
+            pass
+
+    def _check_cancel():
+        return redis_conn is not None and redis_conn.exists(f"benchmark:{benchmark_id}:cancel")
 
     algorithm = registry.get_algorithm(module_type, algo_key)
     series_points = {metric: [] for metric in metrics_list}
     table_rows = []
 
     for size in sizes:
+        if _check_cancel():
+            break
+
         trial_metrics = []
         for trial_idx in range(trials_per_size):
+            if _check_cancel():
+                break
+
             input_payload = inputs_by_size[size][trial_idx]
             if module_type == "sorting":
                 input_payload = {"array": list(input_payload["array"])}
@@ -176,6 +194,10 @@ def _run_single_algorithm(module_type, algo_key, sizes, inputs_by_size, trials_p
             raw = dict(output.summary_metrics)
             raw["runtime_ms"] = round((t1 - t0) * 1000, 3)
             trial_metrics.append(raw)
+
+        # Skip aggregation if cancelled mid-trial (incomplete data)
+        if _check_cancel():
+            break
 
         # Aggregate metrics for this algo x size
         aggregated = {}
@@ -202,7 +224,7 @@ def _run_single_algorithm(module_type, algo_key, sizes, inputs_by_size, trials_p
 
 def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = None, progress_callback: Callable[[int, int], None] | None = None, redis_conn = None, db_job_updater: Callable | None = None) -> dict:
     import os
-    from concurrent.futures import ProcessPoolExecutor, as_completed
+    from concurrent.futures import ProcessPoolExecutor, wait, FIRST_COMPLETED
 
     algorithm_keys = config["algorithm_keys"]
     input_family = config["input_family"]
@@ -243,40 +265,48 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
             executor.submit(
                 _run_single_algorithm,
                 module_type, algo_key, sizes, inputs_by_size, trials_per_size, metrics,
+                benchmark_id,
             ): algo_key
             for algo_key in algorithm_keys
         }
 
         cancelled = False
-        for future in as_completed(futures):
-            algo_result = future.result()
-            completed_algos += 1
+        pending = set(futures.keys())
 
-            # Merge this algorithm's results
-            for metric_key in metrics:
-                all_series[metric_key].append({
-                    "algorithm_key": algo_result["algo_key"],
-                    "points": algo_result["series"][metric_key],
-                })
-            all_table.extend(algo_result["table"])
+        while pending:
+            # Wait up to 2s for any future to complete, then check cancellation
+            done, pending = wait(pending, timeout = 2.0, return_when = FIRST_COMPLETED)
 
-            # Progress callback
-            if progress_callback is not None:
-                completed_runs = completed_algos * len(sizes) * trials_per_size
-                progress_callback(completed_runs, total_runs)
+            for future in done:
+                algo_result = future.result()
+                completed_algos += 1
 
-            # Progressive update — write partial results to DB
-            if db_job_updater is not None:
-                partial = {"series": dict(all_series), "table": list(all_table)}
-                progress = completed_algos / len(algorithm_keys)
-                db_job_updater(partial, progress)
+                # Merge this algorithm's results (may be partial if cancelled)
+                for metric_key in metrics:
+                    points = algo_result["series"][metric_key]
+                    if points:
+                        all_series[metric_key].append({
+                            "algorithm_key": algo_result["algo_key"],
+                            "points": points,
+                        })
+                if algo_result["table"]:
+                    all_table.extend(algo_result["table"])
 
-            # Check cancellation after processing — don't discard computed work
-            if _is_cancelled(benchmark_id, redis_conn):
+                # Progress callback
+                if progress_callback is not None:
+                    completed_runs = completed_algos * len(sizes) * trials_per_size
+                    progress_callback(completed_runs, total_runs)
+
+                # Progressive update — write partial results to DB
+                if db_job_updater is not None:
+                    partial = {"series": dict(all_series), "table": list(all_table)}
+                    progress = completed_algos / len(algorithm_keys)
+                    db_job_updater(partial, progress)
+
+            # Check cancellation every 2s or after each algorithm completes
+            if not cancelled and _is_cancelled(benchmark_id, redis_conn):
                 cancelled = True
-                for f in futures:
-                    f.cancel()
-                break
+                # Subprocesses detect cancel via Redis independently
 
     if cancelled and redis_conn is not None:
         redis_conn.delete(f"benchmark:{benchmark_id}:cancel")

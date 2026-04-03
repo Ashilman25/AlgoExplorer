@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Gauge, Play, Check, X, ChevronDown, ChevronUp,
   Clock, Hash, ArrowUpDown, PenTool, Loader2,
@@ -590,6 +590,7 @@ export default function BenchmarksPage() {
   const [benchmarkError, setBenchmarkError] = useState(null)
   const [workerHealthy, setWorkerHealthy] = useState(true)
   const [isCancelling, setIsCancelling] = useState(false)
+  const benchmarkStartTime = useRef(null)
 
   // Active job tracking
   const activeJob = activeJobId != null ? jobs[activeJobId] : null
@@ -735,6 +736,7 @@ export default function BenchmarksPage() {
     setIsRunning(true)
     setResultData(null)
     setBenchmarkError(null)
+    benchmarkStartTime.current = Date.now()
 
     try {
       const body = {
@@ -774,11 +776,23 @@ export default function BenchmarksPage() {
   }, [activeJobId, cancelJob])
 
   const progress = activeJob?.progress ?? 0
-  const statusLabel = activeJob?.status === 'pending'
-    ? 'Queued...'
-    : activeJob?.status === 'running'
-      ? `Running benchmarks... ${Math.round(progress * 100)}%`
-      : null
+
+  const etaLabel = (() => {
+    if (!benchmarkStartTime.current || progress <= 0 || progress >= 1) return null
+    const elapsed = (Date.now() - benchmarkStartTime.current) / 1000
+    const remaining = (elapsed / progress) * (1 - progress)
+    if (remaining < 1) return '< 1s remaining'
+    if (remaining < 60) return `~${Math.round(remaining)}s remaining`
+    return `~${Math.round(remaining / 60)} min remaining`
+  })()
+
+  const statusLabel = isCancelling || activeJob?.status === 'cancelling'
+    ? 'Cancelling...'
+    : activeJob?.status === 'pending'
+      ? 'Queued...'
+      : activeJob?.status === 'running'
+        ? `Running benchmarks... ${Math.round(progress * 100)}%`
+        : null
 
   const hasResults = resultData && (resultData.series && Object.keys(resultData.series).length > 0)
 
@@ -845,7 +859,7 @@ export default function BenchmarksPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-mono text-slate-500">
-                      {Math.round(progress * 100)}%
+                      {Math.round(progress * 100)}%{!isCancelling && etaLabel && ` \u2014 ${etaLabel}`}
                     </span>
                     <Button
                       variant="ghost"
