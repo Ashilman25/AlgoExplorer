@@ -1,7 +1,6 @@
 // frontend/src/components/simulation/GridConfig.jsx
 
-import { Play, RotateCcw } from 'lucide-react'
-import { Button, Select, ErrorAlert } from '../ui'
+import { Select, ErrorAlert } from '../ui'
 import ConfigPanel, { ConfigSection } from './ConfigPanel'
 import { EXPLANATION_LEVELS, MODE_OPTIONS } from '../../config/simulationConfig'
 
@@ -18,9 +17,7 @@ export default function GridConfig({
   allowDiagonal, onAllowDiagonalChange,
   explanationLevel, onExplanationLevelChange,
   mode, onModeChange,
-  onRun, onReset,
-  isRunning, error,
-  canRun,
+  error,
 }) {
   return (
     <ConfigPanel title = "Grid Lab">
@@ -66,30 +63,6 @@ export default function GridConfig({
           <ErrorAlert title = "Simulation failed" message = {error} />
         </ConfigSection>
       )}
-
-      <ConfigSection>
-        <Button
-          variant = "primary"
-          size = "md"
-          icon = {Play}
-          className = "w-full"
-          onClick = {onRun}
-          disabled = {!canRun || isRunning}
-        >
-          {isRunning ? 'Running…' : 'Run Simulation'}
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {RotateCcw}
-          className = "w-full text-slate-500"
-          onClick = {onReset}
-          disabled = {isRunning}
-        >
-          Reset
-        </Button>
-      </ConfigSection>
 
     </ConfigPanel>
   )

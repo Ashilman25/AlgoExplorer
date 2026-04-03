@@ -99,7 +99,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
         className = {cn(
           'absolute right-[-16px] top-[50px] z-10',
           'w-5 h-12 rounded-r-lg',
-          'bg-slate-800 border border-white/[0.12] border-l-0',
+          'bg-slate-900 border border-white/[0.12] border-l-0',
           'flex items-center justify-center',
           'text-slate-400 hover:text-brand-400 hover:bg-slate-700 hover:border-brand-500/30',
           'transition-colors duration-[100ms]',

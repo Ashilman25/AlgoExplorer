@@ -63,7 +63,6 @@ export function SortingConfig({
   inputError,
   array,
   onGenerate, onShuffle,
-  onRun, onReset, onSave,
   isRunning, error,
 }) {
   const showSizeControls = preset !== 'custom'
@@ -193,8 +192,8 @@ export function SortingConfig({
         </ConfigSection>
       )}
 
-      <ConfigSection>
-        {preset !== 'custom' && (
+      {preset !== 'custom' && (
+        <ConfigSection>
           <div className = "flex gap-2">
             <Button
               variant = "secondary"
@@ -218,41 +217,8 @@ export function SortingConfig({
               Shuffle
             </Button>
           </div>
-        )}
-
-        <Button
-          variant = "primary"
-          size = "md"
-          icon = {Play}
-          className = "w-full"
-          onClick = {onRun}
-          disabled = {isRunning || array.length < 2 || !!inputError}
-        >
-          {isRunning ? 'Running…' : 'Run Simulation'}
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {Save}
-          className = "w-full text-slate-500"
-          onClick = {onSave}
-          disabled = {isRunning || array.length < 2 || !!inputError}
-        >
-          Save Scenario
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {RotateCcw}
-          className = "w-full text-slate-500"
-          onClick = {onReset}
-          disabled = {isRunning}
-        >
-          Reset
-        </Button>
-      </ConfigSection>
+        </ConfigSection>
+      )}
 
     </ConfigPanel>
   )
@@ -807,7 +773,20 @@ export default function SortingLabPage() {
         description = "Visualize sorting and searching algorithms with comparison, swap, and operation tracking."
         accent = "amber"
         badge = "Phase 6"
-      />
+      >
+        <div className = "flex items-center gap-1 bg-slate-900/50 border border-white/[0.06] rounded-lg p-1">
+          <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || array.length < 2 || !!inputError}>
+            {isRunning || isPlaying ? 'Running…' : 'Run'}
+          </Button>
+          <Button variant = "ghost" size = "sm" icon = {Save} onClick = {handleSave} disabled = {isRunning || isPlaying || array.length < 2 || !!inputError}>
+            Save
+          </Button>
+          <div className = "w-px h-4 bg-white/[0.08]" />
+          <Button variant = "ghost" size = "sm" icon = {RotateCcw} onClick = {handleReset} disabled = {isRunning || isPlaying}>
+            Reset
+          </Button>
+        </div>
+      </PageHeader>
 
       <GuestPromptBanner />
 
@@ -837,9 +816,6 @@ export default function SortingLabPage() {
             array = {array}
             onGenerate = {handleGenerate}
             onShuffle = {handleShuffle}
-            onRun = {handleRun}
-            onReset = {handleReset}
-            onSave = {handleSave}
             isRunning = {isRunning || isPlaying}
             error = {timelineError}
           />

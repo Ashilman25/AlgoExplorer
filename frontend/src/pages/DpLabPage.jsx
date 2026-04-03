@@ -140,8 +140,7 @@ export function DpConfig({
   // shared
   explanationLevel, onExplanationLevelChange,
   inputError,
-  onRun, onReset, onSave,
-  isRunning, error,
+  error,
 }) {
 
   return (
@@ -315,41 +314,6 @@ export function DpConfig({
           <ErrorAlert title="Simulation failed" message={error} />
         </ConfigSection>
       )}
-
-      <ConfigSection>
-        <Button
-          variant = "primary"
-          size = "md"
-          icon = {Play}
-          className = "w-full"
-          onClick = {onRun}
-          disabled = {isRunning || !!inputError}
-        >
-          {isRunning ? 'Running…' : 'Run Simulation'}
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {Save}
-          className = "w-full text-slate-500"
-          onClick = {onSave}
-          disabled = {isRunning || !!inputError}
-        >
-          Save Scenario
-        </Button>
-
-        <Button
-          variant = "ghost"
-          size = "md"
-          icon = {RotateCcw}
-          className = "w-full text-slate-500"
-          onClick = {onReset}
-          disabled = {isRunning}
-        >
-          Reset
-        </Button>
-      </ConfigSection>
 
     </ConfigPanel>
   )
@@ -984,7 +948,20 @@ export default function DpLabPage() {
         description = "Explore dynamic programming through step-by-step table construction, traceback, and recursive call trees."
         accent = "violet"
         badge = "Phase 7"
-      />
+      >
+        <div className = "flex items-center gap-1 bg-slate-900/50 border border-white/[0.06] rounded-lg p-1">
+          <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || !!inputError}>
+            {isRunning || isPlaying ? 'Running…' : 'Run'}
+          </Button>
+          <Button variant = "ghost" size = "sm" icon = {Save} onClick = {handleSave} disabled = {isRunning || isPlaying || !!inputError}>
+            Save
+          </Button>
+          <div className = "w-px h-4 bg-white/[0.08]" />
+          <Button variant = "ghost" size = "sm" icon = {RotateCcw} onClick = {handleReset} disabled = {isRunning || isPlaying}>
+            Reset
+          </Button>
+        </div>
+      </PageHeader>
 
       <GuestPromptBanner />
 
@@ -1026,10 +1003,6 @@ export default function DpLabPage() {
             explanationLevel = {explanationLevel}
             onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
             inputError = {inputError}
-            onRun = {handleRun}
-            onReset = {handleReset}
-            onSave = {handleSave}
-            isRunning = {isRunning || isPlaying}
             error = {timelineError}
           />
         }
