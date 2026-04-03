@@ -166,9 +166,8 @@ describe('GraphLabPage — mode switch', () => {
   it('switches to grid mode and renders grid canvases', () => {
     const { container } = renderPage()
 
-    // Find the mode select and switch to grid
-    const modeSelect = screen.getByLabelText('Mode')
-    fireEvent.change(modeSelect, { target: { value: 'grid' } })
+    // Click the Grid toggle button to switch modes
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
 
     // Grid mode renders 5 canvas layers
     expect(container.querySelectorAll('canvas').length).toBeGreaterThanOrEqual(5)
@@ -180,12 +179,12 @@ describe('GraphLabPage — mode switch', () => {
     const { container } = renderPage()
 
     // Switch to grid
-    fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'grid' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
     expect(container.querySelectorAll('canvas').length).toBeGreaterThanOrEqual(5)
     expect(findGraphSvg(container)).toBeFalsy()
 
-    // Switch back to graph — re-query Mode select since it's a new element after re-render
-    fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'graph' } })
+    // Switch back to graph
+    fireEvent.click(screen.getByRole('button', { name: 'Graph' }))
     expect(findGraphSvg(container)).toBeTruthy()
     // Verify graph-specific UI returned: Preset select should be back
     expect(screen.getByLabelText('Preset')).toBeInTheDocument()
@@ -198,8 +197,7 @@ describe('GraphLabPage — mode switch', () => {
     expect(screen.getByLabelText('Preset')).toBeInTheDocument()
 
     // Switch to grid
-    const modeSelect = screen.getByLabelText('Mode')
-    fireEvent.change(modeSelect, { target: { value: 'grid' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
 
     // GridConfig no longer has Maze dropdown — maze generation moved to pin tray
     // Just check that Preset (graph-only) is gone and Algorithm (grid) is present
@@ -210,8 +208,7 @@ describe('GraphLabPage — mode switch', () => {
   it('switches algorithm to bfs_grid on grid mode change', () => {
     renderPage()
 
-    const modeSelect = screen.getByLabelText('Mode')
-    fireEvent.change(modeSelect, { target: { value: 'grid' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
 
     // GridConfig should show grid algorithms
     const algoSelect = screen.getByLabelText('Algorithm')
@@ -220,7 +217,7 @@ describe('GraphLabPage — mode switch', () => {
 
   it('does not show grid size slider in grid mode', () => {
     renderPage()
-    fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'grid' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
     expect(screen.queryByLabelText('Grid size')).not.toBeInTheDocument()
   })
 
@@ -232,12 +229,11 @@ describe('GraphLabPage — mode switch', () => {
     expect(algoSelect.value).toBe('bfs')
 
     // Switch to grid — should become bfs_grid
-    const modeSelect = screen.getByLabelText('Mode')
-    fireEvent.change(modeSelect, { target: { value: 'grid' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
     expect(screen.getByLabelText('Algorithm').value).toBe('bfs_grid')
 
     // Switch back to graph — should become bfs again
-    fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'graph' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Graph' }))
     expect(screen.getByLabelText('Algorithm').value).toBe('bfs')
   })
 })
@@ -296,8 +292,7 @@ describe('GraphLabPage — grid integration flow', () => {
     const { container } = renderPage()
 
     // Switch to grid mode
-    const modeSelect = screen.getByLabelText('Mode')
-    fireEvent.change(modeSelect, { target: { value: 'grid' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
 
     // Verify grid canvases appeared
     expect(container.querySelectorAll('canvas').length).toBeGreaterThanOrEqual(5)
@@ -353,8 +348,7 @@ describe('GraphLabPage — grid integration flow', () => {
     expect(usePlaybackStore.getState().totalSteps).toBe(1)
 
     // Switch mode
-    const modeSelect = screen.getByLabelText('Mode')
-    fireEvent.change(modeSelect, { target: { value: 'grid' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
 
     // Timeline should be cleared
     expect(usePlaybackStore.getState().totalSteps).toBe(0)
@@ -364,8 +358,7 @@ describe('GraphLabPage — grid integration flow', () => {
     renderPage()
 
     // Switch to grid
-    const modeSelect = screen.getByLabelText('Mode')
-    fireEvent.change(modeSelect, { target: { value: 'grid' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }))
 
     // GridDataStructurePanel renders a container even with no data
     // It doesn't show "Frontier" when there's no step, but its container is present

@@ -61,7 +61,8 @@ describe('module setup forms', () => {
       />,
     )
 
-    expect(screen.getByText('Graph Lab')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Graph' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Grid' })).toBeInTheDocument()
     fireEvent.change(screen.getByRole('combobox', { name: 'Algorithm' }), {
       target: { value: 'dijkstra' },
     })
