@@ -33,6 +33,79 @@ class MergeSortAlgorithm(BaseAlgorithm):
         except ValidationError as e:
             raise DomainError("Invalid sorting input.", details = {"errors": e.errors()})
 
+        if benchmark_mode:
+            arr = list(sorting_input.array)
+            n = len(arr)
+            comparisons = 0
+            swaps = 0
+            writes = 0
+            max_depth = 0
+
+            def ms(low, high, depth):
+                nonlocal comparisons, swaps, writes, max_depth
+                if depth > max_depth:
+                    max_depth = depth
+                if low >= high:
+                    return
+                mid = (low + high) // 2
+                ms(low, mid, depth + 1)
+                ms(mid + 1, high, depth + 1)
+
+                left = arr[low:mid + 1]
+                right = arr[mid + 1:high + 1]
+                i = j = 0
+                k = low
+                while i < len(left) and j < len(right):
+                    comparisons += 1
+                    if left[i] <= right[j]:
+                        arr[k] = left[i]
+                        i += 1
+                    else:
+                        arr[k] = right[j]
+                        j += 1
+                    writes += 1
+                    k += 1
+                while i < len(left):
+                    arr[k] = left[i]
+                    writes += 1
+                    i += 1
+                    k += 1
+                while j < len(right):
+                    arr[k] = right[j]
+                    writes += 1
+                    j += 1
+                    k += 1
+
+            ms(0, n - 1, 0)
+
+            metrics = {
+                "comparisons": comparisons,
+                "swaps": swaps,
+                "writes": writes,
+                "array_accesses": 0,
+                "recursion_depth": 0,
+                "max_recursion_depth": max_depth,
+                "array_length": n,
+                "runtime_ms": 0,
+            }
+
+            return AlgorithmOutput(
+                timeline_steps = [],
+                final_result = {
+                    "sorted_array": arr,
+                    "comparisons": comparisons,
+                    "writes": writes,
+                    "max_recursion_depth": max_depth,
+                },
+                summary_metrics = metrics,
+                algorithm_metadata = self.build_metadata(algo_input) | {
+                    "time_complexity": "O(n log n)",
+                    "space_complexity": "O(n)",
+                    "stable": True,
+                    "array_size": n,
+                },
+            )
+
         arr = list(sorting_input.array)
         n = len(arr)
 
