@@ -4,10 +4,12 @@ import { cn } from '../../utils/cn'
 import PlaybackBar from './PlaybackBar'
 import StepInspector from './StepInspector'
 import FloatingCodePanel from './FloatingCodePanel'
+import ResizeHandle from './ResizeHandle'
 import { usePlaybackStore } from '../../stores/usePlaybackStore'
 import { useMetadataStore } from '../../stores/useMetadataStore'
 import { metadataService } from '../../services'
 import { algorithmContent } from '../../content/algorithms'
+import { useResizablePanel } from '../../hooks/useResizablePanel'
 
 export default function SimulationLayout({ configPanel, children, metrics, className, moduleKey, algorithmKey }) {
   const [isCodePanelOpen, setIsCodePanelOpen] = useState(false)
@@ -32,21 +34,25 @@ export default function SimulationLayout({ configPanel, children, metrics, class
     }).catch(() => {})
   }, [setMetadata])
 
+  const { leftWidth, rightWidth, containerRef, leftHandleProps, rightHandleProps } = useResizablePanel(moduleKey)
+
   const contentKey = moduleKey && algorithmKey ? `${moduleKey}/${algorithmKey}` : null
   const content = contentKey ? algorithmContent[contentKey] || null : null
   const activeLines = currentStep?.state_payload?.pseudocode_lines || []
 
   return (
     <div className = {cn('flex flex-col gap-3 h-[calc(100vh-170px)] min-h-[520px] animate-enter stagger-1', className)}>
-      <div className = "flex gap-3 flex-1 min-h-0">
+      <div className = "flex flex-1 min-h-0" ref = {containerRef}>
 
         {/* left — configurations */}
         <div
           className = "flex flex-col rounded-xl border border-white/[0.07] bg-slate-800/50 overflow-hidden flex-none"
-          style = {{width: '260px'}}
+          style = {{ width: leftWidth }}
         >
           {configPanel}
         </div>
+
+        <ResizeHandle {...leftHandleProps} side = "left" />
 
         {/* center — canvas (relative for floating panel positioning) */}
         <div className = "flex-1 flex flex-col rounded-xl border border-white/[0.07] bg-slate-800/30 overflow-hidden min-w-0 relative">
@@ -78,10 +84,12 @@ export default function SimulationLayout({ configPanel, children, metrics, class
           />
         </div>
 
+        <ResizeHandle {...rightHandleProps} side = "right" />
+
         {/* right — step inspector */}
         <div
           className = "flex flex-col rounded-xl border border-white/[0.07] bg-slate-800/50 overflow-hidden flex-none"
-          style = {{ width: '300px' }}
+          style = {{ width: rightWidth }}
         >
           <StepInspector metrics = {metrics} moduleKey = {moduleKey} algorithmKey = {algorithmKey} />
         </div>
