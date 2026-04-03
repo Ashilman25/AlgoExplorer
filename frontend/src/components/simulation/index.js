@@ -1,7 +1,7 @@
 export { default as SimulationLayout } from './SimulationLayout'
 export { default as PlaybackBar }     from './PlaybackBar'
 export { default as StepInspector }   from './StepInspector'
-export { default as ConfigPanel, ConfigSection } from './ConfigPanel'
+export { default as ConfigPanel, ConfigSection, ModeToggle } from './ConfigPanel'
 export { default as DpStripCanvas }   from './DpStripCanvas'
 export { default as FibCallTree }     from './FibCallTree'
 export { default as FloatingCodePanel } from './FloatingCodePanel'

@@ -23,15 +23,18 @@ function renderConfig(overrides = {}) {
 }
 
 describe('GridConfig', () => {
-  it('renders the panel title', () => {
+  it('renders the mode toggle', () => {
     renderConfig()
-    expect(screen.getByText('Grid Lab')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Graph' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Grid' })).toBeInTheDocument()
   })
 
-  it('renders mode selector with grid selected', () => {
+  it('renders mode toggle with grid active', () => {
     renderConfig()
-    const modeSelect = screen.getByLabelText('Mode')
-    expect(modeSelect.value).toBe('grid')
+    const gridBtn = screen.getByRole('button', { name: 'Grid' })
+    const graphBtn = screen.getByRole('button', { name: 'Graph' })
+    expect(gridBtn).toBeInTheDocument()
+    expect(graphBtn).toBeInTheDocument()
   })
 
   it('renders algorithm selector with grid algorithms', () => {

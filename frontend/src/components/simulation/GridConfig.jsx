@@ -1,8 +1,8 @@
 // frontend/src/components/simulation/GridConfig.jsx
 
 import { Select, ErrorAlert } from '../ui'
-import ConfigPanel, { ConfigSection } from './ConfigPanel'
-import { EXPLANATION_LEVELS, MODE_OPTIONS } from '../../config/simulationConfig'
+import ConfigPanel, { ConfigSection, ModeToggle } from './ConfigPanel'
+import { EXPLANATION_LEVELS } from '../../config/simulationConfig'
 
 const GRID_ALGOS = [
   { value: 'bfs_grid',      label: 'BFS — Breadth-First Search' },
@@ -20,11 +20,7 @@ export default function GridConfig({
   error,
 }) {
   return (
-    <ConfigPanel title = "Grid Lab">
-
-      <ConfigSection title = "Mode">
-        <Select aria-label = "Mode" options = {MODE_OPTIONS} value = {mode} onChange = {onModeChange} />
-      </ConfigSection>
+    <ConfigPanel header = {<ModeToggle mode = {mode} onChange = {onModeChange} />}>
 
       <ConfigSection title = "Algorithm">
         <Select aria-label = "Algorithm" options = {GRID_ALGOS} value = {algorithm} onChange = {onAlgorithmChange} />
