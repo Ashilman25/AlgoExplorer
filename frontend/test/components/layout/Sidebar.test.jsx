@@ -66,14 +66,12 @@ describe('Sidebar', () => {
       expect(span.className).toContain('opacity-0')
     })
 
-    it('replaces section headers with hr separators', () => {
+    it('hides section headers with text-transparent when collapsed', () => {
       renderSidebar({ isCollapsed: true })
-      expect(screen.queryByText('Labs')).not.toBeInTheDocument()
-      expect(screen.queryByText('Tools')).not.toBeInTheDocument()
-      expect(screen.queryByText('Library')).not.toBeInTheDocument()
-      const aside = screen.getByRole('complementary')
-      const separators = aside.querySelectorAll('hr')
-      expect(separators.length).toBe(3)
+      const labsHeader = screen.getByText('Labs')
+      expect(labsHeader.className).toContain('text-transparent')
+      expect(screen.getByText('Tools').className).toContain('text-transparent')
+      expect(screen.getByText('Library').className).toContain('text-transparent')
     })
 
     it('shows title tooltip on nav links', () => {

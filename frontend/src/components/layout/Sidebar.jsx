@@ -129,14 +129,13 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
 
         {/* nav sections */}
         {NAV_SECTIONS.map(({section, items}) => (
-          <div key = {section} className = {cn('pb-1', showExpanded ? 'pt-5' : 'pt-2')}>
-            {showExpanded ? (
-              <p className = "px-5 pb-2 text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600 select-none">
-                {section}
-              </p>
-            ) : (
-              <hr className = "mx-auto w-6 border-white/[0.06] mb-2" />
-            )}
+          <div key = {section} className = "pb-1 pt-5">
+            <p className = {cn(
+              'px-5 pb-2 text-[10px] font-semibold tracking-[0.10em] uppercase select-none',
+              showExpanded ? 'text-slate-600' : 'text-transparent',
+            )}>
+              {section}
+            </p>
 
             <div className = {showExpanded ? 'space-y-0.5' : 'flex flex-col items-center gap-0.5'}>
               {items.map(item => (
