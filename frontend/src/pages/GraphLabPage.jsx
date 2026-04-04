@@ -3,6 +3,7 @@ import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast, ErrorAlert } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection, ModeToggle, GridCanvas, GridConfig, GridDataStructurePanel } from '../components/simulation'
+import { GRID_TIMING_CONFIG } from '../components/simulation/PlaybackBar'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { useGridState } from '../hooks/useGridState'
 import { useReopenRun } from '../hooks/useReopenRun'
@@ -809,7 +810,8 @@ export default function GraphLabPage() {
   }, [loadedScenario])
 
   // Reopen run: fetch stored timeline if navigated from Run History
-  useReopenRun(loadedScenario?._reopenRunId)
+  const reopenTimingConfig = loadedScenario?.input_payload?.mode === 'grid' ? GRID_TIMING_CONFIG : undefined
+  useReopenRun(loadedScenario?._reopenRunId, reopenTimingConfig)
 
   // builder mode: drag | add | connect | delete
   const [builderMode, setBuilderMode]     = useState('drag')
@@ -972,7 +974,7 @@ export default function GraphLabPage() {
         input_payload: payload,
         execution_mode: 'simulate',
         explanation_level: explanationLevel,
-      })
+      }, GRID_TIMING_CONFIG)
       return
     }
 

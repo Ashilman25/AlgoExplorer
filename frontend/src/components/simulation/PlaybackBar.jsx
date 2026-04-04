@@ -6,12 +6,36 @@ import { usePlaybackStore } from '../../stores/usePlaybackStore'
 const SPEEDS = [0.25, 0.5, 1, 2, 4, 8, 16]
 const BASE_DELAY_MS = 700   // ms per step at 1× speed
 
+export const GRID_TIMING_CONFIG = {
+  baseDelay: 150,
+  eventWeights: {
+    INITIALIZE:  2.5,
+    PATH_FOUND:  2.5,
+    COMPLETE:    2.5,
+    DEQUEUE:     1.0,
+    POP:         1.0,
+    POP_MIN:     1.0,
+    ENQUEUE:     0.4,
+    PUSH:        0.4,
+    RELAX:       0.4,
+    NO_RELAX:    0.4,
+    BACKTRACK:   0.4,
+  },
+}
+
+function computeStepDelay(step, timingConfig, speed) {
+  if (!timingConfig) return Math.round(BASE_DELAY_MS / speed)
+  const weight = timingConfig.eventWeights[step?.event_type] ?? 1.0
+  return Math.round((timingConfig.baseDelay / speed) * weight)
+}
+
 export default function PlaybackBar() {
   const stepIndex = usePlaybackStore((s) => s.stepIndex)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const speed = usePlaybackStore((s) => s.speed)
   const isScrubbing = usePlaybackStore((s) => s.isScrubbing)
+  const timingConfig = usePlaybackStore((s) => s.timingConfig)
   const {play, pause, next, prev, jumpToStart, jumpToEnd, jumpTo, setSpeed, beginScrub, endScrub} = usePlaybackStore()
 
   const hasSteps = totalSteps > 0
@@ -25,21 +49,32 @@ export default function PlaybackBar() {
   useEffect(() => {
     if (!isPlaying || !hasSteps || isScrubbing) return
 
-    const delay = Math.round(BASE_DELAY_MS / speed)
-    const id = setInterval(() => {
+    let timerId = null
+
+    function scheduleTick() {
       const s = usePlaybackStore.getState()
+      const delay = computeStepDelay(s.currentStep, timingConfig, speed)
 
-      if (s.stepIndex >= s.totalSteps - 1) {
-        s.pause()
-
-      } else {
+      timerId = setTimeout(() => {
+        const s = usePlaybackStore.getState()
+        if (s.stepIndex >= s.totalSteps - 1) {
+          s.pause()
+          return
+        }
         s.next()
-      }
+        const after = usePlaybackStore.getState()
+        if (after.stepIndex >= after.totalSteps - 1) {
+          after.pause()
+        } else {
+          scheduleTick()
+        }
+      }, delay)
+    }
 
-    }, delay)
+    scheduleTick()
 
-    return () => clearInterval(id)
-  }, [isPlaying, speed, hasSteps, isScrubbing])
+    return () => { if (timerId != null) clearTimeout(timerId) }
+  }, [isPlaying, speed, hasSteps, isScrubbing, timingConfig])
 
   return (
     <div className = "flex items-center gap-4 px-5 rounded-xl border border-white/[0.07] bg-slate-900/80 h-[72px] flex-none">
