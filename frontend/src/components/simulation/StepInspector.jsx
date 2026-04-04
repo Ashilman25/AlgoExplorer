@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { ChevronRight } from 'lucide-react'
+import { cn } from '../../utils/cn'
 import { usePlaybackStore } from '../../stores/usePlaybackStore'
 import { useRunStore } from '../../stores/useRunStore'
 import { useMetadataStore } from '../../stores/useMetadataStore'
@@ -20,7 +23,6 @@ function entityClasses(state) {
   return ENTITY_STATE_CLASSES[state] ?? ENTITY_STATE_CLASSES.default
 }
 
-
 const ALGO_LABELS = {
   bfs: 'BFS',
   dfs: 'DFS',
@@ -34,20 +36,14 @@ const ALGO_LABELS = {
   mergesort: 'Merge Sort',
   lcs: 'LCS',
   edit_distance: 'Edit Distance',
-}
-
-const MODULE_LABELS = {
-  graph: 'Graph',
-  sorting: 'Sorting',
-  dp: 'DP',
+  bfs_grid: 'BFS Grid',
+  dfs_grid: 'DFS Grid',
+  dijkstra_grid: 'Dijkstra Grid',
+  astar_grid: 'A* Grid',
 }
 
 function fmtAlgo(key) {
   return ALGO_LABELS[key] ?? key?.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) ?? '—'
-}
-
-function fmtModule(key) {
-  return MODULE_LABELS[key] ?? key ?? '—'
 }
 
 
@@ -79,47 +75,80 @@ export default function StepInspector({ metrics = [], moduleKey, algorithmKey })
           {label: 'Current step', value: hasTimeline ? stepIndex + 1 : '—'},
         ]
 
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  // ── Playback mode ──────────────────────────────────────
+  if (hasTimeline) {
+    const eventType = currentStep?.event_type ?? currentStep?.eventType ?? 'STEP'
+
+    return (
+      <>
+        {/* header: event badge + step counter */}
+        <div className = "panel-header shrink-0 flex items-center justify-between">
+          <div className = "flex items-center gap-2">
+            <span className = "font-mono text-[9px] font-bold uppercase tracking-widest text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full border border-brand-500/20">
+              {eventType}
+            </span>
+            <span className = "font-mono text-[9px] text-slate-600">
+              #{stepIndex + 1} of {totalSteps}
+            </span>
+          </div>
+          {runId && (
+            <span className = "font-mono text-[8px] text-slate-700">
+              #{runId}
+            </span>
+          )}
+        </div>
+
+        {/* body: step detail */}
+        <div className = "flex-1 overflow-y-auto min-h-0">
+          {isLoading ? (
+            <LoadingSkeleton />
+          ) : (
+            <StepDetail step = {currentStep} />
+          )}
+        </div>
+
+        {/* grid focus — inline within body area, grid-mode only */}
+        <GridFocusCard />
+
+        {/* drawer: info & metrics */}
+        <InfoDrawer
+          algorithmKey = {summary?.algorithm_key}
+          learningInfo = {learningInfo}
+          metrics = {displayMetrics}
+          isOpen = {drawerOpen}
+          onToggle = {() => setDrawerOpen((v) => !v)}
+        />
+      </>
+    )
+  }
+
+  // ── Idle mode (no playback) ────────────────────────────
   return (
     <>
-      {/* header */}
-      <div className = "panel-header shrink-0 flex items-center justify-between">
-        <span>Step Inspector</span>
-
-        {runId && (
-          <span className = "font-mono text-[9px] text-slate-600 tabular-nums">
-            #{runId}
-          </span>
-        )}
+      {/* header: static label */}
+      <div className = "panel-header shrink-0">
+        Step Inspector
       </div>
 
-      {/* scrollable body */}
+      {/* body: algorithm info + empty state */}
       <div className = "flex-1 overflow-y-auto min-h-0">
-        <AlgorithmInfo learningInfo = {learningInfo} defaultExpanded = {!hasTimeline} />
-
         {isLoading ? (
           <LoadingSkeleton />
-
-        ) : !hasTimeline ? (
-          <EmptyState />
-
-
         ) : (
-          <div className = "flex flex-col divide-y divide-white/[0.05]">
-            <StepDetail
-              step = {currentStep}
-              stepIndex = {stepIndex}
-              algorithmKey = {summary?.algorithm_key}
-              moduleType = {summary?.module_type}
-            />
+          <div className = "flex flex-col">
+            {learningInfo && (
+              <div className = "px-4 pt-4 pb-2">
+                <AlgorithmInfo learningInfo = {learningInfo} />
+              </div>
+            )}
+            <EmptyState />
           </div>
         )}
-
       </div>
 
-      {/* grid focus — fixed, grid-mode only */}
-      <GridFocusCard />
-
-      {/* footer */}
+      {/* footer: summary metrics */}
       <div className = "shrink-0 p-3 border-t border-white/[0.07] space-y-1.5">
         {displayMetrics.map((m) => (
           <div key = {m.label} className = "metric-card flex items-center justify-between py-2 px-3">
@@ -132,51 +161,34 @@ export default function StepInspector({ metrics = [], moduleKey, algorithmKey })
   )
 }
 
-function StepDetail({ step, stepIndex, algorithmKey, moduleType }) {
+
+// ── StepDetail ──────────────────────────────────────────
+
+function StepDetail({ step }) {
   if (!step) return null
 
-  const eventType = step.event_type ?? step.eventType ?? 'STEP'
   const rawExplanation = step.explanation
   const entities = step.highlighted_entities ?? step.highlightedEntities ?? []
   const snapshot = step.metrics_snapshot ?? step.metricsSnapshot ?? {}
 
-  // Normalize explanation: support both legacy strings and new structured objects
   let title = null
   let body = null
   let dataSnapshot = null
 
   if (typeof rawExplanation === 'string') {
-    // Legacy format: treat whole string as body
     body = rawExplanation
   } else if (rawExplanation && typeof rawExplanation === 'object') {
     if (rawExplanation.title) {
-      // New structured format
       title = rawExplanation.title
       body = rawExplanation.body ?? null
       dataSnapshot = rawExplanation.data_snapshot ?? null
     } else if (rawExplanation.text) {
-      // Legacy { text: "..." } format
       body = rawExplanation.text
     }
   }
 
   return (
-    <div className = "p-4 space-y-4">
-
-      {/* Event type badge + step number + algorithm */}
-      <div className = "flex items-center gap-2 flex-wrap">
-        <span className = "font-mono text-[10px] font-semibold uppercase tracking-widest text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full border border-brand-500/20">
-          {eventType}
-        </span>
-
-        <span className = "mono-label">#{stepIndex + 1}</span>
-
-        {algorithmKey && (
-          <span className = "ml-auto font-mono text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-700/60 border border-white/[0.06] text-slate-500">
-            {fmtAlgo(algorithmKey)}
-          </span>
-        )}
-      </div>
+    <div className = "p-4 space-y-5">
 
       {/* Explanation */}
       {(title || body || dataSnapshot) && (
@@ -184,11 +196,11 @@ function StepDetail({ step, stepIndex, algorithmKey, moduleType }) {
           <p className = "mono-label">Explanation</p>
 
           {title && (
-            <p className = "text-xs font-medium text-slate-300">{title}</p>
+            <p className = "text-xs font-medium text-slate-200">{title}</p>
           )}
 
           {body && (
-            <p className = "text-xs text-slate-400 leading-relaxed">{body}</p>
+            <p className = "text-xs text-slate-200 leading-relaxed">{body}</p>
           )}
 
           {dataSnapshot && Object.keys(dataSnapshot).length > 0 && (
@@ -211,10 +223,10 @@ function StepDetail({ step, stepIndex, algorithmKey, moduleType }) {
         </div>
       )}
 
-      {/* changed entities */}
+      {/* Changed entities */}
       {entities.length > 0 && (
         <div className = "space-y-1.5">
-          <p className = "mono-label">Changed Entities</p>
+          <p className = "mono-label">Entities</p>
 
           <div className = "flex flex-wrap gap-1.5">
             {entities.map((e, i) => {
@@ -235,29 +247,118 @@ function StepDetail({ step, stepIndex, algorithmKey, moduleType }) {
         </div>
       )}
 
-      {/* metrics */}
+      {/* Step snapshot — 2-column grid */}
       {Object.keys(snapshot).length > 0 && (
         <div className = "space-y-1.5">
-          <p className = "mono-label">Step Snapshot</p>
+          <p className = "mono-label">Snapshot</p>
 
-          <div className = "space-y-1">
+          <div className = "grid grid-cols-2 gap-1">
             {Object.entries(snapshot).map(([k, v]) => (
               <div
                 key = {k}
-                className = "flex items-center justify-between rounded-lg bg-slate-800/50 border border-white/[0.05] px-2.5 py-1.5"
+                className = "flex items-center justify-between rounded bg-slate-800/50 border border-white/[0.05] px-2.5 py-1.5"
               >
-                <span className = "mono-sm">{k.replace(/_/g, ' ')}</span>
-                <span className = "font-mono text-xs text-slate-300 tabular-nums">{String(v)}</span>
+                <span className = "font-mono text-[9px] text-slate-500">{k.replace(/_/g, ' ')}</span>
+                <span className = "font-mono text-[9px] text-slate-300 tabular-nums">{String(v)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
-
     </div>
   )
 }
 
+
+// ── InfoDrawer ──────────────────────────────────────────
+
+function InfoDrawer({ algorithmKey, learningInfo, metrics, isOpen, onToggle }) {
+  const algoLabel = fmtAlgo(algorithmKey)
+  const primaryComplexity = learningInfo?.complexity?.time?.average ?? null
+  const hint = [algoLabel, primaryComplexity].filter(Boolean).join(' · ')
+
+  return (
+    <div className = "shrink-0 border-t border-white/[0.07]">
+      {/* toggle bar */}
+      <button
+        onClick = {onToggle}
+        className = "w-full flex items-center justify-between px-3 py-2 hover:bg-white/[0.02] transition-colors duration-100"
+      >
+        <div className = "flex items-center gap-1.5">
+          <ChevronRight
+            size = {10}
+            className = {cn(
+              'text-slate-600 transition-transform duration-150',
+              isOpen && 'rotate-90',
+            )}
+          />
+          <span className = "font-mono text-[9px] text-slate-300 uppercase tracking-wider">
+            Info & Metrics
+          </span>
+        </div>
+
+        {hint && (
+          <span className = "font-mono text-[8px] text-slate-300">
+            {hint}
+          </span>
+        )}
+      </button>
+
+      {/* expandable content */}
+      {isOpen && (
+        <div className = "px-3 pb-3 space-y-4 border-t border-white/[0.04] animate-enter">
+          {/* Algorithm info — compact: complexity + properties only */}
+          {learningInfo && (
+            <div className = "space-y-3 pt-2">
+              <div className = "space-y-1">
+                <p className = "mono-label">Complexity</p>
+                <div className = "space-y-1">
+                  {Object.entries({
+                    'TIME (avg)': learningInfo.complexity.time.average,
+                    'TIME (worst)': learningInfo.complexity.time.worst,
+                    'SPACE': learningInfo.complexity.space,
+                  }).map(([label, value]) => (
+                    <div key = {label} className = "flex items-center justify-between rounded bg-slate-800/50 border border-white/[0.05] px-2.5 py-1">
+                      <span className = "font-mono text-[9px] text-slate-500">{label}</span>
+                      <span className = "font-mono text-[9px] text-slate-300">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {learningInfo.properties.length > 0 && (
+                <div className = "space-y-1">
+                  <p className = "mono-label">Properties</p>
+                  <div className = "flex flex-wrap gap-1.5">
+                    {learningInfo.properties.map((prop) => (
+                      <span key = {prop} className = "font-mono text-[10px] px-2 py-0.5 rounded-full border border-brand-500/20 bg-brand-500/10 text-brand-400">
+                        {prop}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Summary metrics */}
+          <div className = "space-y-1.5">
+            <p className = "mono-label">Run Metrics</p>
+            {metrics.map((m) => (
+              <div key = {m.label} className = "metric-card flex items-center justify-between py-1.5 px-3">
+                <span className = "mono-label">{m.label}</span>
+                <span className = "mono-value text-sm">{m.value ?? '—'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ── Helpers ─────────────────────────────────────────────
 
 function formatSnapshotValue(value) {
   if (value === null || value === undefined) return '\u2014'
@@ -266,7 +367,6 @@ function formatSnapshotValue(value) {
   if (typeof value === 'string') return value
   if (Array.isArray(value)) {
     if (value.length === 0) return '[]'
-    // Check if it's a 2D array (DP table)
     if (Array.isArray(value[0])) {
       return value.map(row => '[' + row.join(', ') + ']').join('\n')
     }
@@ -279,7 +379,6 @@ function formatSnapshotValue(value) {
   }
   return String(value)
 }
-
 
 function LoadingSkeleton() {
   return (
@@ -300,7 +399,7 @@ function EmptyState() {
       </div>
 
       <p className = "text-xs text-slate-600 leading-relaxed max-w-[180px]">
-        Step details, changed entities, and explanations will appear here during playback.
+        Run a simulation to see step-by-step details here.
       </p>
     </div>
   )
