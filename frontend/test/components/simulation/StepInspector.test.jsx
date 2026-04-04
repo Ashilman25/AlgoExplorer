@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
 
 import StepInspector from '../../../src/components/simulation/StepInspector'
 import { useMetadataStore } from '../../../src/stores/useMetadataStore'
@@ -61,142 +62,215 @@ describe('StepInspector', () => {
     resetStores()
   })
 
-  it('renders loading skeletons while timeline data is being fetched', () => {
-    usePlaybackStore.setState({ ...DEFAULT_PLAYBACK_STATE, isLoading: true })
+  describe('idle mode (no playback)', () => {
+    it('renders loading skeletons while timeline data is being fetched', () => {
+      usePlaybackStore.setState({ ...DEFAULT_PLAYBACK_STATE, isLoading: true })
 
-    const { container } = render(<StepInspector />)
+      const { container } = render(<StepInspector />)
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4)
-    expect(
-      screen.queryByText(/step details, changed entities, and explanations will appear here/i),
-    ).not.toBeInTheDocument()
-  })
-
-  it('renders the empty state and default metrics when no timeline exists', () => {
-    render(<StepInspector />)
-
-    expect(
-      screen.getByText(/step details, changed entities, and explanations will appear here/i),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Steps total')).toBeInTheDocument()
-    expect(screen.getByText('Current step')).toBeInTheDocument()
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2)
-  })
-
-  it('renders the active step details, entities, and summary metrics', () => {
-    usePlaybackStore.setState({
-      ...DEFAULT_PLAYBACK_STATE,
-      steps: [{}, {}],
-      totalSteps: 2,
-      stepIndex: 1,
-      currentStep: {
-        eventType: 'RELAX',
-        explanation: { text: 'Relaxed the frontier edge.' },
-        highlightedEntities: [
-          { id: 'A', state: 'active' },
-          { label: 'Node B', state: 'frontier' },
-        ],
-        metricsSnapshot: {
-          frontier_size: 2,
-          path_cost: 5,
-        },
-      },
+      expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4)
     })
-    useRunStore.setState({
-      ...DEFAULT_RUN_STATE,
-      runId: 42,
-      summary: {
-        algorithm_key: 'dijkstra',
-        module_type: 'graph',
+
+    it('shows "Step Inspector" header when no timeline exists', () => {
+      render(<StepInspector />)
+
+      expect(screen.getByText('Step Inspector')).toBeInTheDocument()
+    })
+
+    it('renders Algorithm Info content directly when learning_info is available', () => {
+      useMetadataStore.setState({
+        ...DEFAULT_METADATA_STATE,
+        algorithms: {
+          graph: [{ key: 'bfs', learning_info: MOCK_LEARNING_INFO }],
+        },
+      })
+
+      render(<StepInspector moduleKey = "graph" algorithmKey = "bfs" />)
+
+      expect(screen.getByText('Complexity')).toBeInTheDocument()
+      expect(screen.getAllByText('O(V + E)').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getByText('complete')).toBeInTheDocument()
+      expect(screen.getByText('Guarantees shortest path in unweighted graphs')).toBeInTheDocument()
+      expect(screen.getByText('BEST')).toBeInTheDocument()
+      expect(screen.getByText('WORST')).toBeInTheDocument()
+    })
+
+    it('renders the empty state message when no timeline exists', () => {
+      render(<StepInspector />)
+
+      expect(
+        screen.getByText(/run a simulation to see step-by-step details here/i),
+      ).toBeInTheDocument()
+    })
+
+    it('renders footer metrics with placeholder dashes when no timeline exists', () => {
+      render(<StepInspector />)
+
+      expect(screen.getByText('Steps total')).toBeInTheDocument()
+      expect(screen.getByText('Current step')).toBeInTheDocument()
+      expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('does not render Algorithm Info when no learning_info is available', () => {
+      render(<StepInspector />)
+
+      expect(screen.queryByText('Complexity')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('playback mode', () => {
+    const PLAYBACK_STEP = {
+      event_type: 'RELAX',
+      explanation: { text: 'Relaxed the frontier edge.' },
+      highlighted_entities: [
+        { id: 'A', state: 'active' },
+        { label: 'Node B', state: 'frontier' },
+      ],
+      metrics_snapshot: {
+        frontier_size: 2,
+        path_cost: 5,
+      },
+    }
+
+    function enterPlayback() {
+      usePlaybackStore.setState({
+        ...DEFAULT_PLAYBACK_STATE,
+        steps: [{}, {}],
+        totalSteps: 2,
+        stepIndex: 1,
+        currentStep: PLAYBACK_STEP,
+      })
+      useRunStore.setState({
+        ...DEFAULT_RUN_STATE,
+        runId: 42,
         summary: {
-          nodes_visited: 5,
-          path_cost: 5,
+          algorithm_key: 'dijkstra',
+          module_type: 'graph',
+          summary: { nodes_visited: 5, path_cost: 5 },
         },
-      },
+      })
+    }
+
+    it('shows event badge and step counter in the header', () => {
+      enterPlayback()
+      render(<StepInspector />)
+
+      expect(screen.getByText('RELAX')).toBeInTheDocument()
+      expect(screen.getByText('#2 of 2')).toBeInTheDocument()
+      expect(screen.getByText('#42')).toBeInTheDocument()
     })
 
-    render(<StepInspector />)
+    it('renders explanation text in the step detail body', () => {
+      enterPlayback()
+      render(<StepInspector />)
 
-    expect(screen.getByText('#42')).toBeInTheDocument()
-    expect(screen.getByText('RELAX')).toBeInTheDocument()
-    expect(screen.getByText('#2')).toBeInTheDocument()
-    expect(screen.getByText("Dijkstra's")).toBeInTheDocument()
-    expect(screen.getByText('Explanation')).toBeInTheDocument()
-    expect(screen.getByText('Relaxed the frontier edge.')).toBeInTheDocument()
-    expect(screen.getByText('Changed Entities')).toBeInTheDocument()
-    expect(screen.getByText('A')).toBeInTheDocument()
-    expect(screen.getByText('Node B')).toBeInTheDocument()
-    expect(screen.getByText('Step Snapshot')).toBeInTheDocument()
-    expect(screen.getByText('frontier size')).toBeInTheDocument()
-    expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getByText('nodes visited')).toBeInTheDocument()
-    expect(screen.getAllByText('path cost')).toHaveLength(2)
-  })
-
-  it('prefers explicit metrics props over the run summary footer metrics', () => {
-    usePlaybackStore.setState({
-      ...DEFAULT_PLAYBACK_STATE,
-      steps: [{ step_index: 0 }],
-      totalSteps: 1,
-      currentStep: {
-        event_type: 'COMPARE',
-        explanation: 'Compared two indices.',
-        highlighted_entities: [],
-        metrics_snapshot: {},
-      },
-    })
-    useRunStore.setState({
-      ...DEFAULT_RUN_STATE,
-      summary: {
-        algorithm_key: 'quicksort',
-        module_type: 'sorting',
-        summary: {
-          comparisons: 99,
-        },
-      },
+      expect(screen.getByText('Explanation')).toBeInTheDocument()
+      expect(screen.getByText('Relaxed the frontier edge.')).toBeInTheDocument()
     })
 
-    render(<StepInspector metrics={[{ label: 'Custom Metric', value: '12' }]} />)
+    it('renders entity pills with correct labels', () => {
+      enterPlayback()
+      render(<StepInspector />)
 
-    expect(screen.getByText('Custom Metric')).toBeInTheDocument()
-    expect(screen.getByText('12')).toBeInTheDocument()
-    expect(screen.queryByText('comparisons')).not.toBeInTheDocument()
-  })
-
-  it('renders Algorithm Info section when learning_info is available', () => {
-    useMetadataStore.setState({
-      ...DEFAULT_METADATA_STATE,
-      algorithms: {
-        graph: [{ key: 'bfs', learning_info: MOCK_LEARNING_INFO }],
-      },
+      expect(screen.getByText('Entities')).toBeInTheDocument()
+      expect(screen.getByText('A')).toBeInTheDocument()
+      expect(screen.getByText('Node B')).toBeInTheDocument()
     })
 
-    render(<StepInspector moduleKey = "graph" algorithmKey = "bfs" />)
+    it('renders snapshot metrics in a 2-column grid', () => {
+      enterPlayback()
+      render(<StepInspector />)
 
-    expect(screen.getByText('Algorithm Info')).toBeInTheDocument()
-    expect(screen.getAllByText('O(V + E)').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('complete')).toBeInTheDocument()
-    expect(screen.getByText('Guarantees shortest path in unweighted graphs')).toBeInTheDocument()
-  })
-
-  it('does not render Algorithm Info when no learning_info is available', () => {
-    render(<StepInspector />)
-
-    expect(screen.queryByText('Algorithm Info')).not.toBeInTheDocument()
-  })
-
-  it('expands Algorithm Info by default when no timeline is active', () => {
-    useMetadataStore.setState({
-      ...DEFAULT_METADATA_STATE,
-      algorithms: {
-        graph: [{ key: 'bfs', learning_info: MOCK_LEARNING_INFO }],
-      },
+      expect(screen.getByText('Snapshot')).toBeInTheDocument()
+      expect(screen.getByText('frontier size')).toBeInTheDocument()
+      expect(screen.getByText('path cost')).toBeInTheDocument()
     })
 
-    render(<StepInspector moduleKey = "graph" algorithmKey = "bfs" />)
+    it('shows collapsed Info & Metrics drawer', () => {
+      enterPlayback()
+      render(<StepInspector />)
 
-    expect(screen.getByText('Complexity')).toBeInTheDocument()
-    expect(screen.getByText('BEST')).toBeInTheDocument()
-    expect(screen.getByText('WORST')).toBeInTheDocument()
+      expect(screen.getByText('Info & Metrics')).toBeInTheDocument()
+      expect(screen.getByText(/Dijkstra/)).toBeInTheDocument()
+    })
+
+    it('does not show "Step Inspector" header during playback', () => {
+      enterPlayback()
+      render(<StepInspector />)
+
+      expect(screen.queryByText('Step Inspector')).not.toBeInTheDocument()
+    })
+
+    it('prefers explicit metrics props for drawer metrics', async () => {
+      enterPlayback()
+      render(<StepInspector metrics = {[{ label: 'Custom Metric', value: '12' }]} />)
+
+      const drawerToggle = screen.getByText('Info & Metrics')
+      await act(async () => { drawerToggle.closest('button').click() })
+
+      expect(screen.getByText('Custom Metric')).toBeInTheDocument()
+      expect(screen.getByText('12')).toBeInTheDocument()
+    })
+
+    describe('drawer interaction', () => {
+      it('expands drawer on click to show algorithm info and run metrics', async () => {
+        const user = userEvent.setup()
+
+        enterPlayback()
+        useMetadataStore.setState({
+          ...DEFAULT_METADATA_STATE,
+          algorithms: {
+            graph: [{ key: 'dijkstra', learning_info: MOCK_LEARNING_INFO }],
+          },
+        })
+
+        render(<StepInspector moduleKey = "graph" algorithmKey = "dijkstra" />)
+
+        expect(screen.queryByText('Run Metrics')).not.toBeInTheDocument()
+
+        const toggle = screen.getByText('Info & Metrics').closest('button')
+        await user.click(toggle)
+
+        expect(screen.getByText('Run Metrics')).toBeInTheDocument()
+        expect(screen.getAllByText('O(V + E)').length).toBeGreaterThanOrEqual(1)
+        expect(screen.getByText('complete')).toBeInTheDocument()
+      })
+
+      it('collapses drawer on second click', async () => {
+        const user = userEvent.setup()
+
+        enterPlayback()
+        useMetadataStore.setState({
+          ...DEFAULT_METADATA_STATE,
+          algorithms: {
+            graph: [{ key: 'dijkstra', learning_info: MOCK_LEARNING_INFO }],
+          },
+        })
+
+        render(<StepInspector moduleKey = "graph" algorithmKey = "dijkstra" />)
+
+        const toggle = screen.getByText('Info & Metrics').closest('button')
+
+        await user.click(toggle)
+        expect(screen.getByText('Run Metrics')).toBeInTheDocument()
+
+        await user.click(toggle)
+        expect(screen.queryByText('Run Metrics')).not.toBeInTheDocument()
+      })
+
+      it('shows drawer hint with algorithm name and complexity', () => {
+        enterPlayback()
+        useMetadataStore.setState({
+          ...DEFAULT_METADATA_STATE,
+          algorithms: {
+            graph: [{ key: 'dijkstra', learning_info: MOCK_LEARNING_INFO }],
+          },
+        })
+
+        render(<StepInspector moduleKey = "graph" algorithmKey = "dijkstra" />)
+
+        expect(screen.getByText("Dijkstra's · O(V + E)")).toBeInTheDocument()
+      })
+    })
   })
 })
