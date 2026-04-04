@@ -14,6 +14,7 @@ const DEFAULT_PLAYBACK_STATE = {
   speed: 1,
   isScrubbing: false,
   currentStep: null,
+  timingConfig: null,
 }
 
 const TIMELINE_STEPS = [
@@ -131,5 +132,63 @@ describe('PlaybackBar', () => {
     expect(usePlaybackStore.getState().stepIndex).toBe(2)
     expect(usePlaybackStore.getState().isScrubbing).toBe(false)
     expect(screen.getByText('STEP 3 / 3')).toBeInTheDocument()
+  })
+
+  it('uses adaptive timing when timingConfig is set (grid mode)', () => {
+    vi.useFakeTimers()
+
+    const gridSteps = [
+      { step_index: 0, event_type: 'INITIALIZE' },
+      { step_index: 1, event_type: 'DEQUEUE' },
+      { step_index: 2, event_type: 'ENQUEUE' },
+      { step_index: 3, event_type: 'ENQUEUE' },
+      { step_index: 4, event_type: 'PATH_FOUND' },
+    ]
+
+    const timingConfig = {
+      baseDelay: 150,
+      eventWeights: {
+        INITIALIZE: 2.5,
+        DEQUEUE: 1.0,
+        ENQUEUE: 0.4,
+        PATH_FOUND: 2.5,
+      },
+    }
+
+    resetPlaybackStore()
+    usePlaybackStore.getState().setTimeline(gridSteps, timingConfig)
+
+    render(<PlaybackBar />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+    expect(usePlaybackStore.getState().isPlaying).toBe(true)
+
+    // Step 0 (INITIALIZE): delay = 150 * 2.5 = 375ms
+    act(() => { vi.advanceTimersByTime(374) })
+    expect(usePlaybackStore.getState().stepIndex).toBe(0)
+    act(() => { vi.advanceTimersByTime(1) })
+    expect(usePlaybackStore.getState().stepIndex).toBe(1)
+
+    // Step 1 (DEQUEUE): delay = 150 * 1.0 = 150ms
+    act(() => { vi.advanceTimersByTime(149) })
+    expect(usePlaybackStore.getState().stepIndex).toBe(1)
+    act(() => { vi.advanceTimersByTime(1) })
+    expect(usePlaybackStore.getState().stepIndex).toBe(2)
+
+    // Step 2 (ENQUEUE): delay = 150 * 0.4 = 60ms
+    act(() => { vi.advanceTimersByTime(59) })
+    expect(usePlaybackStore.getState().stepIndex).toBe(2)
+    act(() => { vi.advanceTimersByTime(1) })
+    expect(usePlaybackStore.getState().stepIndex).toBe(3)
+
+    // Step 3 (ENQUEUE): delay = 150 * 0.4 = 60ms
+    act(() => { vi.advanceTimersByTime(59) })
+    expect(usePlaybackStore.getState().stepIndex).toBe(3)
+    act(() => { vi.advanceTimersByTime(1) })
+    expect(usePlaybackStore.getState().stepIndex).toBe(4)
+
+    // At last step — should pause
+    expect(usePlaybackStore.getState().isPlaying).toBe(false)
+    expect(screen.getByText('STEP 5 / 5')).toBeInTheDocument()
   })
 })

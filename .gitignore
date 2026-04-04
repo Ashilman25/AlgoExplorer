@@ -6,5 +6,6 @@ _docs
 **/*.py[cod]
 CLAUDE.md
 docs
+_demos
 .superpowers
 *.rdb
