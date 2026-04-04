@@ -5,7 +5,7 @@ import { runsService } from '../services/runsService'
 import { useToast } from '../components/ui/Toast'
 
 
-export function useReopenRun(reopenRunId) {
+export function useReopenRun(reopenRunId, timingConfig) {
   const toast = useToast()
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export function useReopenRun(reopenRunId) {
         }
 
         useRunStore.getState().setRun(reopenRunId, summary)
-        usePlaybackStore.getState().setTimeline(steps)
+        usePlaybackStore.getState().setTimeline(steps, timingConfig)
         usePlaybackStore.getState().play()
       } catch {
         if (!cancelled) {
@@ -56,5 +56,7 @@ export function useReopenRun(reopenRunId) {
     })()
 
     return () => { cancelled = true }
+  // timingConfig intentionally excluded — derived from loadedScenario
+  // which is stable (useState initializer). Only re-run on reopenRunId change.
   }, [reopenRunId]) // eslint-disable-line react-hooks/exhaustive-deps
 }

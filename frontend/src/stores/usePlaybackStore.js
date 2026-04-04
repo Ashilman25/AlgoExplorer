@@ -20,8 +20,9 @@ export const usePlaybackStore = create((set, get) => ({
   isScrubbing: false,
 
   currentStep: null,
+  timingConfig: null,
 
-  setTimeline: (steps) => {
+  setTimeline: (steps, timingConfig) => {
     const s = Array.isArray(steps) ? steps : []
     set({
       steps: s,
@@ -30,6 +31,7 @@ export const usePlaybackStore = create((set, get) => ({
       currentStep: s[0] ?? null,
       isPlaying: false,
       error: null,
+      timingConfig: timingConfig ?? null,
     })
   },
 
@@ -43,6 +45,7 @@ export const usePlaybackStore = create((set, get) => ({
       isScrubbing: false,
       isLoading: false,
       error: null,
+      timingConfig: null,
     }),
 
   setLoading: (isLoading) => set({isLoading}),
