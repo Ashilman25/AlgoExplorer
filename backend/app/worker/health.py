@@ -13,6 +13,13 @@ def get_failed_queue(connection):
 
 
 def get_worker_health() -> dict:
+    if not settings.use_redis:
+        return {
+            "workers": {"active": 0, "idle": 0},
+            "queue": {"pending": 0, "failed": 0},
+            "healthy": False,
+        }
+
     try:
         connection = get_redis()
         workers = Worker.all(connection = connection)

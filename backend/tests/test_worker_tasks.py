@@ -122,3 +122,32 @@ def test_execute_benchmark_sets_running_status(session_factory):
         execute_benchmark(job_id)
 
     assert "running" in statuses_seen
+
+
+def test_execute_benchmark_without_redis(session_factory, monkeypatch):
+    job_id = _create_pending_job(session_factory)
+
+    monkeypatch.setattr("app.worker.tasks.settings.use_redis", False)
+    monkeypatch.setattr("app.worker.tasks.SessionLocal", session_factory)
+
+    mock_result = {
+        "series": {"runtime_ms": [{"algorithm_key": "quicksort", "points": []}]},
+        "table": [],
+        "summary": {
+            "total_algorithms": 1,
+            "total_sizes": 1,
+            "trials_per_size": 1,
+            "total_runs": 1,
+            "input_family": "random",
+            "elapsed_ms": 10.0,
+            "cancelled": False,
+        },
+    }
+
+    with patch("app.worker.tasks.run_benchmark", return_value = mock_result) as mock_bench:
+        from app.worker.tasks import execute_benchmark
+        execute_benchmark(job_id)
+
+    # Verify redis_conn was passed as None
+    call_kwargs = mock_bench.call_args
+    assert call_kwargs.kwargs.get("redis_conn") is None or call_kwargs[1].get("redis_conn") is None

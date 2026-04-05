@@ -1,3 +1,4 @@
+import pytest
 from app.benchmark.service import _resolve_metric_key, run_benchmark
 
 
@@ -273,3 +274,16 @@ def test_full_benchmark_with_medium_sizes():
 
     # Table should have 6 algorithms x 3 sizes = 18 rows
     assert len(result["table"]) == 18
+
+
+def test_benchmark_single_worker(monkeypatch):
+    monkeypatch.setattr("app.benchmark.service.settings.use_redis", False)
+    result = run_benchmark("sorting", {
+        "algorithm_keys": ["quicksort"],
+        "input_family": "random",
+        "sizes": [10],
+        "trials_per_size": 1,
+        "metrics": ["runtime_ms"],
+    })
+    assert result["summary"]["total_runs"] == 1
+    assert len(result["table"]) == 1
