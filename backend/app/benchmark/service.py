@@ -163,7 +163,12 @@ def _run_single_algorithm(module_type, algo_key, sizes, inputs_by_size, trials_p
             pass
 
     def _check_cancel():
-        return redis_conn is not None and redis_conn.exists(f"benchmark:{benchmark_id}:cancel")
+        if redis_conn is None:
+            return False
+        try:
+            return redis_conn.exists(f"benchmark:{benchmark_id}:cancel")
+        except Exception:
+            return False
 
     algorithm = registry.get_algorithm(module_type, algo_key)
     series_points = {metric: [] for metric in metrics_list}
