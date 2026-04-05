@@ -584,8 +584,9 @@ export default function SortingLabPage() {
     if (preset === 'custom') return
     setArray(generateFromPreset(preset, size, preset === 'duplicates' ? 'high' : duplicateDensity))
     setInputError(null)
-
-  }, [preset, size, duplicateDensity])
+    clearTimeline()
+    clearRun()
+  }, [preset, size, duplicateDensity, clearTimeline, clearRun])
 
 
   // parse manual input when it changes
@@ -596,13 +597,14 @@ export default function SortingLabPage() {
     if (result.array) {
       setArray(result.array)
       setInputError(null)
-
     } else {
       setArray([])
       setInputError(result.error)
     }
 
-  }, [manualInput, preset])
+    clearTimeline()
+    clearRun()
+  }, [manualInput, preset, clearTimeline, clearRun])
 
 
   // --- metrics derived from current step ---
@@ -647,10 +649,42 @@ export default function SortingLabPage() {
 
   // --- handlers ---
 
+  const handleAlgorithmChange = useCallback((e) => {
+    setAlgorithm(e.target.value)
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleSearchTargetChange = useCallback((e) => {
+    setSearchTarget(Number(e.target.value))
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handlePresetChange = useCallback((e) => {
+    setPreset(e.target.value)
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleDuplicateDensityChange = useCallback((e) => {
+    setDuplicateDensity(e.target.value)
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleManualInputChange = useCallback((e) => {
+    setManualInput(e.target.value)
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
   const handleGenerate = useCallback(() => {
     if (preset === 'custom') return
     setArray(generateFromPreset(preset, size, preset === 'duplicates' ? 'high' : duplicateDensity))
-  }, [preset, size, duplicateDensity])
+    clearTimeline()
+    clearRun()
+  }, [preset, size, duplicateDensity, clearTimeline, clearRun])
 
 
   const handleShuffle = useCallback(() => {
@@ -664,7 +698,9 @@ export default function SortingLabPage() {
       }
       return copy
     })
-  }, [])
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
 
 
   const handleRun = useCallback(() => {
@@ -744,19 +780,19 @@ export default function SortingLabPage() {
         configPanel = {
           <SortingConfig
             algorithm = {algorithm}
-            onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
+            onAlgorithmChange = {handleAlgorithmChange}
             searchTarget = {searchTarget}
-            onSearchTargetChange = {(e) => setSearchTarget(Number(e.target.value))}
+            onSearchTargetChange = {handleSearchTargetChange}
             preset = {preset}
-            onPresetChange = {(e) => setPreset(e.target.value)}
+            onPresetChange = {handlePresetChange}
             size = {size}
             onSizeChange = {setSize}
             duplicateDensity = {duplicateDensity}
-            onDuplicateDensityChange = {(e) => setDuplicateDensity(e.target.value)}
+            onDuplicateDensityChange = {handleDuplicateDensityChange}
             explanationLevel = {explanationLevel}
             onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
             manualInput = {manualInput}
-            onManualInputChange = {(e) => setManualInput(e.target.value)}
+            onManualInputChange = {handleManualInputChange}
             inputError = {inputError}
             array = {array}
             onGenerate = {handleGenerate}
