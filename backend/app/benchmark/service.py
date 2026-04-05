@@ -155,7 +155,7 @@ def _run_single_algorithm(module_type, algo_key, sizes, inputs_by_size, trials_p
 
     # Connect to Redis for cancel detection (fail-open if unavailable)
     redis_conn = None
-    if benchmark_id is not None:
+    if benchmark_id is not None and settings.use_redis:
         try:
             from app.worker.connection import get_redis
             redis_conn = get_redis()
