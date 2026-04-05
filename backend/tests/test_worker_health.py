@@ -106,6 +106,17 @@ def test_worker_health_redis_unavailable(client):
     assert data["queue"]["pending"] == 0
 
 
+def test_worker_health_redis_disabled(client, monkeypatch):
+    monkeypatch.setattr("app.worker.health.settings.use_redis", False)
+    resp = client.get("/api/benchmarks/workers/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["healthy"] is False
+    assert data["workers"]["active"] == 0
+    assert data["queue"]["pending"] == 0
+    assert data["queue"]["failed"] == 0
+
+
 def test_create_benchmark_returns_pending(client):
     with patch("app.routes.benchmarks.enqueue_benchmark") as mock_enqueue:
         resp = client.post("/api/benchmarks/", json = {
