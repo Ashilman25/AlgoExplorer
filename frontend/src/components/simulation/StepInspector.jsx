@@ -47,7 +47,7 @@ function fmtAlgo(key) {
 }
 
 
-export default function StepInspector({ metrics = [], moduleKey, algorithmKey }) {
+export default function StepInspector({ metrics = [], moduleKey, algorithmKey, explanationLevel }) {
   const stepIndex = usePlaybackStore((s) => s.stepIndex)
   const totalSteps = usePlaybackStore((s) => s.totalSteps)
   const isLoading = usePlaybackStore((s) => s.isLoading)
@@ -105,7 +105,7 @@ export default function StepInspector({ metrics = [], moduleKey, algorithmKey })
           {isLoading ? (
             <LoadingSkeleton />
           ) : (
-            <StepDetail step = {currentStep} />
+            <StepDetail step = {currentStep} explanationLevel = {explanationLevel} />
           )}
         </div>
 
@@ -164,7 +164,7 @@ export default function StepInspector({ metrics = [], moduleKey, algorithmKey })
 
 // ── StepDetail ──────────────────────────────────────────
 
-function StepDetail({ step }) {
+function StepDetail({ step, explanationLevel = 'detailed' }) {
   if (!step) return null
 
   const rawExplanation = step.explanation
@@ -187,11 +187,14 @@ function StepDetail({ step }) {
     }
   }
 
+  const showBody = explanationLevel !== 'none'
+  const showDataSnapshot = explanationLevel === 'detailed'
+
   return (
     <div className = "p-4 space-y-5">
 
       {/* Explanation */}
-      {(title || body || dataSnapshot) && (
+      {(title || (showBody && body) || (showDataSnapshot && dataSnapshot)) && (
         <div className = "space-y-2">
           <p className = "mono-label">Explanation</p>
 
@@ -199,11 +202,11 @@ function StepDetail({ step }) {
             <p className = "text-xs font-medium text-slate-200">{title}</p>
           )}
 
-          {body && (
+          {showBody && body && (
             <p className = "text-xs text-slate-200 leading-relaxed">{body}</p>
           )}
 
-          {dataSnapshot && Object.keys(dataSnapshot).length > 0 && (
+          {showDataSnapshot && dataSnapshot && Object.keys(dataSnapshot).length > 0 && (
             <div className = "pt-2 mt-2 border-t border-white/[0.06] space-y-1">
               {Object.entries(dataSnapshot).map(([key, value]) => (
                 <div

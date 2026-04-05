@@ -759,13 +759,17 @@ export default function DpLabPage() {
   const handleString1Change = useCallback((e) => {
     setString1(e.target.value)
     setPreset('custom')
-  }, [])
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
 
 
   const handleString2Change = useCallback((e) => {
     setString2(e.target.value)
     setPreset('custom')
-  }, [])
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
 
 
   const handleRun = useCallback(() => {
@@ -789,9 +793,9 @@ export default function DpLabPage() {
       input_payload,
       algorithm_config,
       execution_mode: 'simulate',
-      explanation_level: explanationLevel,
+      explanation_level: 'detailed',
     })
-  }, [run, algorithm, string1, string2, capacity, items, coins, coinTarget, fibN, fibMode, explanationLevel])
+  }, [run, algorithm, string1, string2, capacity, items, coins, coinTarget, fibN, fibMode])
 
 
   const handleReset = useCallback(() => {
@@ -833,17 +837,23 @@ export default function DpLabPage() {
   const handleItemChange = useCallback((index, field, val) => {
     setItems((prev) => prev.map((it, i) => i === index ? { ...it, [field]: val } : it))
     setKnapsackPreset('custom')
-  }, [])
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
 
   const handleItemAdd = useCallback(() => {
     setItems((prev) => [...prev, { weight: 1, value: 1 }])
     setKnapsackPreset('custom')
-  }, [])
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
 
   const handleItemRemove = useCallback((index) => {
     setItems((prev) => prev.filter((_, i) => i !== index))
     setKnapsackPreset('custom')
-  }, [])
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
 
   const handleCoinsTextChange = useCallback((e) => {
     const text = e.target.value
@@ -851,7 +861,30 @@ export default function DpLabPage() {
     setCoinPreset('custom')
     const parsed = text.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
     setCoins(parsed)
-  }, [])
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleCapacityChange = useCallback((e) => {
+    setCapacity(Number(e.target.value))
+    setKnapsackPreset('custom')
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleCoinTargetChange = useCallback((e) => {
+    setCoinTarget(Number(e.target.value))
+    setCoinPreset('custom')
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleFibNChange = useCallback((e) => {
+    setFibN(Number(e.target.value))
+    setFibPreset('custom')
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
 
   const handleKnapsackPresetChange = useCallback((e) => {
     const key = e.target.value
@@ -940,6 +973,7 @@ export default function DpLabPage() {
       <SimulationLayout
         moduleKey = "dp"
         algorithmKey = {algorithm}
+        explanationLevel = {explanationLevel}
         configPanel = {
           <DpConfig
             algorithm = {algorithm}
@@ -954,7 +988,7 @@ export default function DpLabPage() {
             knapsackPreset = {knapsackPreset}
             onKnapsackPresetChange = {handleKnapsackPresetChange}
             capacity = {capacity}
-            onCapacityChange = {(e) => { setCapacity(Number(e.target.value)); setKnapsackPreset('custom') }}
+            onCapacityChange = {handleCapacityChange}
             items = {items}
             onItemAdd = {handleItemAdd}
             onItemRemove = {handleItemRemove}
@@ -965,11 +999,11 @@ export default function DpLabPage() {
             coinsText = {coinsText}
             onCoinsTextChange = {handleCoinsTextChange}
             coinTarget = {coinTarget}
-            onCoinTargetChange = {(e) => { setCoinTarget(Number(e.target.value)); setCoinPreset('custom') }}
+            onCoinTargetChange = {handleCoinTargetChange}
             fibPreset = {fibPreset}
             onFibPresetChange = {handleFibPresetChange}
             fibN = {fibN}
-            onFibNChange = {(e) => { setFibN(Number(e.target.value)); setFibPreset('custom') }}
+            onFibNChange = {handleFibNChange}
             fibMode = {fibMode}
             onFibModeChange = {handleFibModeChange}
             explanationLevel = {explanationLevel}

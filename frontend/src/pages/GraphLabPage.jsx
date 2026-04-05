@@ -963,6 +963,42 @@ export default function GraphLabPage() {
     clearRun()
   }, [clearTimeline, clearRun])
 
+  const handleAlgorithmChange = useCallback((e) => {
+    setAlgorithm(e.target.value)
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleSourceChange = useCallback((e) => {
+    setSource(e.target.value)
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleTargetChange = useCallback((e) => {
+    setTarget(e.target.value)
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleWeightedChange = useCallback((e) => {
+    setWeighted(e.target.checked)
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleDirectedChange = useCallback((e) => {
+    setDirected(e.target.checked)
+    clearTimeline()
+    clearRun()
+  }, [clearTimeline, clearRun])
+
+  const handleAllowDiagonalChange = useCallback((e) => {
+    gridState.setAllowDiagonal(e.target.checked)
+    clearTimeline()
+    clearRun()
+  }, [gridState.setAllowDiagonal, clearTimeline, clearRun])
+
   // ── Run / Reset / Save ─────────────────────────────────────────────────────
   const handleRun = useCallback(() => {
     if (mode === 'grid') {
@@ -973,7 +1009,7 @@ export default function GraphLabPage() {
         algorithm_key: algorithm,
         input_payload: payload,
         execution_mode: 'simulate',
-        explanation_level: explanationLevel,
+        explanation_level: 'detailed',
       }, GRID_TIMING_CONFIG)
       return
     }
@@ -999,9 +1035,9 @@ export default function GraphLabPage() {
         mode,
       },
       execution_mode: 'simulate',
-      explanation_level: explanationLevel,
+      explanation_level: 'detailed',
     })
-  }, [run, algorithm, graphNodes, graphEdges, source, target, weighted, directed, mode, explanationLevel, gridState])
+  }, [run, algorithm, graphNodes, graphEdges, source, target, weighted, directed, mode, gridState])
 
   const handleReset = useCallback(() => {
     clearTimeline()
@@ -1053,22 +1089,23 @@ export default function GraphLabPage() {
       <SimulationLayout
         moduleKey = "graph"
         algorithmKey = {algorithm}
+        explanationLevel = {explanationLevel}
         configPanel = {
           mode === 'graph' ? (
             <GraphConfig
               algorithm = {algorithm}
-              onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
+              onAlgorithmChange = {handleAlgorithmChange}
               preset = {presetKey}
               onPresetChange = {handlePresetChange}
               presetOptions = {presetOptions}
               source = {source}
-              onSourceChange = {(e) => setSource(e.target.value)}
+              onSourceChange = {handleSourceChange}
               target = {target}
-              onTargetChange = {(e) => setTarget(e.target.value)}
+              onTargetChange = {handleTargetChange}
               weighted = {weighted}
-              onWeightedChange = {(e) => setWeighted(e.target.checked)}
+              onWeightedChange = {handleWeightedChange}
               directed = {directed}
-              onDirectedChange = {(e) => setDirected(e.target.checked)}
+              onDirectedChange = {handleDirectedChange}
               explanationLevel = {explanationLevel}
               onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
               mode = {mode}
@@ -1080,11 +1117,11 @@ export default function GraphLabPage() {
           ) : (
             <GridConfig
               algorithm = {algorithm}
-              onAlgorithmChange = {(e) => setAlgorithm(e.target.value)}
+              onAlgorithmChange = {handleAlgorithmChange}
               rows = {gridState.rows}
               cols = {gridState.cols}
               allowDiagonal = {gridState.allowDiagonal}
-              onAllowDiagonalChange = {(e) => gridState.setAllowDiagonal(e.target.checked)}
+              onAllowDiagonalChange = {handleAllowDiagonalChange}
               explanationLevel = {explanationLevel}
               onExplanationLevelChange = {(e) => setExplanationLevel(e.target.value)}
               mode = {mode}
