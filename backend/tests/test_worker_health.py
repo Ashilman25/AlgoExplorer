@@ -135,6 +135,25 @@ def test_create_benchmark_returns_pending(client):
     mock_enqueue.assert_called_once_with(data["id"])
 
 
+def test_create_benchmark_uses_background_tasks_when_redis_disabled(client, monkeypatch):
+    monkeypatch.setattr("app.routes.benchmarks.settings.use_redis", False)
+
+    with patch("app.routes.benchmarks.execute_benchmark") as mock_exec:
+        resp = client.post("/api/benchmarks/", json = {
+            "module_type": "sorting",
+            "algorithm_keys": ["quicksort"],
+            "input_family": "random",
+            "sizes": [10],
+            "trials_per_size": 1,
+            "metrics": ["runtime_ms"],
+        })
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "pending"
+    # BackgroundTasks calls execute_benchmark after response
+    mock_exec.assert_called_once()
+
+
 def test_create_benchmark_returns_pending_without_results(client):
     with patch("app.routes.benchmarks.enqueue_benchmark"):
         create_resp = client.post("/api/benchmarks/", json = {

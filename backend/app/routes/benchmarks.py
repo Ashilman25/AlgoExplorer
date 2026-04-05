@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, BackgroundTasks
 from rq import Queue
 from app.exceptions import NotFoundException, PermissionError
 from app.observability import get_logger, compact_context, summarize_benchmark_config
@@ -62,7 +62,7 @@ def list_benchmark_jobs(request: Request, db = Depends(get_db), user: UserAccoun
 
 @router.post("/", response_model = BenchmarkStatusResponse)
 @limiter.limit(settings.rate_limit_general)
-def create_benchmark_job(request: Request, body: CreateBenchmarkRequest, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
+def create_benchmark_job(request: Request, body: CreateBenchmarkRequest, background_tasks: BackgroundTasks, db = Depends(get_db), user: UserAccount | None = Depends(get_optional_user)):
     guest_session_id = None
     if user is None:
         guest_session_id = request.headers.get("X-Guest-Session")
@@ -109,7 +109,10 @@ def create_benchmark_job(request: Request, body: CreateBenchmarkRequest, db = De
         ),
     )
 
-    enqueue_benchmark(job.id)
+    if settings.use_redis:
+        enqueue_benchmark(job.id)
+    else:
+        background_tasks.add_task(execute_benchmark, job.id)
 
     return BenchmarkStatusResponse.model_validate(job)
 
@@ -157,8 +160,9 @@ def cancel_benchmark_job(request: Request, benchmark_id: int, db = Depends(get_d
     _check_benchmark_access(job, user)
 
     if job.status == "running":
-        connection = get_redis()
-        connection.set(f"benchmark:{benchmark_id}:cancel", "1", ex = 3600)
+        if settings.use_redis:
+            connection = get_redis()
+            connection.set(f"benchmark:{benchmark_id}:cancel", "1", ex = 3600)
         job.status = "cancelling"
         db.commit()
         db.refresh(job)
@@ -169,8 +173,9 @@ def cancel_benchmark_job(request: Request, benchmark_id: int, db = Depends(get_d
         )
 
     elif job.status == "pending":
-        connection = get_redis()
-        connection.set(f"benchmark:{benchmark_id}:cancel", "1", ex = 3600)
+        if settings.use_redis:
+            connection = get_redis()
+            connection.set(f"benchmark:{benchmark_id}:cancel", "1", ex = 3600)
         job.status = "cancelled"
         db.commit()
         db.refresh(job)
