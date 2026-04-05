@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     benchmark_queue_name: str = "benchmarks"
     benchmark_progress_interval: int = 1
     enforce_https: bool = False
+    use_redis: bool = True
     rate_limit_auth: str = "5/minute"
     rate_limit_general: str = "30/minute"
     rate_limit_readonly: str = "60/minute"

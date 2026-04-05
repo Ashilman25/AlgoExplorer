@@ -5,11 +5,12 @@ from app.config import settings
 
 engine = create_engine(settings.database_url)
 
-@event.listens_for(engine, "connect")
-def enable_sqlite_fk(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+if settings.database_url.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def enable_sqlite_fk(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
     
 SessionLocal = sessionmaker(bind = engine)
 
