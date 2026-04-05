@@ -11,7 +11,7 @@ import { metadataService } from '../../services'
 import { algorithmContent } from '../../content/algorithms'
 import { useResizablePanel } from '../../hooks/useResizablePanel'
 
-export default function SimulationLayout({ configPanel, children, metrics, className, moduleKey, algorithmKey }) {
+export default function SimulationLayout({ configPanel, children, metrics, className, moduleKey, algorithmKey, explanationLevel }) {
   const [isCodePanelOpen, setIsCodePanelOpen] = useState(false)
   const currentStep = usePlaybackStore((s) => s.currentStep)
   const setMetadata = useMetadataStore((s) => s.setMetadata)
@@ -91,7 +91,7 @@ export default function SimulationLayout({ configPanel, children, metrics, class
           className = "flex flex-col rounded-xl border border-white/[0.07] bg-slate-800/50 overflow-hidden flex-none"
           style = {{ width: rightWidth }}
         >
-          <StepInspector metrics = {metrics} moduleKey = {moduleKey} algorithmKey = {algorithmKey} />
+          <StepInspector metrics = {metrics} moduleKey = {moduleKey} algorithmKey = {algorithmKey} explanationLevel = {explanationLevel} />
         </div>
 
       </div>
