@@ -3,6 +3,7 @@ import statistics
 import time
 from collections.abc import Callable
 
+from app.config import settings
 from app.observability import get_logger, compact_context, summarize_benchmark_config, summarize_summary_metrics
 from app.simulation import registry
 from app.simulation.types import AlgorithmInput
@@ -254,7 +255,10 @@ def run_benchmark(module_type: str, config: dict, benchmark_id: int | None = Non
         ]
 
     # Run algorithms in parallel
-    worker_count = min(len(algorithm_keys), os.cpu_count() or 4)
+    if settings.use_redis:
+        worker_count = min(len(algorithm_keys), os.cpu_count() or 4)
+    else:
+        worker_count = 1  # Single process on free tier to conserve memory
 
     all_series: dict[str, list] = {m: [] for m in metrics}
     all_table: list[dict] = []

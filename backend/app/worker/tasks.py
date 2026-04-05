@@ -7,6 +7,7 @@ from app.db import SessionLocal
 from app.observability import get_logger, compact_context, summarize_benchmark_config, summarize_summary_metrics
 from app.persistence import safe_json_value
 from sqlalchemy.orm.attributes import flag_modified
+from app.config import settings
 from app.worker.connection import get_redis
 
 logger = get_logger("benchmark.worker")
@@ -45,7 +46,7 @@ def execute_benchmark(benchmark_id: int) -> None:
             ),
         )
 
-        redis_conn = get_redis()
+        redis_conn = get_redis() if settings.use_redis else None
 
         def update_job_results(partial_results, progress):
             job.results = safe_json_value(partial_results, label = "benchmark partial results")
