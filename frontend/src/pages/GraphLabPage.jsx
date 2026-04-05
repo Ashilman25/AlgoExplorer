@@ -1009,7 +1009,7 @@ export default function GraphLabPage() {
         algorithm_key: algorithm,
         input_payload: payload,
         execution_mode: 'simulate',
-        explanation_level: explanationLevel,
+        explanation_level: 'detailed',
       }, GRID_TIMING_CONFIG)
       return
     }
@@ -1035,9 +1035,9 @@ export default function GraphLabPage() {
         mode,
       },
       execution_mode: 'simulate',
-      explanation_level: explanationLevel,
+      explanation_level: 'detailed',
     })
-  }, [run, algorithm, graphNodes, graphEdges, source, target, weighted, directed, mode, explanationLevel, gridState])
+  }, [run, algorithm, graphNodes, graphEdges, source, target, weighted, directed, mode, gridState])
 
   const handleReset = useCallback(() => {
     clearTimeline()
@@ -1089,6 +1089,7 @@ export default function GraphLabPage() {
       <SimulationLayout
         moduleKey = "graph"
         algorithmKey = {algorithm}
+        explanationLevel = {explanationLevel}
         configPanel = {
           mode === 'graph' ? (
             <GraphConfig

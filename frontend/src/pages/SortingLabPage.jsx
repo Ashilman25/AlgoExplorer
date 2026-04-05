@@ -719,9 +719,9 @@ export default function SortingLabPage() {
       algorithm_key: algorithm,
       input_payload: payload,
       execution_mode: 'simulate',
-      explanation_level: explanationLevel,
+      explanation_level: 'detailed',
     })
-  }, [run, algorithm, array, preset, duplicateDensity, explanationLevel, isSearching, searchTarget])
+  }, [run, algorithm, array, preset, duplicateDensity, isSearching, searchTarget])
 
 
   const handleReset = useCallback(() => {
@@ -777,6 +777,7 @@ export default function SortingLabPage() {
       <SimulationLayout
         moduleKey = "sorting"
         algorithmKey = {algorithm}
+        explanationLevel = {explanationLevel}
         configPanel = {
           <SortingConfig
             algorithm = {algorithm}

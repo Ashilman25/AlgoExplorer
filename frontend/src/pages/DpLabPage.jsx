@@ -793,9 +793,9 @@ export default function DpLabPage() {
       input_payload,
       algorithm_config,
       execution_mode: 'simulate',
-      explanation_level: explanationLevel,
+      explanation_level: 'detailed',
     })
-  }, [run, algorithm, string1, string2, capacity, items, coins, coinTarget, fibN, fibMode, explanationLevel])
+  }, [run, algorithm, string1, string2, capacity, items, coins, coinTarget, fibN, fibMode])
 
 
   const handleReset = useCallback(() => {
@@ -973,6 +973,7 @@ export default function DpLabPage() {
       <SimulationLayout
         moduleKey = "dp"
         algorithmKey = {algorithm}
+        explanationLevel = {explanationLevel}
         configPanel = {
           <DpConfig
             algorithm = {algorithm}
