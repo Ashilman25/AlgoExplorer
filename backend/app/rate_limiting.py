@@ -8,6 +8,10 @@ logger = get_logger("rate_limiting")
 
 
 def _create_limiter() -> Limiter:
+    if not settings.use_redis:
+        logger.info("rate_limit.init.memory use_redis=false")
+        return Limiter(key_func = get_remote_address)
+
     try:
         limiter = Limiter(
             key_func = get_remote_address,
