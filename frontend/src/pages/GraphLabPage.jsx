@@ -2,7 +2,7 @@ import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast, ErrorAlert } from '../components/ui'
-import { SimulationLayout, ConfigPanel, ConfigSection, ModeToggle, GridCanvas, GridConfig, GridDataStructurePanel } from '../components/simulation'
+import { SimulationLayout, ConfigPanel, ConfigSection, ModeToggle, GridCanvas, GridConfig, GridDataStructurePanel, PresetSelect } from '../components/simulation'
 import { GRID_TIMING_CONFIG } from '../components/simulation/PlaybackBar'
 import { useRunSimulation } from '../hooks/useRunSimulation'
 import { useGridState } from '../hooks/useGridState'
@@ -47,7 +47,7 @@ const GRAPH_ALGOS = [
 
 export function GraphConfig({
   algorithm, onAlgorithmChange,
-  preset, onPresetChange, presetOptions,
+  preset, onPresetChange, presets, onAlgorithmSwitch,
   source, onSourceChange,
   target, onTargetChange,
   weighted, onWeightedChange,
@@ -73,11 +73,13 @@ export function GraphConfig({
       </ConfigSection>
 
       <ConfigSection title = "Preset">
-        <Select
-          aria-label = "Preset"
-          options = {presetOptions}
+        <PresetSelect
+          presets = {presets}
           value = {preset}
           onChange = {onPresetChange}
+          algorithm = {algorithm}
+          categoryMap = {ALGORITHM_CATEGORY}
+          onAlgorithmSwitch = {onAlgorithmSwitch}
         />
       </ConfigSection>
 
@@ -826,30 +828,30 @@ export default function GraphLabPage() {
   useEffect(() => {
     if (mode !== 'graph') return
 
-    const cached = useMetadataStore.getState().getPresets('graph', algorithm)
+    const cached = useMetadataStore.getState().getPresets('graph', null)
     if (cached) {
       setGraphPresets(cached)
       return
     }
 
     let cancelled = false
-    metadataService.getPresets('graph', algorithm).then((resp) => {
+    metadataService.getPresets('graph').then((resp) => {
       if (cancelled) return
       const items = resp.groups.flatMap((g) => g.presets)
-      useMetadataStore.getState().setPresets('graph', algorithm, items)
+      useMetadataStore.getState().setPresets('graph', null, items)
       setGraphPresets(items)
     }).catch(() => {
-      // Graceful degradation — presets dropdown will just show "Custom"
+      // Graceful degradation — presets will be empty
     })
     return () => { cancelled = true }
-  }, [algorithm, mode])
+  }, [mode])
 
   // Apply first preset on initial load (once presets arrive and no scenario is loaded)
   const appliedInitialPreset = useRef(!!loadedScenario)
   useEffect(() => {
     if (appliedInitialPreset.current || graphPresets.length === 0) return
     appliedInitialPreset.current = true
-    const first = graphPresets[0]
+    const first = graphPresets.find((p) => p.designed_for?.includes(algorithm)) ?? graphPresets[0]
     const p = first.input_payload
     setPresetKey(first.key)
     setGraphNodes(p.nodes)
@@ -861,14 +863,8 @@ export default function GraphLabPage() {
     setDirected(p.directed ?? false)
   }, [graphPresets, canvasSize])
 
-  const presetOptions = useMemo(() => [
-    { value: 'custom', label: 'Custom (loaded scenario)' },
-    ...graphPresets.map((p) => ({ value: p.key, label: p.label })),
-  ], [graphPresets])
-
   // presets
-  const handlePresetChange = useCallback((e) => {
-    const key = e.target.value
+  const handlePresetChange = useCallback((key) => {
     setPresetKey(key)
     clearTimeline()
     clearRun()
@@ -885,6 +881,14 @@ export default function GraphLabPage() {
       setConnectSource(null)
     }
   }, [graphPresets, canvasSize, clearTimeline, clearRun])
+
+  const handleAlgorithmSwitch = useCallback((newAlgoKey) => {
+    setAlgorithm(newAlgoKey)
+    clearTimeline()
+    clearRun()
+    const algoLabel = GRAPH_ALGOS.find((a) => a.value === newAlgoKey)?.label ?? newAlgoKey
+    toast({ type: 'info', title: 'Algorithm switched', message: `Switched to ${algoLabel}` })
+  }, [clearTimeline, clearRun, toast])
 
   //build actions
   const handleAddNode = useCallback((cx, cy) => {
@@ -965,6 +969,7 @@ export default function GraphLabPage() {
 
   const handleAlgorithmChange = useCallback((e) => {
     setAlgorithm(e.target.value)
+    setPresetKey('')
     clearTimeline()
     clearRun()
   }, [clearTimeline, clearRun])
@@ -1096,7 +1101,8 @@ export default function GraphLabPage() {
               onAlgorithmChange = {handleAlgorithmChange}
               preset = {presetKey}
               onPresetChange = {handlePresetChange}
-              presetOptions = {presetOptions}
+              presets = {graphPresets}
+              onAlgorithmSwitch = {handleAlgorithmSwitch}
               source = {source}
               onSourceChange = {handleSourceChange}
               target = {target}

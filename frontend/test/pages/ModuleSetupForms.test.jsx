@@ -35,11 +35,11 @@ describe('module setup forms', () => {
         onAlgorithmChange={handlers.onAlgorithmChange}
         preset="simple-traversal"
         onPresetChange={handlers.onPresetChange}
-        presetOptions={[
-          { value: 'custom', label: 'Custom (loaded scenario)' },
-          { value: 'simple-traversal', label: 'Simple Traversal — 6 nodes' },
-          { value: 'weighted-diamond', label: 'Weighted Diamond — 5 nodes' },
+        presets={[
+          { key: 'simple-traversal', label: 'Simple Traversal — 6 nodes', designed_for: ['bfs', 'dfs'], input_payload: {} },
+          { key: 'weighted-diamond', label: 'Weighted Diamond — 5 nodes', designed_for: ['dijkstra', 'bellman_ford'], input_payload: {} },
         ]}
+        onAlgorithmSwitch={vi.fn()}
         source="A"
         onSourceChange={handlers.onSourceChange}
         target="F"
@@ -66,9 +66,9 @@ describe('module setup forms', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Algorithm' }), {
       target: { value: 'dijkstra' },
     })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Preset' }), {
-      target: { value: 'weighted-diamond' },
-    })
+    // Open preset dropdown and select
+    fireEvent.click(screen.getByRole('button', { name: /preset/i }))
+    fireEvent.click(screen.getByText('Weighted Diamond — 5 nodes'))
     fireEvent.change(screen.getByRole('combobox', { name: 'Source' }), {
       target: { value: 'F' },
     })
@@ -91,10 +91,10 @@ describe('module setup forms', () => {
         onAlgorithmChange={handlers.onAlgorithmChange}
         preset="custom"
         onPresetChange={handlers.onPresetChange}
-        presetOptions={[
-          { value: 'custom', label: 'Custom (loaded scenario)' },
-          { value: 'simple-traversal', label: 'Simple Traversal — 6 nodes' },
+        presets={[
+          { key: 'simple-traversal', label: 'Simple Traversal — 6 nodes', designed_for: ['bfs', 'dfs'], input_payload: {} },
         ]}
+        onAlgorithmSwitch={vi.fn()}
         source="A"
         onSourceChange={handlers.onSourceChange}
         target="B"

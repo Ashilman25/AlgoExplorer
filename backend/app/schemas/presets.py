@@ -6,6 +6,7 @@ class PresetItem(BaseModel):
     label: str
     description: str | None = None
     tags: list[str] = []
+    designed_for: list[str] = []
     input_payload: dict
 
 
