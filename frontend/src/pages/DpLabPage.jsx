@@ -169,17 +169,17 @@ export function DpConfig({
       {(algorithm === 'lcs' || algorithm === 'edit_distance') && (
         <ConfigSection title = "Input Strings">
           <div className = "space-y-1.5">
-            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">String A</label>
+            <label className = "block text-xs font-medium text-muted uppercase tracking-wide">String A</label>
             <input type = "text" aria-label = "String A" value = {string1} onChange = {onString1Change}
               placeholder = "e.g. ABCDEF" maxLength = {MAX_STRING_LENGTH}
-              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+              className = "w-full bg-base border border-default focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-secondary text-sm font-mono transition-colors outline-none"
             />
           </div>
           <div className = "space-y-1.5">
-            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">String B</label>
+            <label className = "block text-xs font-medium text-muted uppercase tracking-wide">String B</label>
             <input type = "text" aria-label = "String B" value = {string2} onChange = {onString2Change}
               placeholder = "e.g. ACBDFE" maxLength = {MAX_STRING_LENGTH}
-              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+              className = "w-full bg-base border border-default focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-secondary text-sm font-mono transition-colors outline-none"
             />
           </div>
         </ConfigSection>
@@ -189,27 +189,27 @@ export function DpConfig({
       {algorithm === 'knapsack_01' && (
         <ConfigSection title = "Knapsack Input">
           <div className = "space-y-1.5">
-            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Capacity</label>
+            <label className = "block text-xs font-medium text-muted uppercase tracking-wide">Capacity</label>
             <input type = "number" aria-label = "Capacity" value = {capacity} min = {1} max = {1000}
               onChange = {onCapacityChange}
-              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+              className = "w-full bg-base border border-default focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-secondary text-sm font-mono transition-colors outline-none"
             />
           </div>
           <div className = "space-y-2">
-            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Items</label>
+            <label className = "block text-xs font-medium text-muted uppercase tracking-wide">Items</label>
             {items.map((item, i) => (
               <div key = {i} className = "flex gap-2 items-center">
                 <input type = "number" aria-label = {`Item ${i + 1} weight`} value = {item.weight} min = {1}
                   onChange = {(e) => onItemChange(i, 'weight', Number(e.target.value))}
-                  className = "w-16 bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-lg px-2 py-1.5 text-slate-200 text-xs font-mono outline-none"
+                  className = "w-16 bg-base border border-default focus:border-brand-500 rounded-lg px-2 py-1.5 text-secondary text-xs font-mono outline-none"
                   placeholder = "w"
                 />
                 <input type = "number" aria-label = {`Item ${i + 1} value`} value = {item.value} min = {1}
                   onChange = {(e) => onItemChange(i, 'value', Number(e.target.value))}
-                  className = "w-16 bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-lg px-2 py-1.5 text-slate-200 text-xs font-mono outline-none"
+                  className = "w-16 bg-base border border-default focus:border-brand-500 rounded-lg px-2 py-1.5 text-secondary text-xs font-mono outline-none"
                   placeholder = "v"
                 />
-                <span className = "text-[10px] text-slate-600 font-mono">#{i + 1}</span>
+                <span className = "text-[10px] text-faint font-mono">#{i + 1}</span>
                 {items.length > 1 && (
                   <button onClick = {() => onItemRemove(i)}
                     className = "text-rose-400/60 hover:text-rose-400 text-xs px-1"
@@ -228,17 +228,17 @@ export function DpConfig({
       {algorithm === 'coin_change' && (
         <ConfigSection title = "Coin Change Input">
           <div className = "space-y-1.5">
-            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Coins (comma-separated)</label>
+            <label className = "block text-xs font-medium text-muted uppercase tracking-wide">Coins (comma-separated)</label>
             <input type = "text" aria-label = "Coins" value = {coinsText} onChange = {onCoinsTextChange}
               placeholder = "e.g. 1, 5, 10, 25"
-              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+              className = "w-full bg-base border border-default focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-secondary text-sm font-mono transition-colors outline-none"
             />
           </div>
           <div className = "space-y-1.5">
-            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Target Amount</label>
+            <label className = "block text-xs font-medium text-muted uppercase tracking-wide">Target Amount</label>
             <input type = "number" aria-label = "Target" value = {coinTarget} min = {1} max = {2499}
               onChange = {onCoinTargetChange}
-              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+              className = "w-full bg-base border border-default focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-secondary text-sm font-mono transition-colors outline-none"
             />
           </div>
         </ConfigSection>
@@ -248,16 +248,16 @@ export function DpConfig({
       {algorithm === 'fibonacci' && (
         <ConfigSection title = "Fibonacci Input">
           <div className = "space-y-1.5">
-            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">Mode</label>
+            <label className = "block text-xs font-medium text-muted uppercase tracking-wide">Mode</label>
             <Select aria-label = "Mode" options = {FIB_MODES} value = {fibMode} onChange = {onFibModeChange} />
           </div>
           <div className = "space-y-1.5">
-            <label className = "block text-xs font-medium text-slate-500 uppercase tracking-wide">
+            <label className = "block text-xs font-medium text-muted uppercase tracking-wide">
               n (max {FIB_MODE_CAPS[fibMode]})
             </label>
             <input type = "number" aria-label = "n" value = {fibN} min = {1} max = {FIB_MODE_CAPS[fibMode]}
               onChange = {onFibNChange}
-              className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-slate-200 text-sm font-mono transition-colors outline-none"
+              className = "w-full bg-base border border-default focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-secondary text-sm font-mono transition-colors outline-none"
             />
             {fibMode === 'naive_recursive' && (
               <p className = "text-[10px] text-amber-400/70">Capped at 15 for recursive to keep the call tree manageable</p>
@@ -296,7 +296,7 @@ export function DpConfig({
 const CELL_BASE = 'flex items-center justify-center font-mono text-xs tabular-nums transition-all duration-150'
 
 const CELL_STATE_CLASSES = {
-  default:  `${CELL_BASE} border border-white/[0.04] text-slate-600`,
+  default:  `${CELL_BASE} border border-hairline text-faint`,
   active:   `${CELL_BASE} border-2 border-state-active   bg-state-active/20   text-state-active`,
   frontier: `${CELL_BASE} border-2 border-state-frontier bg-state-frontier/15 text-state-frontier`,
   visited:  `${CELL_BASE} border border-state-visited/20  bg-state-visited/10  text-state-visited`,
@@ -311,7 +311,7 @@ const GLOW = {
   frontier: '0 0 6px rgba(251,191,36,0.3)',
 }
 
-const HEADER_CELL = 'flex items-center justify-center bg-slate-800/80 border border-white/[0.06] font-mono text-xs font-semibold text-slate-400 select-none'
+const HEADER_CELL = 'flex items-center justify-center bg-surface border border-hairline font-mono text-xs font-semibold text-muted select-none'
 
 
 function DpTableCanvas({ string1, string2, algorithm, items }) {
@@ -344,11 +344,11 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
   if (!hasTimeline) {
     return (
       <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className = "text-sm font-medium text-slate-500">
+        <p className = "text-sm font-medium text-muted">
           DP table — cells fill in as the algorithm progresses
         </p>
 
-        <p className = "text-xs text-slate-600 max-w-xs leading-relaxed">
+        <p className = "text-xs text-faint max-w-xs leading-relaxed">
           Enter your input strings, then step through the recurrence relation.
         </p>
 
@@ -356,7 +356,7 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
           {['LCS', 'Edit Distance', 'Knapsack', 'Coin Change', 'Fibonacci'].map((alg) => (
             <span
               key = {alg}
-              className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-slate-700/50 text-slate-500 border border-white/[0.06]"
+              className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-elevated text-muted border border-hairline"
             >
               {alg}
             </span>
@@ -369,7 +369,7 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
   if (!table || table.length === 0) {
     return (
       <div className = "flex-1 flex items-center justify-center">
-        <p className = "text-sm text-slate-500">No table data.</p>
+        <p className = "text-sm text-muted">No table data.</p>
       </div>
     )
   }
@@ -399,10 +399,10 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
 
       {/* loading overlay */}
       {isLoading && (
-        <div className = "absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
+        <div className = "absolute inset-0 flex items-center justify-center bg-base/60 z-10">
           <div className = "flex flex-col items-center gap-3">
             <div className = "w-6 h-6 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-            <p className = "text-xs text-slate-500 font-mono">Running simulation…</p>
+            <p className = "text-xs text-muted font-mono">Running simulation…</p>
           </div>
         </div>
       )}
@@ -526,11 +526,11 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
 
 export function DpDataPanel({ explanation, currentCell, eventType }) {
   if (!explanation && !currentCell) {
-    return <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 min-h-[40px]" />
+    return <div className = "shrink-0 border-t border-hairline px-4 py-3 min-h-[40px]" />
   }
 
   return (
-    <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
+    <div className = "shrink-0 border-t border-hairline px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
 
       {currentCell && (
         <div className = "flex items-center gap-2">
@@ -549,7 +549,7 @@ export function DpDataPanel({ explanation, currentCell, eventType }) {
       )}
 
       {explanation && (
-        <p className = "text-xs text-slate-400 leading-relaxed">{explanation}</p>
+        <p className = "text-xs text-muted leading-relaxed">{explanation}</p>
       )}
 
     </div>
@@ -954,14 +954,14 @@ export default function DpLabPage() {
         accent = "violet"
         badge = "Phase 7"
       >
-        <div className = "flex items-center gap-1 bg-slate-900/50 border border-white/[0.06] rounded-lg p-1">
+        <div className = "flex items-center gap-1 bg-base border border-hairline rounded-lg p-1">
           <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || !!inputError}>
             {isRunning || isPlaying ? 'Running…' : 'Run'}
           </Button>
           <Button variant = "ghost" size = "sm" icon = {Save} onClick = {handleSave} disabled = {isRunning || isPlaying || !!inputError}>
             Save
           </Button>
-          <div className = "w-px h-4 bg-white/[0.08]" />
+          <div className = "w-px h-4 border-l border-hairline" />
           <Button variant = "ghost" size = "sm" icon = {RotateCcw} onClick = {handleReset} disabled = {isRunning || isPlaying}>
             Reset
           </Button>
@@ -1037,7 +1037,7 @@ export default function DpLabPage() {
 
         {algorithm === 'fibonacci' && fibMode === 'memoized' && (
           <div className = "flex-1 flex flex-col min-h-0">
-            <div className = "flex-1 min-h-0 border-b border-white/[0.06]">
+            <div className = "flex-1 min-h-0 border-b border-hairline">
               <DpStripCanvas />
             </div>
             <div className = "flex-1 min-h-0">

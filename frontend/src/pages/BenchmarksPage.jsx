@@ -73,7 +73,7 @@ function CheckboxGroup({ label, options, selected, onChange, min = 0, max = Infi
   return (
     <div className="space-y-1.5">
       {label && (
-        <span className="block text-xs font-medium text-slate-500 uppercase tracking-wide">
+        <span className="block text-xs font-medium text-muted uppercase tracking-wide">
           {label}
         </span>
       )}
@@ -85,18 +85,18 @@ function CheckboxGroup({ label, options, selected, onChange, min = 0, max = Infi
               key={opt.key}
               onClick={() => toggle(opt.key)}
               className="flex items-center gap-2.5 px-2 py-1.5 rounded-md cursor-pointer
-                         hover:bg-slate-800/60 transition-colors duration-100"
+                         hover:bg-hover transition-colors duration-100"
             >
               <span
                 className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors
                   ${checked
                     ? 'bg-cyan-500 border-cyan-500'
-                    : 'bg-transparent border-slate-600'
+                    : 'bg-transparent border-faint'
                   }`}
               >
                 {checked && <Check size={10} strokeWidth={3} className="text-slate-950" />}
               </span>
-              <span className="text-sm text-slate-300">{opt.label}</span>
+              <span className="text-sm text-secondary">{opt.label}</span>
             </label>
           )
         })}
@@ -155,13 +155,13 @@ function SizeSelector({ preset, onPresetChange, customSizes, onCustomSizesChange
             placeholder="e.g. 100, 500, 1000, 5000"
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2
-                       text-sm text-slate-200 placeholder-slate-600
+            className="w-full bg-base border border-default rounded-lg px-3 py-2
+                       text-sm text-secondary placeholder:text-faint
                        focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 outline-none"
           />
           <div className="flex items-center justify-between">
             <Button size="sm" onClick={handleApplyCustom}>Apply</Button>
-            <span className="text-[10px] text-slate-600 font-mono">
+            <span className="text-[10px] text-faint font-mono">
               {sizeLimits.min.toLocaleString()}\u2013{sizeLimits.max.toLocaleString()}
             </span>
           </div>
@@ -169,7 +169,7 @@ function SizeSelector({ preset, onPresetChange, customSizes, onCustomSizesChange
       )}
       <div className="flex flex-wrap gap-1 mt-1">
         {customSizes.map((s) => (
-          <span key={s} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/[0.06]">
+          <span key={s} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface text-muted border border-hairline">
             {s.toLocaleString()}
           </span>
         ))}
@@ -383,15 +383,15 @@ function ResultsTable({ table, metrics, moduleType, category }) {
 
   return (
     <Card title="Results Table">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-slate-700/30">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-default/30">
         <div className="flex items-center gap-3">
           {!showAllSizes && allSizes.length > 1 && (
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Size</span>
+              <span className="text-[10px] font-medium text-muted uppercase tracking-wide">Size</span>
               <select
                 value={activeSize}
                 onChange={(e) => setSelectedSize(Number(e.target.value))}
-                className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
+                className="bg-surface border border-default text-secondary text-xs rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
               >
                 {allSizes.map((s) => (
                   <option key={s} value={s}>{s.toLocaleString()}</option>
@@ -412,12 +412,12 @@ function ResultsTable({ table, metrics, moduleType, category }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-700/50">
+            <tr className="border-b border-default/50">
               {headerColumns.map((col) => (
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
-                  className="px-3 py-2.5 text-left text-[10px] font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-300 transition-colors whitespace-nowrap"
+                  className="px-3 py-2.5 text-left text-[10px] font-medium text-muted uppercase tracking-wider cursor-pointer hover:text-secondary transition-colors whitespace-nowrap"
                 >
                   <span className="inline-flex items-center gap-1">
                     {col.label}
@@ -431,14 +431,14 @@ function ResultsTable({ table, metrics, moduleType, category }) {
             {sorted.map((row, i) => (
               <tr
                 key={`${row.algorithm_key}-${row.size}`}
-                className={`border-b border-slate-800/50 ${i % 2 === 0 ? '' : 'bg-slate-800/20'}`}
+                className={`border-b border-surface-translucent ${i % 2 === 0 ? '' : 'bg-surface/20'}`}
               >
-                <td className="px-3 py-2 text-slate-300 font-mono text-xs">{row.algorithm_key}</td>
+                <td className="px-3 py-2 text-secondary font-mono text-xs">{row.algorithm_key}</td>
                 {showAllSizes && (
-                  <td className="px-3 py-2 text-slate-400 font-mono text-xs">{row.size?.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-muted font-mono text-xs">{row.size?.toLocaleString()}</td>
                 )}
                 {metricColumns.map((col) => (
-                  <td key={col.key} className="px-3 py-2 text-slate-400 font-mono text-xs">
+                  <td key={col.key} className="px-3 py-2 text-muted font-mono text-xs">
                     {formatCell(row[col.key])}
                   </td>
                 ))}
@@ -471,14 +471,14 @@ function ChartSection({ series, metrics, moduleType, category }) {
             return (
               <div
                 key={metricKey}
-                className="rounded-xl bg-slate-800/40 border border-white/[0.06] p-4"
+                className="rounded-xl bg-surface-dim border border-hairline p-4"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Icon size={14} strokeWidth={1.5} className="text-cyan-400" />
-                  <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">
+                  <span className="text-xs font-medium text-muted uppercase tracking-wide">
                     {metricInfo?.label ?? metricKey}
                   </span>
-                  <span className="text-[10px] text-slate-600 font-mono ml-auto">
+                  <span className="text-[10px] text-faint font-mono ml-auto">
                     {metricInfo?.unit}
                   </span>
                 </div>
@@ -542,10 +542,10 @@ function ExportBar({ resultData }) {
   if (!resultData) return null
 
   return (
-    <div className="flex items-center justify-between rounded-xl bg-slate-800/50 border border-white/[0.06] px-4 py-3">
+    <div className="flex items-center justify-between rounded-xl bg-surface-translucent border border-hairline px-4 py-3">
       <div className="flex items-center gap-2">
-        <Download size={14} strokeWidth={1.5} className="text-slate-500" />
-        <span className="text-xs text-slate-500">Export Results</span>
+        <Download size={14} strokeWidth={1.5} className="text-muted" />
+        <span className="text-xs text-muted">Export Results</span>
       </div>
 
       <div className="flex items-center gap-2">
@@ -882,12 +882,12 @@ export default function BenchmarksPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Spinner size="md" />
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-muted">
                       {statusLabel || `Running benchmark (${algorithms.length} algorithms × ${sizes.length} sizes × ${trials} trials)...`}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-slate-500">
+                    <span className="text-xs font-mono text-muted">
                       {Math.round(progress * 100)}%{!isCancelling && etaLabel && ` \u2014 ${etaLabel}`}
                     </span>
                     <Button
@@ -901,7 +901,7 @@ export default function BenchmarksPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="w-full bg-slate-800 rounded-full h-1.5">
+                <div className="w-full bg-surface rounded-full h-1.5">
                   <div
                     className="bg-cyan-500 h-1.5 rounded-full transition-all duration-300"
                     style={{ width: `${Math.round(progress * 100)}%` }}
@@ -932,11 +932,11 @@ export default function BenchmarksPage() {
           {!isRunning && !hasResults && !benchmarkError && (
             <Card>
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="p-3.5 rounded-2xl bg-slate-800/70 border border-white/[0.07] mb-5">
-                  <Gauge size={22} strokeWidth={1} className="text-slate-600" />
+                <div className="p-3.5 rounded-2xl bg-hover border border-hairline mb-5">
+                  <Gauge size={22} strokeWidth={1} className="text-faint" />
                 </div>
-                <p className="text-sm font-semibold text-slate-400 mb-1">No benchmark results yet</p>
-                <p className="text-xs text-slate-600 max-w-xs leading-relaxed">
+                <p className="text-sm font-semibold text-muted mb-1">No benchmark results yet</p>
+                <p className="text-xs text-faint max-w-xs leading-relaxed">
                   Configure your benchmark parameters and click Launch to compare algorithm performance.
                 </p>
               </div>

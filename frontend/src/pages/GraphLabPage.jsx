@@ -104,7 +104,7 @@ export function GraphConfig({
               disabled = {lockWeighted}
               className = "accent-brand-500 w-3.5 h-3.5"
             />
-            <span className = {`text-xs ${lockWeighted ? 'text-slate-600' : 'text-slate-400'}`}>
+            <span className = {`text-xs ${lockWeighted ? 'text-faint' : 'text-muted'}`}>
               Weighted edges {lockWeighted ? '(required)' : ''}
             </span>
           </label>
@@ -119,7 +119,7 @@ export function GraphConfig({
               disabled = {lockDirected}
               className = "accent-brand-500 w-3.5 h-3.5"
             />
-            <span className = {`text-xs ${lockDirected ? 'text-slate-600' : 'text-slate-400'}`}>
+            <span className = {`text-xs ${lockDirected ? 'text-faint' : 'text-muted'}`}>
               Directed graph {lockDirected ? '(required)' : ''}
             </span>
           </label>
@@ -317,10 +317,10 @@ function GraphCanvas({
 
       {/* loading overlay — sits on top of the graph, does not replace it */}
       {isLoading && (
-        <div className = "absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
+        <div className = "absolute inset-0 flex items-center justify-center bg-base/60 z-10">
           <div className = "flex flex-col items-center gap-3">
             <div className = "w-6 h-6 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-            <p className = "text-xs text-slate-500 font-mono">Running simulation…</p>
+            <p className = "text-xs text-muted font-mono">Running simulation…</p>
           </div>
         </div>
       )}
@@ -527,7 +527,7 @@ export function DataStructurePanel({ algorithm, frontier, distances, path }) {
   const queueLabel = algorithm === 'dfs' ? 'Stack' : 'Queue'
 
   return (
-    <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
+    <div className = "shrink-0 border-t border-hairline px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
 
       {/* BFS queue / DFS stack */}
       {hasQueue && (
@@ -554,9 +554,9 @@ export function DataStructurePanel({ algorithm, frontier, distances, path }) {
             {Object.entries(distances).map(([node, d]) => (
               <span
                 key = {node}
-                className = "font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/[0.08] bg-slate-800/50 text-slate-400"
+                className = "font-mono text-[10px] px-1.5 py-0.5 rounded border border-subtle bg-surface-translucent text-muted"
               >
-                {node}:<span className = {d === 'inf' ? 'text-slate-600' : 'text-state-active'}>{d}</span>
+                {node}:<span className = {d === 'inf' ? 'text-faint' : 'text-state-active'}>{d}</span>
               </span>
             ))}
           </div>
@@ -571,9 +571,9 @@ export function DataStructurePanel({ algorithm, frontier, distances, path }) {
             {Object.entries(heuristicValues).map(([node, vals]) => (
               <span
                 key = {node}
-                className = "font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/[0.08] bg-slate-800/50 text-slate-400"
+                className = "font-mono text-[10px] px-1.5 py-0.5 rounded border border-subtle bg-surface-translucent text-muted"
               >
-                {node}:<span className = {vals.f === 'inf' ? 'text-slate-600' : 'text-brand-400'}>{vals.f}</span>
+                {node}:<span className = {vals.f === 'inf' ? 'text-faint' : 'text-brand-400'}>{vals.f}</span>
               </span>
             ))}
           </div>
@@ -593,7 +593,7 @@ export function DataStructurePanel({ algorithm, frontier, distances, path }) {
                 {e.source}-{e.target} ({e.weight})
               </span>
             ))}
-            <span className = "font-mono text-[10px] text-slate-500 ml-1">
+            <span className = "font-mono text-[10px] text-muted ml-1">
               = {mstWeight}
             </span>
           </div>
@@ -611,7 +611,7 @@ export function DataStructurePanel({ algorithm, frontier, distances, path }) {
                   {i + 1}. {id}
                 </span>
                 {i < ordering.length - 1 && (
-                  <span className = "text-[10px] text-slate-600">→</span>
+                  <span className = "text-[10px] text-faint">→</span>
                 )}
               </span>
             ))}
@@ -630,7 +630,7 @@ export function DataStructurePanel({ algorithm, frontier, distances, path }) {
                   {id}
                 </span>
                 {i < negativeCycle.length - 1 && (
-                  <span className = "text-[10px] text-slate-600">→</span>
+                  <span className = "text-[10px] text-faint">→</span>
                 )}
               </span>
             ))}
@@ -649,7 +649,7 @@ export function DataStructurePanel({ algorithm, frontier, distances, path }) {
                   {id}
                 </span>
                 {i < path.length - 1 && (
-                  <span className = "text-[10px] text-slate-600">→</span>
+                  <span className = "text-[10px] text-faint">→</span>
                 )}
               </span>
             ))}
@@ -672,7 +672,7 @@ const BUILDER_MODES = [
 
 function BuilderToolbar({ builderMode, onModeChange, connectSource }) {
   return (
-    <div className = "shrink-0 flex items-center gap-1 px-4 py-2 border-b border-white/[0.06]">
+    <div className = "shrink-0 flex items-center gap-1 px-4 py-2 border-b border-hairline">
       {BUILDER_MODES.map(({ value, icon: Icon, label }) => (
         <button
           key = {value}
@@ -681,7 +681,7 @@ function BuilderToolbar({ builderMode, onModeChange, connectSource }) {
           className = {`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors ${
             builderMode === value
               ? 'bg-brand-500/15 text-brand-400 border border-brand-500/30'
-              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent'
+              : 'text-muted hover:text-secondary hover:bg-hover border border-transparent'
           }`}
         >
           <Icon size = {12} strokeWidth = {1.5} />
@@ -1070,14 +1070,14 @@ export default function GraphLabPage() {
         accent = "brand"
         badge = "Phase 5"
       >
-        <div className = "flex items-center gap-1 bg-slate-900/50 border border-white/[0.06] rounded-lg p-1">
+        <div className = "flex items-center gap-1 bg-base border border-hairline rounded-lg p-1">
           <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || (mode === 'grid' && (!gridState.startCell || !gridState.endCell))}>
             {isRunning || isPlaying ? 'Running…' : 'Run'}
           </Button>
           <Button variant = "ghost" size = "sm" icon = {Save} onClick = {handleSave} disabled = {isRunning || isPlaying}>
             Save
           </Button>
-          <div className = "w-px h-4 bg-white/[0.08]" />
+          <div className = "w-px h-4 border-l border-hairline" />
           <Button variant = "ghost" size = "sm" icon = {RotateCcw} onClick = {handleReset} disabled = {isRunning || isPlaying}>
             Reset
           </Button>

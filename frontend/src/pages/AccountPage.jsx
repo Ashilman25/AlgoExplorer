@@ -35,21 +35,21 @@ export default function AccountPage() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <Card title="Identity" bodyClassName="p-5 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/[0.06] bg-slate-900/70 px-4 py-3">
-              <p className="text-[10px] font-semibold tracking-widest uppercase text-slate-600 mb-2">
+            <div className="rounded-xl border border-hairline bg-base px-4 py-3">
+              <p className="text-[10px] font-semibold tracking-widest uppercase text-faint mb-2">
                 Username
               </p>
-              <div className="flex items-center gap-2 text-slate-100">
+              <div className="flex items-center gap-2 text-primary">
                 <UserRound size={14} strokeWidth={1.75} className="text-brand-400" />
                 <span className="font-medium">{user?.username}</span>
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/[0.06] bg-slate-900/70 px-4 py-3">
-              <p className="text-[10px] font-semibold tracking-widest uppercase text-slate-600 mb-2">
+            <div className="rounded-xl border border-hairline bg-base px-4 py-3">
+              <p className="text-[10px] font-semibold tracking-widest uppercase text-faint mb-2">
                 Email
               </p>
-              <div className="flex items-center gap-2 text-slate-100">
+              <div className="flex items-center gap-2 text-primary">
                 <Mail size={14} strokeWidth={1.75} className="text-brand-400" />
                 <span className="font-medium">{user?.email}</span>
               </div>
@@ -57,14 +57,14 @@ export default function AccountPage() {
           </div>
 
           <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 px-4 py-3">
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               Your runs and benchmarks are owned by your account. Guest data is automatically imported when you sign in.
             </p>
           </div>
         </Card>
 
         <Card title="Preferences" bodyClassName="p-5 space-y-3">
-          <div className="flex items-center gap-2 text-slate-300">
+          <div className="flex items-center gap-2 text-secondary">
             <SlidersHorizontal size={14} strokeWidth={1.75} className="text-brand-400" />
             <span className="text-sm font-medium">Current defaults</span>
           </div>
