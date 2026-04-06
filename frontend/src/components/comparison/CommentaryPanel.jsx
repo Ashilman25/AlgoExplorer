@@ -6,7 +6,7 @@ export default function CommentaryPanel({ commentary, onJumpToStep }) {
   if (!summary && (!divergences || divergences.length === 0)) {
     return (
       <div className = "flex items-center justify-center py-8">
-        <p className = "text-xs text-slate-600">No commentary available yet</p>
+        <p className = "text-xs text-faint">No commentary available yet</p>
       </div>
     )
   }
@@ -16,7 +16,7 @@ export default function CommentaryPanel({ commentary, onJumpToStep }) {
       {summary && (
         <div className = "space-y-1.5">
           <p className = "mono-label">Summary</p>
-          <p className = "text-xs text-slate-400 leading-relaxed">{summary}</p>
+          <p className = "text-xs text-muted leading-relaxed">{summary}</p>
         </div>
       )}
 
@@ -25,11 +25,11 @@ export default function CommentaryPanel({ commentary, onJumpToStep }) {
           <p className = "mono-label">Key Divergences ({divergences.length})</p>
           <div className = "space-y-1">
             {divergences.map((div, i) => (
-              <div key = {i} className = "flex items-start gap-2 rounded-lg bg-slate-800/50 border border-white/[0.05] px-3 py-2">
+              <div key = {i} className = "flex items-start gap-2 rounded-lg bg-surface-translucent border border-hairline px-3 py-2">
                 <span className = "font-mono text-[10px] text-state-source font-semibold whitespace-nowrap mt-0.5">
                   Step {div.stepIndex + 1}
                 </span>
-                <p className = "flex-1 text-[11px] text-slate-400 leading-relaxed min-w-0">
+                <p className = "flex-1 text-[11px] text-muted leading-relaxed min-w-0">
                   {div.description}
                 </p>
                 <button

@@ -175,10 +175,10 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
   }, [pendingAlg, addSlot])
 
   return (
-    <div className = "space-y-4 p-4 rounded-xl border border-white/[0.07] bg-slate-800/50">
+    <div className = "space-y-4 p-4 rounded-xl border border-hairline bg-surface-translucent">
       {/* Module selection */}
       <div className = "space-y-2">
-        <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+        <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-faint">
           Domain
         </p>
         <Select
@@ -204,7 +204,7 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
       {/* Graph sub-category */}
       {moduleType === 'graph' && (
         <div className = "space-y-2">
-          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-faint">
             Category
           </p>
           <Select
@@ -224,7 +224,7 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
       {/* Sorting sub-category */}
       {moduleType === 'sorting' && (
         <div className = "space-y-2">
-          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-faint">
             Category
           </p>
           <Select
@@ -244,7 +244,7 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
       {/* DP sub-category */}
       {moduleType === 'dp' && (
         <div className = "space-y-2">
-          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-faint">
             Category
           </p>
           <Select
@@ -265,7 +265,7 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
       {/* Algorithm slots */}
       {moduleType && (
         <div className = "space-y-2">
-          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+          <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-faint">
             Algorithms ({slots.length}/{maxSlots})
           </p>
 
@@ -274,14 +274,14 @@ export default function ComparisonConfigPanel({ isRunning, onRun }) {
             {slots.map((slot) => (
               <div
                 key = {slot.id}
-                className = "flex items-center justify-between rounded-lg bg-slate-900/50 border border-state-source/20 px-3 py-1.5"
+                className = "flex items-center justify-between rounded-lg bg-base border border-state-source/20 px-3 py-1.5"
               >
                 <span className = "font-mono text-xs text-state-source">
                   {fmtAlgorithmName(slot.algorithmKey)}
                 </span>
                 <button
                   onClick = {() => removeSlot(slot.id)}
-                  className = "text-slate-600 hover:text-state-target transition-colors"
+                  className = "text-faint hover:text-state-target transition-colors"
                   aria-label = {`Remove ${fmtAlgorithmName(slot.algorithmKey)}`}
                 >
                   <X size = {12} />

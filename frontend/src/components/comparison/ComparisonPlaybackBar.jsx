@@ -37,7 +37,7 @@ export default function ComparisonPlaybackBar() {
   }, [isPlaying, speed, hasSteps, isScrubbing])
 
   return (
-    <div className = "flex items-center gap-4 px-5 rounded-xl border border-state-source/20 bg-slate-900/80 h-[72px] flex-none">
+    <div className = "flex items-center gap-4 px-5 rounded-xl border border-state-source/20 bg-base h-[72px] flex-none">
       <span className = "mono-label whitespace-nowrap" style = {{ minWidth: '88px' }}>
         STEP {hasSteps ? stepIndex + 1 : '—'} / {hasSteps ? maxSteps : '—'}
       </span>
@@ -97,9 +97,9 @@ function SpeedControl({ speed, setSpeed }) {
         title = {`Playback speed: ${speed}×`}
       />
       <div className = "flex justify-between">
-        <span className = "font-mono text-[8px] text-slate-700 leading-none">¼×</span>
-        <span className = "font-mono text-[8px] text-slate-700 leading-none">1×</span>
-        <span className = "font-mono text-[8px] text-slate-700 leading-none">4×</span>
+        <span className = "font-mono text-[8px] text-faint leading-none">¼×</span>
+        <span className = "font-mono text-[8px] text-faint leading-none">1×</span>
+        <span className = "font-mono text-[8px] text-faint leading-none">4×</span>
       </div>
     </div>
   )
@@ -117,7 +117,7 @@ function CtrlBtn({ icon: Icon, onClick, disabled, title, accent }) {
         'disabled:opacity-30 disabled:cursor-not-allowed',
         accent
           ? 'bg-state-source/20 border-state-source/30 text-state-source hover:bg-state-source/30 hover:border-state-source/50'
-          : 'bg-slate-800/50 border-white/[0.06] text-slate-400 hover:text-slate-200 hover:bg-slate-700/50',
+          : 'bg-surface-translucent border-hairline text-muted hover:text-primary hover:bg-hover',
       )}
     >
       <Icon size = {14} strokeWidth = {1.8} />

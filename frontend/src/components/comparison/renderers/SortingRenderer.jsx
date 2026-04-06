@@ -40,7 +40,7 @@ export default function SortingRenderer({ currentStep, inputPayload }) {
   if (n === 0) {
     return (
       <div className = "w-full h-full flex items-center justify-center">
-        <p className = "text-sm text-slate-500">No array data.</p>
+        <p className = "text-sm text-muted">No array data.</p>
       </div>
     )
   }
