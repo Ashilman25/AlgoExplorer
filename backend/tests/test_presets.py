@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.data.presets import PRESETS
-from app.routes.presets import ALGORITHM_CATEGORY
 from app.schemas.presets import PresetItem
 
 
@@ -53,51 +52,40 @@ class TestGraphPresetsUnfiltered:
 
 
 class TestGraphPresetsFiltered:
+    """After the redesign, graph presets always return ALL presets regardless of algorithm_key."""
 
-    def test_pathfinding_filter_returns_pathfinding_presets(self, client):
-        r = client.get("/api/presets/graph", params = {"algorithm_key": "dijkstra"})
-        assert r.status_code == 200
-        presets = r.json()["groups"][0]["presets"]
-        for p in presets:
-            assert "pathfinding" in p["tags"] or not p["tags"]
-
-    def test_pathfinding_excludes_mst_and_ordering(self, client):
+    def test_graph_with_algorithm_key_returns_all_presets(self, client):
+        """Passing algorithm_key for graph still returns all presets (no filtering)."""
         r = client.get("/api/presets/graph", params = {"algorithm_key": "bfs"})
-        keys = {p["key"] for p in r.json()["groups"][0]["presets"]}
-        assert "connected-weighted" not in keys
-        assert "dag-prereqs" not in keys
-        assert "dag-cycle" not in keys
-
-    def test_mst_filter_returns_mst_presets(self, client):
-        r = client.get("/api/presets/graph", params = {"algorithm_key": "prims"})
         assert r.status_code == 200
         presets = r.json()["groups"][0]["presets"]
-        assert len(presets) >= 1
-        for p in presets:
-            assert "mst" in p["tags"] or not p["tags"]
+        all_keys = {p["key"] for p in presets}
+        # Should include presets from ALL categories
+        assert "simple-traversal" in all_keys      # pathfinding
+        assert "connected-weighted" in all_keys     # mst
+        assert "dag-prereqs" in all_keys            # ordering
 
-    def test_kruskals_returns_same_as_prims(self, client):
-        r_prims = client.get("/api/presets/graph", params = {"algorithm_key": "prims"})
-        r_kruskal = client.get("/api/presets/graph", params = {"algorithm_key": "kruskals"})
-        assert r_prims.json() == r_kruskal.json()
+    def test_graph_with_algorithm_key_returns_designed_for(self, client):
+        """Each preset in the response includes designed_for."""
+        r = client.get("/api/presets/graph", params = {"algorithm_key": "dijkstra"})
+        for p in r.json()["groups"][0]["presets"]:
+            assert "designed_for" in p
+            assert isinstance(p["designed_for"], list)
 
-    def test_ordering_filter_returns_dag_presets(self, client):
-        r = client.get("/api/presets/graph", params = {"algorithm_key": "topological_sort"})
-        assert r.status_code == 200
-        keys = {p["key"] for p in r.json()["groups"][0]["presets"]}
-        assert "dag-prereqs" in keys
-        assert "dag-cycle" in keys
-        assert "simple-traversal" not in keys
-
-    @pytest.mark.parametrize("algorithm_key", list(ALGORITHM_CATEGORY.keys()))
-    def test_all_known_graph_algorithms_return_200(self, client, algorithm_key):
+    @pytest.mark.parametrize("algorithm_key", ["bfs", "dijkstra", "astar", "prims", "topological_sort"])
+    def test_all_graph_algorithms_return_same_preset_count(self, client, algorithm_key):
+        """All algorithm_key values return the same full set of presets."""
         r = client.get("/api/presets/graph", params = {"algorithm_key": algorithm_key})
         assert r.status_code == 200
-        assert len(r.json()["groups"]) >= 1
+        presets = r.json()["groups"][0]["presets"]
+        assert len(presets) == len(PRESETS["graph"]["general"])
 
-    def test_unknown_graph_algorithm_returns_404(self, client):
+    def test_unknown_graph_algorithm_still_returns_all(self, client):
+        """Unknown algorithm_key for graph now returns all presets instead of 404."""
         r = client.get("/api/presets/graph", params = {"algorithm_key": "nonexistent"})
-        assert r.status_code == 404
+        assert r.status_code == 200
+        presets = r.json()["groups"][0]["presets"]
+        assert len(presets) == len(PRESETS["graph"]["general"])
 
 
 # ─── DP Presets ───────────────────────────────────────────
@@ -247,3 +235,19 @@ class TestPresetDataIntegrity:
                     assert "weight" in edge, (
                         f"Preset '{preset['key']}' is weighted but edge {edge} has no weight"
                     )
+
+    def test_graph_presets_have_designed_for(self):
+        """Every graph preset must have a non-empty designed_for list."""
+        for preset in PRESETS["graph"]["general"]:
+            item = PresetItem(**preset)
+            assert len(item.designed_for) >= 1, (
+                f"Preset '{preset['key']}' is missing designed_for"
+            )
+
+    def test_graph_preset_designed_for_contains_valid_algorithm_keys(self):
+        valid_keys = {"bfs", "dfs", "dijkstra", "astar", "bellman_ford", "prims", "kruskals", "topological_sort"}
+        for preset in PRESETS["graph"]["general"]:
+            for algo in preset.get("designed_for", []):
+                assert algo in valid_keys, (
+                    f"Preset '{preset['key']}' has invalid designed_for key '{algo}'"
+                )

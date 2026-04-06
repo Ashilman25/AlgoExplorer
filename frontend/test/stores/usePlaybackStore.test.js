@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePlaybackStore } from '../../src/stores/usePlaybackStore'
 
 const STEPS = [
@@ -24,6 +24,7 @@ function resetStore() {
     isScrubbing: false,
     currentStep: null,
     timingConfig: null,
+    runHandler: null,
   })
 }
 
@@ -61,5 +62,34 @@ describe('usePlaybackStore — timingConfig', () => {
     const state = usePlaybackStore.getState()
     expect(state.stepIndex).toBe(0)
     expect(state.timingConfig).toEqual(TIMING_CONFIG)
+  })
+})
+
+describe('usePlaybackStore — runHandler', () => {
+  beforeEach(resetStore)
+
+  it('defaults runHandler to null', () => {
+    expect(usePlaybackStore.getState().runHandler).toBe(null)
+  })
+
+  it('registerRunHandler stores the callback', () => {
+    const handler = vi.fn()
+    usePlaybackStore.getState().registerRunHandler(handler)
+    expect(usePlaybackStore.getState().runHandler).toBe(handler)
+  })
+
+  it('unregisterRunHandler clears the callback', () => {
+    const handler = vi.fn()
+    usePlaybackStore.getState().registerRunHandler(handler)
+    usePlaybackStore.getState().unregisterRunHandler()
+    expect(usePlaybackStore.getState().runHandler).toBe(null)
+  })
+
+  it('clearTimeline does NOT clear runHandler', () => {
+    const handler = vi.fn()
+    usePlaybackStore.getState().registerRunHandler(handler)
+    usePlaybackStore.getState().setTimeline(STEPS)
+    usePlaybackStore.getState().clearTimeline()
+    expect(usePlaybackStore.getState().runHandler).toBe(handler)
   })
 })

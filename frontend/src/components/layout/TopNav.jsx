@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import Button from '../ui/Button'
 import { useAuthStore } from '../../stores/useAuthStore'
 import { useLogout } from '../../hooks/useLogout'
+import { ConnectionDot } from '../ui/ConnectionIndicator'
 
-export default function TopNav({theme, onToggleTheme}) {
+export default function TopNav({theme, onToggleTheme, connectionStatus, onRetry}) {
   const user = useAuthStore((s) => s.user)
   const isInitialized = useAuthStore((s) => s.isInitialized)
   const handleLogout = useLogout()
@@ -26,6 +27,8 @@ export default function TopNav({theme, onToggleTheme}) {
     </Link>
 
     <div className = "flex-1" />
+
+    <ConnectionDot status = {connectionStatus} />
 
     {isInitialized && user ? (
       <div className="flex items-center gap-2">

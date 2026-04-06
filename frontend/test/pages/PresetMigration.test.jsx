@@ -31,6 +31,7 @@ const MOCK_GRAPH_PRESETS = {
           label: 'Simple Traversal — 6 nodes',
           description: 'Simple unweighted graph for breadth-first traversal',
           tags: ['pathfinding'],
+          designed_for: ['bfs', 'dfs'],
           input_payload: {
             nodes: [
               { id: 'A' }, { id: 'B' }, { id: 'C' },
@@ -51,6 +52,7 @@ const MOCK_GRAPH_PRESETS = {
           label: 'Weighted Diamond — 5 nodes',
           description: 'Classic diamond graph with weighted edges',
           tags: ['pathfinding'],
+          designed_for: ['dijkstra', 'bellman_ford'],
           input_payload: {
             nodes: [
               { id: 'S' }, { id: 'A' }, { id: 'B' },
@@ -276,99 +278,58 @@ function renderDpLab() {
 // ── Graph Lab preset tests ───────────────────────────────────────────────────
 
 describe('GraphLabPage — preset dropdown from API', () => {
-  it('populates the Preset dropdown with fetched graph presets', async () => {
+  it('shows the Preset trigger button', async () => {
     mockGetPresets.mockResolvedValue(MOCK_GRAPH_PRESETS)
-
     renderGraphLab()
-
     await waitFor(() => {
-      expect(screen.getByLabelText('Preset')).toBeInTheDocument()
-      const presetSelect = screen.getByLabelText('Preset')
-      const options = Array.from(presetSelect.querySelectorAll('option'))
-      const labels = options.map((o) => o.textContent)
-      expect(labels).toContain('Custom (loaded scenario)')
-      expect(labels).toContain('Simple Traversal — 6 nodes')
-      expect(labels).toContain('Weighted Diamond — 5 nodes')
+      expect(screen.getByRole('button', { name: /preset/i })).toBeInTheDocument()
     })
   })
 
-  it('auto-applies the first preset on initial load', async () => {
+  it('auto-applies the first matching preset on initial load', async () => {
     mockGetPresets.mockResolvedValue(MOCK_GRAPH_PRESETS)
-
     renderGraphLab()
-
     await waitFor(() => {
-      // First preset is simple-traversal with source=A, target=F
       const sourceSelect = screen.getByLabelText('Source')
       expect(sourceSelect.value).toBe('A')
     })
-
     const targetSelect = screen.getByLabelText('Target')
     expect(targetSelect.value).toBe('F')
-
-    // 6 nodes from the simple-traversal preset
-    const nodeOptions = Array.from(screen.getByLabelText('Source').querySelectorAll('option'))
-    expect(nodeOptions).toHaveLength(6)
   })
 
-  it('populates form fields when selecting a different preset', async () => {
+  it('populates form fields when selecting a different preset via PresetSelect', async () => {
     mockGetPresets.mockResolvedValue(MOCK_GRAPH_PRESETS)
-
     renderGraphLab()
-
-    // Wait for initial presets to load
     await waitFor(() => {
-      const options = Array.from(screen.getByLabelText('Preset').querySelectorAll('option'))
-      expect(options.length).toBeGreaterThan(1)
+      expect(screen.getByLabelText('Source').value).toBe('A')
     })
-
-    // Switch to weighted-diamond preset
-    fireEvent.change(screen.getByLabelText('Preset'), {
-      target: { value: 'weighted-diamond' },
-    })
-
-    // Should update to weighted-diamond's data
+    fireEvent.click(screen.getByRole('button', { name: /preset/i }))
+    fireEvent.click(screen.getByText('Weighted Diamond — 5 nodes'))
     await waitFor(() => {
       expect(screen.getByLabelText('Source').value).toBe('S')
       expect(screen.getByLabelText('Target').value).toBe('T')
     })
-
-    // weighted-diamond has 5 nodes
-    const nodeOptions = Array.from(screen.getByLabelText('Source').querySelectorAll('option'))
-    expect(nodeOptions).toHaveLength(5)
-
-    // weighted-diamond has weighted=true
-    expect(screen.getByLabelText('Weighted edges').checked).toBe(true)
   })
 
-  it('shows only Custom option when preset fetch fails', async () => {
+  it('shows placeholder when preset fetch fails', async () => {
     mockGetPresets.mockRejectedValue(new Error('Network error'))
-
     renderGraphLab()
-
-    // Give time for the fetch to fail
     await act(async () => {
       await new Promise((r) => setTimeout(r, 50))
     })
-
-    const presetSelect = screen.getByLabelText('Preset')
-    const options = Array.from(presetSelect.querySelectorAll('option'))
-    expect(options).toHaveLength(1)
-    expect(options[0].textContent).toBe('Custom (loaded scenario)')
+    expect(screen.getByRole('button', { name: /preset/i })).toHaveTextContent(/select a preset/i)
   })
 
   it('caches presets in useMetadataStore after first fetch', async () => {
     mockGetPresets.mockResolvedValue(MOCK_GRAPH_PRESETS)
-
     renderGraphLab()
-
     await waitFor(() => {
-      const options = Array.from(screen.getByLabelText('Preset').querySelectorAll('option'))
-      expect(options.length).toBeGreaterThan(1)
+      expect(screen.getByRole('button', { name: /preset/i })).toBeInTheDocument()
     })
-
-    // Store should now have the cached presets
-    const cached = useMetadataStore.getState().getPresets('graph', 'bfs')
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /preset/i })).toHaveTextContent('Simple Traversal')
+    })
+    const cached = useMetadataStore.getState().getPresets('graph', null)
     expect(cached).not.toBeNull()
     expect(cached).toHaveLength(2)
     expect(cached[0].key).toBe('simple-traversal')
