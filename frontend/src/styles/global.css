@@ -412,6 +412,19 @@
 
   /* Brand accent: cyan-400 is 1.9:1 on white — darken in light mode */
   .light .text-brand-400 { color: #0e7490; text-shadow: none; }
+  .light .text-brand-300 { color: #0891b2; }                     /* brand-600 */
+
+  /* Status colors: bright tones wash out on white — darken in light mode */
+  .light .text-amber-300  { color: #b45309; }                    /* amber-700 */
+  .light .text-amber-200  { color: #92400e; }                    /* amber-800 */
+  .light .text-emerald-400 { color: #059669; }                   /* emerald-600 */
+
+  /* Connection banners: low-opacity bg/borders invisible on white */
+  .light .connection-banner-info    { background: rgba(6, 182, 212, 0.07);  border-color: rgba(6, 182, 212, 0.18); }
+  .light .connection-banner-success { background: rgba(16, 185, 129, 0.07); border-color: rgba(16, 185, 129, 0.18); }
+  .light .connection-banner-warning { background: rgba(245, 158, 11, 0.07); border-color: rgba(245, 158, 11, 0.18); }
+  .light .connection-banner-warning button { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.22); }
+  .light .connection-banner-warning button:hover { background: rgba(245, 158, 11, 0.14); }
 
   /* ── Semantic text ────────────────────────────────────────────────────── */
 

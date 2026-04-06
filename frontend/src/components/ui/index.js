@@ -29,4 +29,4 @@ export { default as PageHeader } from './PageHeader'
 // Error handling
 export { default as ErrorBoundary } from './ErrorBoundary'
 export { default as ErrorAlert } from './ErrorAlert'
-export { default as ConnectionBanner } from './ConnectionBanner'
+export { ConnectionDot, ConnectionBanner } from './ConnectionIndicator'
