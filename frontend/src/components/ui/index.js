@@ -25,7 +25,6 @@ export { default as EmptyState } from './EmptyState'
 
 // Page-level
 export { default as PageHeader } from './PageHeader'
-export { default as ComingSoon } from './ComingSoon'
 
 // Error handling
 export { default as ErrorBoundary } from './ErrorBoundary'

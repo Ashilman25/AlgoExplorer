@@ -14,7 +14,6 @@ export default function PageHeader({
   title,
   description,
   accent = 'brand',
-  badge,
   children,
 }) {
   return (
@@ -32,12 +31,6 @@ export default function PageHeader({
             <h1 className = "text-xl font-semibold text-primary tracking-tight">
               {title}
             </h1>
-
-            {badge && (
-              <span className = "text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-elevated text-muted border border-hairline uppercase tracking-wide">
-                {badge}
-              </span>
-            )}
           </div>
 
           {description && (
