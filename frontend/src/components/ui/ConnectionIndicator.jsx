@@ -42,7 +42,7 @@ export function ConnectionDot({ status }) {
 export function ConnectionBanner({ status, onRetry }) {
   if (status === 'WAKING_UP') {
     return (
-      <div className="flex items-center justify-center gap-2 px-4 py-2 bg-brand-500/5 border-b border-brand-500/12">
+      <div className="connection-banner-info flex items-center justify-center gap-2 px-4 py-2 bg-brand-500/5 border-b border-brand-500/12">
         <Loader2 size={12} strokeWidth={2} className="animate-spin text-brand-300" />
         <p className="text-xs text-brand-300">
           Server is waking up — this usually takes about 30 seconds
@@ -53,7 +53,7 @@ export function ConnectionBanner({ status, onRetry }) {
 
   if (status === 'CONNECTED') {
     return (
-      <div className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/6 border-b border-emerald-500/15">
+      <div className="connection-banner-success flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500/6 border-b border-emerald-500/15">
         <Check size={12} strokeWidth={2.5} className="text-emerald-400" />
         <p className="text-xs text-emerald-400 font-medium">Connected!</p>
       </div>
@@ -62,12 +62,12 @@ export function ConnectionBanner({ status, onRetry }) {
 
   if (status === 'UNREACHABLE') {
     return (
-      <div className="flex items-center justify-center gap-3 px-4 py-2 bg-amber-500/6 border-b border-amber-500/15">
+      <div className="connection-banner-warning flex items-center justify-center gap-3 px-4 py-2 bg-amber-500/6 border-b border-amber-500/15">
         <span
           className="block w-[5px] h-[5px] rounded-full bg-amber-400 shrink-0"
         />
         <p className="text-xs text-amber-300">
-          Can't reach the server — some features won't be available
+          Can't reach the server - some features won't be available
         </p>
         <button
           onClick={onRetry}
