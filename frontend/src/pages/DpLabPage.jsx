@@ -314,10 +314,20 @@ const GLOW = {
 const HEADER_CELL = 'flex items-center justify-center bg-surface border border-hairline font-mono text-xs font-semibold text-muted select-none'
 
 
-function DpTableCanvas({ string1, string2, algorithm, items }) {
+function buildBlankTable(algorithm, string1, string2, items, capacity) {
+  if (algorithm === 'knapsack_01') {
+    const rows = (items?.length ?? 0) + 1
+    const cols = (capacity ?? 0) + 1
+    return Array.from({ length: rows }, () => Array(cols).fill(null))
+  }
+  const rows = (string1?.length ?? 0) + 1
+  const cols = (string2?.length ?? 0) + 1
+  return Array.from({ length: rows }, () => Array(cols).fill(null))
+}
+
+function DpTableCanvas({ string1, string2, algorithm, items, capacity }) {
   const currentStep = usePlaybackStore((s) => s.currentStep)
   const isLoading  = usePlaybackStore((s) => s.isLoading)
-  const totalSteps = usePlaybackStore((s) => s.totalSteps)
 
   const activeCellRef = useRef(null)
 
@@ -329,7 +339,7 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
   const explanation   = typeof rawExp === 'string' ? rawExp : rawExp?.body ?? rawExp?.text ?? rawExp?.title ?? null
   const eventType     = currentStep?.event_type ?? currentStep?.eventType ?? null
 
-  const hasTimeline = totalSteps > 0
+  const displayTable = table ?? buildBlankTable(algorithm, string1, string2, items, capacity)
 
   const activeRow = currentCell?.[0] ?? null
   const activeCol = currentCell?.[1] ?? null
@@ -339,34 +349,7 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
     activeCellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
   }, [activeRow, activeCol])
 
-
-  // ── empty state ──
-  if (!hasTimeline) {
-    return (
-      <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className = "text-sm font-medium text-muted">
-          DP table — cells fill in as the algorithm progresses
-        </p>
-
-        <p className = "text-xs text-faint max-w-xs leading-relaxed">
-          Enter your input strings, then step through the recurrence relation.
-        </p>
-
-        <div className = "flex flex-wrap gap-2 mt-1">
-          {['LCS', 'Edit Distance', 'Knapsack', 'Coin Change', 'Fibonacci'].map((alg) => (
-            <span
-              key = {alg}
-              className = "text-[10px] font-mono px-2.5 py-1 rounded-full bg-elevated text-muted border border-hairline"
-            >
-              {alg}
-            </span>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (!table || table.length === 0) {
+  if (!displayTable || displayTable.length === 0) {
     return (
       <div className = "flex-1 flex items-center justify-center">
         <p className = "text-sm text-muted">No table data.</p>
@@ -376,8 +359,8 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
 
 
   // ── derive grid dimensions ──
-  const rows = table.length
-  const cols = table[0]?.length ?? 0
+  const rows = displayTable.length
+  const cols = displayTable[0]?.length ?? 0
 
   // derive headers based on algorithm
   const isKnapsack = algorithm === 'knapsack_01'
@@ -432,7 +415,7 @@ function DpTableCanvas({ string1, string2, algorithm, items }) {
             ))}
 
             {/* rows: header + data cells */}
-            {table.map((row, i) => [
+            {displayTable.map((row, i) => [
               /* row header — string1 character */
               <div
                 key = {`rh-${i}`}
@@ -563,7 +546,7 @@ export default function DpLabPage() {
   const { run, isRunning } = useRunSimulation()
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const currentStep = usePlaybackStore((s) => s.currentStep)
-  const { clearTimeline, error: timelineError } = usePlaybackStore()
+  const { clearTimeline, registerRunHandler, unregisterRunHandler, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
   const toast = useToast()
@@ -772,7 +755,7 @@ export default function DpLabPage() {
   }, [clearTimeline, clearRun])
 
 
-  const handleRun = useCallback(() => {
+  const handleRun = useCallback(({ autoPlay = true } = {}) => {
     let input_payload = {}
     let algorithm_config = null
 
@@ -794,7 +777,7 @@ export default function DpLabPage() {
       algorithm_config,
       execution_mode: 'simulate',
       explanation_level: 'detailed',
-    })
+    }, null, { autoPlay })
   }, [run, algorithm, string1, string2, capacity, items, coins, coinTarget, fibN, fibMode])
 
 
@@ -944,6 +927,15 @@ export default function DpLabPage() {
     }
   }, [clearTimeline, clearRun])
 
+  const handleRunRef = useRef()
+  handleRunRef.current = handleRun
+
+  useEffect(() => {
+    clearTimeline()
+    clearRun()
+    registerRunHandler((opts) => handleRunRef.current?.(opts))
+    return () => unregisterRunHandler()
+  }, [registerRunHandler, unregisterRunHandler, clearTimeline, clearRun])
 
   return (
     <>
@@ -1023,21 +1015,22 @@ export default function DpLabPage() {
           <DpTableCanvas
             algorithm = "knapsack_01"
             items = {items}
+            capacity = {capacity}
           />
         )}
 
         {algorithm === 'coin_change' && (
-          <DpStripCanvas showCoinUsed />
+          <DpStripCanvas showCoinUsed previewLength = {coinTarget + 1} />
         )}
 
         {algorithm === 'fibonacci' && fibMode === 'tabulation' && (
-          <DpStripCanvas />
+          <DpStripCanvas previewLength = {fibN + 1} />
         )}
 
         {algorithm === 'fibonacci' && fibMode === 'memoized' && (
           <div className = "flex-1 flex flex-col min-h-0">
             <div className = "flex-1 min-h-0 border-b border-hairline">
-              <DpStripCanvas />
+              <DpStripCanvas previewLength = {fibN + 1} />
             </div>
             <div className = "flex-1 min-h-0">
               <FibCallTree />
