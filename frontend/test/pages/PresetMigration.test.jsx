@@ -27,8 +27,8 @@ const MOCK_GRAPH_PRESETS = {
       group_key: 'general',
       presets: [
         {
-          key: 'bfs-demo',
-          label: 'BFS Demo — 6 nodes',
+          key: 'simple-traversal',
+          label: 'Simple Traversal — 6 nodes',
           description: 'Simple unweighted graph for breadth-first traversal',
           tags: ['pathfinding'],
           input_payload: {
@@ -287,7 +287,7 @@ describe('GraphLabPage — preset dropdown from API', () => {
       const options = Array.from(presetSelect.querySelectorAll('option'))
       const labels = options.map((o) => o.textContent)
       expect(labels).toContain('Custom (loaded scenario)')
-      expect(labels).toContain('BFS Demo — 6 nodes')
+      expect(labels).toContain('Simple Traversal — 6 nodes')
       expect(labels).toContain('Weighted Diamond — 5 nodes')
     })
   })
@@ -298,7 +298,7 @@ describe('GraphLabPage — preset dropdown from API', () => {
     renderGraphLab()
 
     await waitFor(() => {
-      // First preset is bfs-demo with source=A, target=F
+      // First preset is simple-traversal with source=A, target=F
       const sourceSelect = screen.getByLabelText('Source')
       expect(sourceSelect.value).toBe('A')
     })
@@ -306,7 +306,7 @@ describe('GraphLabPage — preset dropdown from API', () => {
     const targetSelect = screen.getByLabelText('Target')
     expect(targetSelect.value).toBe('F')
 
-    // 6 nodes from the bfs-demo preset
+    // 6 nodes from the simple-traversal preset
     const nodeOptions = Array.from(screen.getByLabelText('Source').querySelectorAll('option'))
     expect(nodeOptions).toHaveLength(6)
   })
@@ -371,7 +371,7 @@ describe('GraphLabPage — preset dropdown from API', () => {
     const cached = useMetadataStore.getState().getPresets('graph', 'bfs')
     expect(cached).not.toBeNull()
     expect(cached).toHaveLength(2)
-    expect(cached[0].key).toBe('bfs-demo')
+    expect(cached[0].key).toBe('simple-traversal')
   })
 })
 

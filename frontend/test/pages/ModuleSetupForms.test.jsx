@@ -33,11 +33,11 @@ describe('module setup forms', () => {
       <GraphConfig
         algorithm="bfs"
         onAlgorithmChange={handlers.onAlgorithmChange}
-        preset="bfs-demo"
+        preset="simple-traversal"
         onPresetChange={handlers.onPresetChange}
         presetOptions={[
           { value: 'custom', label: 'Custom (loaded scenario)' },
-          { value: 'bfs-demo', label: 'BFS Demo — 6 nodes' },
+          { value: 'simple-traversal', label: 'Simple Traversal — 6 nodes' },
           { value: 'weighted-diamond', label: 'Weighted Diamond — 5 nodes' },
         ]}
         source="A"
@@ -93,7 +93,7 @@ describe('module setup forms', () => {
         onPresetChange={handlers.onPresetChange}
         presetOptions={[
           { value: 'custom', label: 'Custom (loaded scenario)' },
-          { value: 'bfs-demo', label: 'BFS Demo — 6 nodes' },
+          { value: 'simple-traversal', label: 'Simple Traversal — 6 nodes' },
         ]}
         source="A"
         onSourceChange={handlers.onSourceChange}
