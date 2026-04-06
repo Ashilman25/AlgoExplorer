@@ -1,4 +1,4 @@
-import { RefreshCw, Loader2, Check } from 'lucide-react'
+import { RefreshCw, Loader2, Check, WifiOff } from 'lucide-react'
 
 export function ConnectionDot({ status }) {
   if (status === 'CONNECTING' || status === 'WAKING_UP') {
@@ -63,9 +63,7 @@ export function ConnectionBanner({ status, onRetry }) {
   if (status === 'UNREACHABLE') {
     return (
       <div className="connection-banner-warning flex items-center justify-center gap-3 px-4 py-2 bg-amber-500/6 border-b border-amber-500/15">
-        <span
-          className="block w-[5px] h-[5px] rounded-full bg-amber-400 shrink-0"
-        />
+        <WifiOff size={14} strokeWidth={1.5} className="text-amber-300 shrink-0" />
         <p className="text-xs text-amber-300">
           Can't reach the server - some features won't be available
         </p>
