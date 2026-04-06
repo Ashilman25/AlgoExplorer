@@ -25,7 +25,7 @@ export default function ErrorAlert({ message, title, fields, onDismiss, classNam
       {onDismiss && (
         <button
           onClick={onDismiss}
-          className="absolute top-2 right-2 p-0.5 text-slate-600 hover:text-slate-300 transition-colors rounded"
+          className="absolute top-2 right-2 p-0.5 text-faint hover:text-secondary transition-colors rounded"
         >
           <X size={12} strokeWidth={1.5} />
         </button>

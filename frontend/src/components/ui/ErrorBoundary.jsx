@@ -31,11 +31,11 @@ export default class ErrorBoundary extends Component {
           <AlertTriangle size={28} strokeWidth={1.5} className="text-rose-400" />
         </div>
 
-        <h1 className="text-lg font-semibold text-slate-200 mb-2">
+        <h1 className="text-lg font-semibold text-secondary mb-2">
           Something went wrong
         </h1>
 
-        <p className="text-sm text-slate-500 max-w-sm leading-relaxed mb-2">
+        <p className="text-sm text-muted max-w-sm leading-relaxed mb-2">
           An unexpected error occurred while rendering this page.
         </p>
 
@@ -54,7 +54,7 @@ export default class ErrorBoundary extends Component {
 
           <button
             onClick={this.handleHome}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-white/[0.08] transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-muted hover:text-primary hover:bg-hover border border-subtle transition-colors"
           >
             <Home size={14} strokeWidth={2} />
             Dashboard

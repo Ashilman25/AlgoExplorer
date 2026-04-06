@@ -29,19 +29,19 @@ export default function PageHeader({
 
         <div>
           <div className = "flex items-center gap-2.5">
-            <h1 className = "text-xl font-semibold text-slate-100 tracking-tight">
+            <h1 className = "text-xl font-semibold text-primary tracking-tight">
               {title}
             </h1>
 
             {badge && (
-              <span className = "text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-700/80 text-slate-500 border border-white/[0.06] uppercase tracking-wide">
+              <span className = "text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-elevated text-muted border border-hairline uppercase tracking-wide">
                 {badge}
               </span>
             )}
           </div>
 
           {description && (
-            <p className = "mt-1 text-sm text-slate-400 max-w-xl leading-relaxed">
+            <p className = "mt-1 text-sm text-muted max-w-xl leading-relaxed">
               {description}
             </p>
           )}

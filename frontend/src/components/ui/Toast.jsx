@@ -40,7 +40,7 @@ export function ToastProvider({ children }) {
             return (
               <div
                 key = {t.id}
-                className = "relative flex items-start gap-3 rounded-xl p-3.5 overflow-hidden glass border border-white/[0.10] shadow-xl animate-enter"
+                className = "relative flex items-start gap-3 rounded-xl p-3.5 overflow-hidden glass border border-subtle shadow-xl animate-enter"
               >
 
                 <div className = {cn('absolute inset-y-0 left-0 w-0.5', accent)} />
@@ -51,16 +51,16 @@ export function ToastProvider({ children }) {
 
                 <div className = "flex-1 min-w-0">
                   {t.title && (
-                    <p className = "text-sm font-semibold text-slate-100 leading-snug">{t.title}</p>
+                    <p className = "text-sm font-semibold text-primary leading-snug">{t.title}</p>
                   )}
                   {t.message && (
-                    <p className = "text-xs text-slate-400 mt-0.5 leading-relaxed">{t.message}</p>
+                    <p className = "text-xs text-muted mt-0.5 leading-relaxed">{t.message}</p>
                   )}
                 </div>
 
                 <button
                   onClick = {() => dismiss(t.id)}
-                  className = "shrink-0 p-0.5 text-slate-600 hover:text-slate-300 transition-colors duration-fast rounded"
+                  className = "shrink-0 p-0.5 text-faint hover:text-secondary transition-colors duration-fast rounded"
                 >
                   <X size = {13} strokeWidth = {1.5} />
                 </button>
