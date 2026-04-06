@@ -3,7 +3,7 @@ PRESETS: dict = {
         "general": [
             {
                 "key": "simple-traversal",
-                "label": "Simple Traversal — 6 nodes",
+                "label": "Simple Traversal",
                 "description": "Simple unweighted graph for breadth-first traversal",
                 "tags": ["pathfinding"],
                 "designed_for": ["bfs", "dfs"],
@@ -24,7 +24,7 @@ PRESETS: dict = {
             },
             {
                 "key": "weighted-diamond",
-                "label": "Weighted Diamond — 5 nodes",
+                "label": "Weighted Diamond",
                 "description": "Classic diamond graph with weighted edges to demonstrate shortest path choices",
                 "tags": ["pathfinding"],
                 "designed_for": ["dijkstra", "bellman_ford"],
@@ -48,7 +48,7 @@ PRESETS: dict = {
             },
             {
                 "key": "weighted-grid",
-                "label": "Weighted 4x4 Grid — 8 nodes",
+                "label": "Weighted 4x4 Grid",
                 "description": "Weighted grid-like topology with multiple paths of varying cost",
                 "tags": ["pathfinding"],
                 "designed_for": ["dijkstra", "bellman_ford"],
@@ -77,7 +77,7 @@ PRESETS: dict = {
             },
             {
                 "key": "astar-coords",
-                "label": "A* with Coordinates — 6 nodes",
+                "label": "A* with Coordinates",
                 "description": "Graph with node coordinates for A* heuristic computation",
                 "tags": ["pathfinding"],
                 "designed_for": ["astar"],
@@ -106,7 +106,7 @@ PRESETS: dict = {
             },
             {
                 "key": "neg-weight",
-                "label": "Negative Weights — 5 nodes",
+                "label": "Negative Weights",
                 "description": "Directed graph with a negative-weight edge for Bellman-Ford",
                 "tags": ["pathfinding"],
                 "designed_for": ["bellman_ford"],
@@ -131,7 +131,7 @@ PRESETS: dict = {
             },
             {
                 "key": "connected-weighted",
-                "label": "Connected Weighted — 6 nodes",
+                "label": "Connected Weighted",
                 "description": "Connected weighted graph for minimum spanning tree algorithms",
                 "tags": ["mst"],
                 "designed_for": ["prims", "kruskals"],
@@ -182,7 +182,7 @@ PRESETS: dict = {
             },
             {
                 "key": "dag-cycle",
-                "label": "DAG with Cycle — 4 nodes",
+                "label": "DAG with Cycle",
                 "description": "Directed graph containing a cycle (tests cycle detection)",
                 "tags": ["ordering"],
                 "designed_for": ["topological_sort"],

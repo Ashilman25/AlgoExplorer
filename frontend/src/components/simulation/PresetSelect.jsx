@@ -137,7 +137,7 @@ export default function PresetSelect({
         </span>
 
         {selectedPreset && (
-          <span className="flex gap-1 flex-shrink-0">
+          <span className="flex gap-1 flex-shrink-0 overflow-hidden">
             {selectedPreset.designed_for.map((algo) => (
               <span
                 key={algo}
@@ -167,7 +167,7 @@ export default function PresetSelect({
       {open && (
         <div
           className={cn(
-            'absolute z-50 mt-1 w-full min-w-[380px]',
+            'absolute z-50 mt-1 w-full',
             'bg-surface border border-default rounded-lg',
             'shadow-lg shadow-black/40',
             'overflow-hidden',
@@ -233,11 +233,11 @@ function PresetItem({ preset, match, selected, focused, algorithm, onClick }) {
       </span>
 
       {!match && hovered ? (
-        <span className="text-[10px] text-faint italic whitespace-nowrap flex-shrink-0">
+        <span className="text-[10px] text-faint italic whitespace-nowrap">
           → switches to {ALGO_DISPLAY[preset.designed_for[0]] ?? preset.designed_for[0]}
         </span>
       ) : (
-        <span className="flex gap-1 flex-shrink-0">
+        <span className="flex gap-1 flex-wrap justify-end">
           {preset.designed_for.map((algo) => (
             <span
               key={algo}
