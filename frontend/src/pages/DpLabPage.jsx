@@ -931,9 +931,11 @@ export default function DpLabPage() {
   handleRunRef.current = handleRun
 
   useEffect(() => {
+    clearTimeline()
+    clearRun()
     registerRunHandler((opts) => handleRunRef.current?.(opts))
     return () => unregisterRunHandler()
-  }, [registerRunHandler, unregisterRunHandler])
+  }, [registerRunHandler, unregisterRunHandler, clearTimeline, clearRun])
 
   return (
     <>
