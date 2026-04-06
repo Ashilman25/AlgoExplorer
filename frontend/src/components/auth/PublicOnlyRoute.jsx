@@ -10,7 +10,7 @@ export default function PublicOnlyRoute({ children }) {
 
   if (!isInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-void">
         <Spinner size="lg" />
       </div>
     )
