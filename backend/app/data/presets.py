@@ -6,6 +6,7 @@ PRESETS: dict = {
                 "label": "Simple Traversal — 6 nodes",
                 "description": "Simple unweighted graph for breadth-first traversal",
                 "tags": ["pathfinding"],
+                "designed_for": ["bfs", "dfs"],
                 "input_payload": {
                     "nodes": [
                         {"id": "A"}, {"id": "B"}, {"id": "C"},
@@ -26,6 +27,7 @@ PRESETS: dict = {
                 "label": "Weighted Diamond — 5 nodes",
                 "description": "Classic diamond graph with weighted edges to demonstrate shortest path choices",
                 "tags": ["pathfinding"],
+                "designed_for": ["dijkstra", "bellman_ford"],
                 "input_payload": {
                     "nodes": [
                         {"id": "S"}, {"id": "A"}, {"id": "B"},
@@ -49,6 +51,7 @@ PRESETS: dict = {
                 "label": "Weighted 4x4 Grid — 8 nodes",
                 "description": "Weighted grid-like topology with multiple paths of varying cost",
                 "tags": ["pathfinding"],
+                "designed_for": ["dijkstra", "bellman_ford"],
                 "input_payload": {
                     "nodes": [
                         {"id": "1"}, {"id": "2"}, {"id": "3"}, {"id": "4"},
@@ -77,6 +80,7 @@ PRESETS: dict = {
                 "label": "A* with Coordinates — 6 nodes",
                 "description": "Graph with node coordinates for A* heuristic computation",
                 "tags": ["pathfinding"],
+                "designed_for": ["astar"],
                 "input_payload": {
                     "nodes": [
                         {"id": "S", "x": 0, "y": 100},
@@ -105,6 +109,7 @@ PRESETS: dict = {
                 "label": "Negative Weights — 5 nodes",
                 "description": "Directed graph with a negative-weight edge for Bellman-Ford",
                 "tags": ["pathfinding"],
+                "designed_for": ["bellman_ford"],
                 "input_payload": {
                     "nodes": [
                         {"id": "S"}, {"id": "A"}, {"id": "B"},
@@ -129,6 +134,7 @@ PRESETS: dict = {
                 "label": "Connected Weighted — 6 nodes",
                 "description": "Connected weighted graph for minimum spanning tree algorithms",
                 "tags": ["mst"],
+                "designed_for": ["prims", "kruskals"],
                 "input_payload": {
                     "nodes": [
                         {"id": "A"}, {"id": "B"}, {"id": "C"},
@@ -154,6 +160,7 @@ PRESETS: dict = {
                 "label": "DAG — Course Prerequisites",
                 "description": "Directed acyclic graph modeling course prerequisites",
                 "tags": ["ordering"],
+                "designed_for": ["topological_sort"],
                 "input_payload": {
                     "nodes": [
                         {"id": "CS101"}, {"id": "CS201"}, {"id": "CS301"},
@@ -178,6 +185,7 @@ PRESETS: dict = {
                 "label": "DAG with Cycle — 4 nodes",
                 "description": "Directed graph containing a cycle (tests cycle detection)",
                 "tags": ["ordering"],
+                "designed_for": ["topological_sort"],
                 "input_payload": {
                     "nodes": [
                         {"id": "A"}, {"id": "B"}, {"id": "C"}, {"id": "D"},
