@@ -145,18 +145,18 @@ function RunCard({ run, onReopen, onRerun, onSaveScenario, onDelete }) {
   const metrics = metricEntries(run)
 
   return (
-    <div className = "glass border border-white/[0.07] rounded-xl p-4 flex flex-col gap-3 group hover:border-white/[0.12] transition-colors duration-fast">
+    <div className = "glass border border-hairline rounded-xl p-4 flex flex-col gap-3 group hover:border-subtle transition-colors duration-fast">
 
       {/* top row */}
       <div className = "flex items-start justify-between gap-2">
         <div className = "flex items-center gap-2.5 min-w-0">
-          <div className = "p-1.5 rounded-lg bg-slate-800/70 border border-white/[0.06] shrink-0">
-            <Icon size = {14} strokeWidth = {1.5} className = "text-slate-400" />
+          <div className = "p-1.5 rounded-lg bg-hover border border-hairline shrink-0">
+            <Icon size = {14} strokeWidth = {1.5} className = "text-muted" />
           </div>
 
           <div className = "min-w-0">
-            <p className = "text-sm font-medium text-slate-200 truncate">{algoLabel(run.algorithm_key)}</p>
-            <p className = "text-[11px] text-slate-500 font-mono">{run.algorithm_key}</p>
+            <p className = "text-sm font-medium text-secondary truncate">{algoLabel(run.algorithm_key)}</p>
+            <p className = "text-[11px] text-muted font-mono">{run.algorithm_key}</p>
           </div>
         </div>
 
@@ -164,11 +164,11 @@ function RunCard({ run, onReopen, onRerun, onSaveScenario, onDelete }) {
       </div>
 
       {/* meta row */}
-      <div className = "flex items-center gap-3 text-[11px] text-slate-500">
+      <div className = "flex items-center gap-3 text-[11px] text-muted">
         <span>{inputSummary(run)}</span>
-        <span className = "text-slate-700">·</span>
+        <span className = "text-faint">·</span>
         <span>{formatDate(run.created_at)}</span>
-        <span className = "text-slate-700">·</span>
+        <span className = "text-faint">·</span>
         <span>{formatTime(run.created_at)}</span>
       </div>
 
@@ -177,15 +177,15 @@ function RunCard({ run, onReopen, onRerun, onSaveScenario, onDelete }) {
         <div className = "flex items-center gap-3 flex-wrap">
           {metrics.map((m) => (
             <div key = {m.label} className = "flex items-center gap-1.5">
-              <span className = "text-[10px] text-slate-600 uppercase tracking-wide">{m.label}</span>
-              <span className = "font-mono text-[11px] text-slate-300 font-medium">{m.value}</span>
+              <span className = "text-[10px] text-faint uppercase tracking-wide">{m.label}</span>
+              <span className = "font-mono text-[11px] text-secondary font-medium">{m.value}</span>
             </div>
           ))}
         </div>
       )}
 
       {/* actions */}
-      <div className = "flex items-center gap-1.5 pt-1 border-t border-white/[0.05]">
+      <div className = "flex items-center gap-1.5 pt-1 border-t border-hairline">
         <button
           onClick = {() => onReopen(run)}
           className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/20 transition-colors duration-fast"
@@ -196,7 +196,7 @@ function RunCard({ run, onReopen, onRerun, onSaveScenario, onDelete }) {
 
         <button
           onClick = {() => onRerun(run)}
-          className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast"
+          className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-muted hover:text-primary hover:bg-hover transition-colors duration-fast"
         >
           <RotateCcw size = {11} strokeWidth = {1.5} />
           Rerun
@@ -204,7 +204,7 @@ function RunCard({ run, onReopen, onRerun, onSaveScenario, onDelete }) {
 
         <button
           onClick = {() => onSaveScenario(run)}
-          className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast"
+          className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-muted hover:text-primary hover:bg-hover transition-colors duration-fast"
         >
           <BookMarked size = {11} strokeWidth = {1.5} />
           Save Scenario
@@ -230,20 +230,20 @@ function RunRow({ run, onReopen, onRerun, onSaveScenario, onDelete }) {
   const metrics = metricEntries(run)
 
   return (
-    <div className = "flex items-center gap-4 px-4 py-2.5 glass border border-white/[0.07] rounded-lg hover:border-white/[0.12] transition-colors duration-fast group">
+    <div className = "flex items-center gap-4 px-4 py-2.5 glass border border-hairline rounded-lg hover:border-subtle transition-colors duration-fast group">
 
       {/* icon */}
-      <div className = "p-1.5 rounded-lg bg-slate-800/70 border border-white/[0.06] shrink-0">
-        <Icon size = {13} strokeWidth = {1.5} className = "text-slate-400" />
+      <div className = "p-1.5 rounded-lg bg-hover border border-hairline shrink-0">
+        <Icon size = {13} strokeWidth = {1.5} className = "text-muted" />
       </div>
 
       {/* name + algo */}
       <div className = "min-w-0 w-36 shrink-0">
-        <p className = "text-sm font-medium text-slate-200 truncate">{algoLabel(run.algorithm_key)}</p>
+        <p className = "text-sm font-medium text-secondary truncate">{algoLabel(run.algorithm_key)}</p>
         <div className = "flex items-center gap-2 mt-0.5">
-          <span className = "text-[11px] text-slate-500 font-mono">{run.algorithm_key}</span>
-          <span className = "text-slate-700 text-[10px]">·</span>
-          <span className = "text-[11px] text-slate-500">{inputSummary(run)}</span>
+          <span className = "text-[11px] text-muted font-mono">{run.algorithm_key}</span>
+          <span className = "text-faint text-[10px]">·</span>
+          <span className = "text-[11px] text-muted">{inputSummary(run)}</span>
         </div>
       </div>
 
@@ -251,26 +251,26 @@ function RunRow({ run, onReopen, onRerun, onSaveScenario, onDelete }) {
       <div className = "hidden lg:flex items-center gap-4 flex-1 min-w-0">
         {metrics.map((m) => (
           <div key = {m.label} className = "flex items-center gap-1.5 shrink-0">
-            <span className = "text-[10px] text-slate-600 uppercase tracking-wide">{m.label}</span>
-            <span className = "font-mono text-[11px] text-slate-300 font-medium">{m.value}</span>
+            <span className = "text-[10px] text-faint uppercase tracking-wide">{m.label}</span>
+            <span className = "font-mono text-[11px] text-secondary font-medium">{m.value}</span>
           </div>
         ))}
       </div>
 
       {/* badge + date */}
       <Badge variant = {meta.badge} className = "shrink-0">{run.module_type}</Badge>
-      <span className = "text-[11px] text-slate-500 shrink-0 w-24 text-right hidden sm:block">{formatDate(run.created_at)}</span>
-      <span className = "text-[11px] text-slate-500 shrink-0 w-16 text-right hidden md:block">{formatTime(run.created_at)}</span>
+      <span className = "text-[11px] text-muted shrink-0 w-24 text-right hidden sm:block">{formatDate(run.created_at)}</span>
+      <span className = "text-[11px] text-muted shrink-0 w-16 text-right hidden md:block">{formatTime(run.created_at)}</span>
 
       {/* actions */}
       <div className = "flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-fast">
         <button onClick = {() => onReopen(run)} className = "p-1.5 rounded-md text-brand-400 hover:bg-brand-500/15 transition-colors duration-fast" title = "Reopen run">
           <ExternalLink size = {13} strokeWidth = {1.5} />
         </button>
-        <button onClick = {() => onRerun(run)} className = "p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast" title = "Rerun with same config">
+        <button onClick = {() => onRerun(run)} className = "p-1.5 rounded-md text-muted hover:text-primary hover:bg-hover transition-colors duration-fast" title = "Rerun with same config">
           <RotateCcw size = {13} strokeWidth = {1.5} />
         </button>
-        <button onClick = {() => onSaveScenario(run)} className = "p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast" title = "Save as scenario">
+        <button onClick = {() => onSaveScenario(run)} className = "p-1.5 rounded-md text-muted hover:text-primary hover:bg-hover transition-colors duration-fast" title = "Save as scenario">
           <BookMarked size = {13} strokeWidth = {1.5} />
         </button>
         <button onClick = {() => onDelete(run)} className = "p-1.5 rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-colors duration-fast" title = "Delete">
@@ -289,15 +289,15 @@ function DeleteRunModal({ run, open, onClose, onConfirm }) {
 
   return (
     <Modal open = {open} onClose = {onClose} title = "Delete Run" size = "sm">
-      <p className = "text-sm text-slate-300 mb-1">
-        Delete this <span className = "font-semibold text-slate-100">{algoLabel(run.algorithm_key)}</span> run from {formatDate(run.created_at)}?
+      <p className = "text-sm text-secondary mb-1">
+        Delete this <span className = "font-semibold text-primary">{algoLabel(run.algorithm_key)}</span> run from {formatDate(run.created_at)}?
       </p>
-      <p className = "text-xs text-slate-500 mb-5">This action cannot be undone.</p>
+      <p className = "text-xs text-muted mb-5">This action cannot be undone.</p>
 
       <div className = "flex items-center justify-end gap-2">
         <button
           onClick = {onClose}
-          className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast"
+          className = "px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-primary hover:bg-hover transition-colors duration-fast"
         >
           Cancel
         </button>
@@ -319,15 +319,15 @@ function DeleteRunModal({ run, open, onClose, onConfirm }) {
 function ClearAllModal({ count, open, onClose, onConfirm }) {
   return (
     <Modal open = {open} onClose = {onClose} title = "Clear Run History" size = "sm">
-      <p className = "text-sm text-slate-300 mb-1">
-        Delete all <span className = "font-semibold text-slate-100">{count}</span> run{count !== 1 ? 's' : ''} from history?
+      <p className = "text-sm text-secondary mb-1">
+        Delete all <span className = "font-semibold text-primary">{count}</span> run{count !== 1 ? 's' : ''} from history?
       </p>
-      <p className = "text-xs text-slate-500 mb-5">This action cannot be undone.</p>
+      <p className = "text-xs text-muted mb-5">This action cannot be undone.</p>
 
       <div className = "flex items-center justify-end gap-2">
         <button
           onClick = {onClose}
-          className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast"
+          className = "px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-primary hover:bg-hover transition-colors duration-fast"
         >
           Cancel
         </button>
@@ -355,9 +355,9 @@ function GroupedSection({ moduleType, runs, view, rowProps }) {
   return (
     <div className = "mb-6 last:mb-0">
       <div className = "flex items-center gap-2 mb-3">
-        <Icon size = {14} strokeWidth = {1.5} className = "text-slate-500" />
-        <h2 className = "text-xs font-semibold text-slate-400 uppercase tracking-wider">{meta.label}</h2>
-        <span className = "text-[10px] text-slate-600 font-mono">{runs.length}</span>
+        <Icon size = {14} strokeWidth = {1.5} className = "text-muted" />
+        <h2 className = "text-xs font-semibold text-muted uppercase tracking-wider">{meta.label}</h2>
+        <span className = "text-[10px] text-faint font-mono">{runs.length}</span>
       </div>
 
       {view === 'grid' ? (
@@ -508,25 +508,25 @@ export default function RunsPage() {
       >
         {/* search */}
         <div className = "relative">
-          <Search size = {13} strokeWidth = {1.5} className = "absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+          <Search size = {13} strokeWidth = {1.5} className = "absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           <input
             value = {query}
             onChange = {(e) => setQuery(e.target.value)}
             placeholder = "Search runs…"
-            className = "pl-8 pr-3 py-1.5 rounded-lg text-xs text-slate-200 bg-slate-800/60 border border-white/[0.07] focus:border-brand-500/40 focus:outline-none transition-colors duration-fast w-48 placeholder:text-slate-600"
+            className = "pl-8 pr-3 py-1.5 rounded-lg text-xs text-secondary bg-surface-translucent border border-hairline focus:border-brand-500/40 focus:outline-none transition-colors duration-fast w-48 placeholder:text-faint"
           />
         </div>
 
         {/* module filter */}
-        <div className = "flex items-center gap-1 p-0.5 rounded-lg bg-slate-800/50 border border-white/[0.06]">
+        <div className = "flex items-center gap-1 p-0.5 rounded-lg bg-surface-translucent border border-hairline">
           {MODULE_FILTERS.map((f) => (
             <button
               key = {f.value}
               onClick = {() => setModuleFilter(f.value)}
               className = {`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-fast ${
                 moduleFilter === f.value
-                  ? 'bg-slate-700 text-slate-200 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-300'
+                  ? 'bg-elevated text-secondary shadow-sm'
+                  : 'text-muted hover:text-secondary'
               }`}
             >
               {f.label}
@@ -535,11 +535,11 @@ export default function RunsPage() {
         </div>
 
         {/* view toggle */}
-        <div className = "flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-800/50 border border-white/[0.06]">
+        <div className = "flex items-center gap-0.5 p-0.5 rounded-lg bg-surface-translucent border border-hairline">
           <button
             onClick = {() => setView('grid')}
             className = {`p-1.5 rounded-md transition-colors duration-fast ${
-              view === 'grid' ? 'bg-slate-700 text-slate-200' : 'text-slate-500 hover:text-slate-300'
+              view === 'grid' ? 'bg-elevated text-secondary' : 'text-muted hover:text-secondary'
             }`}
             title = "Grid view"
           >
@@ -548,7 +548,7 @@ export default function RunsPage() {
           <button
             onClick = {() => setView('list')}
             className = {`p-1.5 rounded-md transition-colors duration-fast ${
-              view === 'list' ? 'bg-slate-700 text-slate-200' : 'text-slate-500 hover:text-slate-300'
+              view === 'list' ? 'bg-elevated text-secondary' : 'text-muted hover:text-secondary'
             }`}
             title = "List view"
           >
@@ -562,7 +562,7 @@ export default function RunsPage() {
       {/* count + clear all */}
       {runs.length > 0 && (
         <div className = "flex items-center gap-3 mb-4 flex-wrap">
-          <p className = "text-xs text-slate-500 font-mono shrink-0">
+          <p className = "text-xs text-muted font-mono shrink-0">
             {filtered.length} of {runs.length} run{runs.length !== 1 ? 's' : ''}
             {moduleFilter !== 'all' ? ` in ${moduleFilter}` : ''}
             {query ? ` matching "${query}"` : ''}
@@ -570,7 +570,7 @@ export default function RunsPage() {
 
           <button
             onClick = {() => setShowClearAll(true)}
-            className = "ml-auto text-[11px] font-medium text-slate-600 hover:text-rose-400 transition-colors duration-fast"
+            className = "ml-auto text-[11px] font-medium text-faint hover:text-rose-400 transition-colors duration-fast"
           >
             Clear all
           </button>

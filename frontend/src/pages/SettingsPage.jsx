@@ -202,7 +202,7 @@ export default function SettingsPage() {
 function ToggleRow({ label, checked, onChange }) {
   return (
     <label className="flex items-center justify-between cursor-pointer group">
-      <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">{label}</span>
+      <span className="text-sm text-secondary group-hover:text-primary transition-colors">{label}</span>
       <button
         type="button"
         role="switch"
@@ -210,7 +210,7 @@ function ToggleRow({ label, checked, onChange }) {
         onClick={() => onChange(!checked)}
         className={`
           relative w-9 h-5 rounded-full transition-colors duration-200
-          ${checked ? 'bg-brand-500' : 'bg-slate-700'}
+          ${checked ? 'bg-brand-500' : 'bg-elevated'}
         `}
       >
         <span

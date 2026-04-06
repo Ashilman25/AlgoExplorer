@@ -2,8 +2,8 @@ import { cn } from '../../utils/cn'
 
 const VARIANTS = {
   primary: 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold hover:shadow-glow-brand',
-  secondary: 'bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium border border-white/[0.08]',
-  ghost: 'text-slate-400 hover:text-slate-200 hover:bg-slate-800',
+  secondary: 'bg-elevated hover:bg-hover text-secondary font-medium border border-subtle',
+  ghost: 'text-muted hover:text-primary hover:bg-elevated',
   danger: 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 font-medium border border-rose-500/20',
 }
 

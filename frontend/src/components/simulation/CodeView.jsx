@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Highlight, themes } from 'prism-react-renderer'
 import { Copy, Check } from 'lucide-react'
 import { cn } from '../../utils/cn'
@@ -10,7 +10,7 @@ const LANGUAGES = [
   { key: 'cpp',        label: 'C++',  prismLang: 'cpp' },
 ]
 
-const algoTheme = {
+const darkTheme = {
   plain: {
     color: '#cbd5e1',
     backgroundColor: 'transparent',
@@ -26,13 +26,38 @@ const algoTheme = {
   ],
 }
 
+const lightTheme = {
+  plain: {
+    color: '#1e293b',
+    backgroundColor: 'transparent',
+  },
+  styles: [
+    { types: ['keyword', 'builtin'],   style: { color: '#0e7490' } },
+    { types: ['string', 'char'],       style: { color: '#047857' } },
+    { types: ['number', 'boolean'],    style: { color: '#b45309' } },
+    { types: ['comment'],              style: { color: '#64748b', fontStyle: 'italic' } },
+    { types: ['function', 'method'],   style: { color: '#7c3aed' } },
+    { types: ['operator', 'punctuation'], style: { color: '#475569' } },
+    { types: ['class-name', 'type-name'], style: { color: '#0369a1' } },
+  ],
+}
+
 export default function CodeView({ code }) {
   const [langKey, setLangKey] = useState('python')
   const [copied, setCopied] = useState(false)
+  const [isLight, setIsLight] = useState(() => document.documentElement.classList.contains('light'))
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsLight(document.documentElement.classList.contains('light'))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   if (!code) {
     return (
-      <div className = "flex-1 flex items-center justify-center text-slate-500 text-xs">
+      <div className = "flex-1 flex items-center justify-center text-muted text-xs">
         No code available
       </div>
     )
@@ -60,7 +85,7 @@ export default function CodeView({ code }) {
                 'px-2 py-0.5 rounded text-[11px] font-mono font-medium transition-colors duration-150',
                 langKey === lang.key
                   ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30'
-                  : 'text-slate-500 hover:text-slate-300 border border-transparent',
+                  : 'text-muted hover:text-secondary border border-transparent',
               )}
             >
               {lang.label}
@@ -71,19 +96,19 @@ export default function CodeView({ code }) {
         <button
           onClick = {handleCopy}
           aria-label = "Copy code"
-          className = "p-1 rounded text-slate-500 hover:text-slate-300 hover:bg-slate-700/50 transition-colors duration-150"
+          className = "p-1 rounded text-muted hover:text-secondary hover:bg-hover transition-colors duration-150"
         >
           {copied ? <Check size = {13} /> : <Copy size = {13} />}
         </button>
       </div>
 
       <div className = "flex-1 overflow-y-auto min-h-0 px-3 pb-3">
-        <Highlight theme = {algoTheme} code = {codeText} language = {activeLang.prismLang}>
+        <Highlight theme = {isLight ? lightTheme : darkTheme} code = {codeText} language = {activeLang.prismLang}>
           {({ tokens, getLineProps, getTokenProps }) => (
             <pre className = "font-mono text-[13px] leading-6 m-0">
               {tokens.map((line, i) => (
                 <div key = {i} {...getLineProps({ line })}>
-                  <span className = "inline-block w-8 text-right pr-3 text-slate-600 select-none text-[12px]">
+                  <span className = "inline-block w-8 text-right pr-3 text-faint select-none text-[12px]">
                     {i + 1}
                   </span>
                   {line.map((token, key) => (

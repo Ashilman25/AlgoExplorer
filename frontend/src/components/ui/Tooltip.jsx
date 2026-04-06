@@ -23,8 +23,8 @@ export default function Tooltip({ content, children, side = 'top', className }) 
         <div
           className = {cn(
             'absolute z-50 pointer-events-none whitespace-nowrap',
-            'bg-slate-700 border border-white/[0.10]',
-            'text-slate-200 text-xs leading-snug',
+            'bg-elevated border border-subtle',
+            'text-secondary text-xs leading-snug',
             'px-2.5 py-1.5 rounded-lg shadow-lg backdrop-blur-sm',
             'max-w-[220px] whitespace-normal',
             POSITION[side],

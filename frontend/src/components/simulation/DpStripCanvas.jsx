@@ -5,7 +5,7 @@ const CELL_SIZE = 48
 const CELL_BASE = 'flex flex-col items-center justify-center font-mono text-xs tabular-nums transition-all duration-150'
 
 const CELL_STATE_CLASSES = {
-  default:  `${CELL_BASE} border border-white/[0.04] text-slate-600`,
+  default:  `${CELL_BASE} border border-hairline text-faint`,
   active:   `${CELL_BASE} border-2 border-state-active   bg-state-active/20   text-state-active`,
   frontier: `${CELL_BASE} border-2 border-state-frontier bg-state-frontier/15 text-state-frontier`,
   visited:  `${CELL_BASE} border border-state-visited/20  bg-state-visited/10  text-state-visited`,
@@ -47,10 +47,10 @@ export default function DpStripCanvas({ showCoinUsed = false }) {
   if (!hasTimeline) {
     return (
       <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className = "text-sm font-medium text-slate-500">
+        <p className = "text-sm font-medium text-muted">
           1D DP array — cells fill in as the algorithm progresses
         </p>
-        <p className = "text-xs text-slate-600 max-w-xs leading-relaxed">
+        <p className = "text-xs text-faint max-w-xs leading-relaxed">
           Configure your input parameters, then step through the computation.
         </p>
       </div>
@@ -60,7 +60,7 @@ export default function DpStripCanvas({ showCoinUsed = false }) {
   if (!array || array.length === 0) {
     return (
       <div className = "flex-1 flex items-center justify-center">
-        <p className = "text-sm text-slate-500">No array data.</p>
+        <p className = "text-sm text-muted">No array data.</p>
       </div>
     )
   }
@@ -73,10 +73,10 @@ export default function DpStripCanvas({ showCoinUsed = false }) {
     <div className = "flex-1 flex flex-col min-h-0 relative">
 
       {isLoading && (
-        <div className = "absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
+        <div className = "absolute inset-0 flex items-center justify-center bg-base z-10">
           <div className = "flex flex-col items-center gap-3">
             <div className = "w-6 h-6 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-            <p className = "text-xs text-slate-500 font-mono">Running simulation...</p>
+            <p className = "text-xs text-muted font-mono">Running simulation...</p>
           </div>
         </div>
       )}
@@ -89,7 +89,7 @@ export default function DpStripCanvas({ showCoinUsed = false }) {
             {array.map((_, idx) => (
               <div
                 key = {`idx-${idx}`}
-                className = "flex items-center justify-center font-mono text-[10px] text-slate-600"
+                className = "flex items-center justify-center font-mono text-[10px] text-faint"
                 style = {{ width: CELL_SIZE, height: 20 }}
               >
                 {idx}
@@ -127,7 +127,7 @@ export default function DpStripCanvas({ showCoinUsed = false }) {
                 <div
                   key = {`coin-${idx}`}
                   className = {`flex items-center justify-center font-mono text-[10px] ${
-                    tracebackSet.has(idx) ? 'text-state-success font-semibold' : 'text-slate-600'
+                    tracebackSet.has(idx) ? 'text-state-success font-semibold' : 'text-faint'
                   }`}
                   style = {{ width: CELL_SIZE, height: 20 }}
                 >
@@ -168,7 +168,7 @@ export default function DpStripCanvas({ showCoinUsed = false }) {
       </div>
 
       {/* explanation panel */}
-      <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
+      <div className = "shrink-0 border-t border-hairline px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
         {currentIndex != null && (
           <div className = "flex items-center gap-2">
             <span className = "mono-label shrink-0">Index</span>
@@ -183,7 +183,7 @@ export default function DpStripCanvas({ showCoinUsed = false }) {
           </div>
         )}
         {explanation && (
-          <p className = "text-xs text-slate-400 leading-relaxed">{explanation}</p>
+          <p className = "text-xs text-muted leading-relaxed">{explanation}</p>
         )}
       </div>
 

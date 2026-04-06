@@ -10,7 +10,7 @@ export default function Spinner({ size = 'md', className }) {
   return (
     <div
       className = {cn(
-        'rounded-full border-slate-700 border-t-brand-400 animate-spin',
+        'rounded-full border-default border-t-brand-400 animate-spin',
         SIZES[size],
         className,
       )}

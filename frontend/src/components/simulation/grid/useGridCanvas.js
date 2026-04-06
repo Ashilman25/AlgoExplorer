@@ -80,6 +80,9 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
   const cellSizeRef = useRef(1)
   const gridOffsetRef = useRef({ x: 0, y: 0 })
 
+  // ── Theme detection ──
+  const isLightRef = useRef(document.documentElement.classList.contains('light'))
+
   // ── Dirty flags ──
   const dirtyRef = useRef({ base: true, heatMap: true, frontier: true, path: true, interaction: true })
 
@@ -162,7 +165,7 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
 
     // Layer 1: Base
     if (dirty.base && ctxRefs.current[0]) {
-      drawBase(ctxRefs.current[0], cellSize, offset, p.rows, p.cols, p.walls)
+      drawBase(ctxRefs.current[0], cellSize, offset, p.rows, p.cols, p.walls, isLightRef.current)
       dirty.base = false
     }
 
@@ -170,7 +173,7 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
     if (dirty.heatMap && ctxRefs.current[1]) {
       drawHeatMap(
         ctxRefs.current[1], cellSize, offset, p.rows, p.cols,
-        anim.exploredKeys, anim.distFromPath, anim.maxDist,
+        anim.exploredKeys, anim.distFromPath, anim.maxDist, isLightRef.current,
       )
       dirty.heatMap = false
     }
@@ -185,7 +188,7 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
     if (hasFrontier) dirty.frontier = true
 
     if (dirty.frontier && ctxRefs.current[2]) {
-      drawFrontier(ctxRefs.current[2], cellSize, offset, frontierCells, activeKey, anim.pulseTime)
+      drawFrontier(ctxRefs.current[2], cellSize, offset, frontierCells, activeKey, anim.pulseTime, isLightRef.current)
       dirty.frontier = false
     }
 
@@ -196,7 +199,7 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
     if (hasPath) dirty.path = true
 
     if (dirty.path && ctxRefs.current[3]) {
-      drawPath(ctxRefs.current[3], cellSize, offset, pathData, anim.dashOffset)
+      drawPath(ctxRefs.current[3], cellSize, offset, pathData, anim.dashOffset, isLightRef.current)
       dirty.path = false
     }
 
@@ -204,7 +207,7 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
     if (dirty.interaction && ctxRefs.current[4]) {
       drawInteraction(
         ctxRefs.current[4], cellSize, offset,
-        hoveredCellRef.current, p.startCell, p.endCell, p.isBuildMode, p.previewPin,
+        hoveredCellRef.current, p.startCell, p.endCell, p.isBuildMode, p.previewPin, isLightRef.current,
       )
       dirty.interaction = false
     }
@@ -311,6 +314,19 @@ export function useGridCanvas({ rows, cols, walls, startCell, endCell, container
   // ── Mark dirty on prop changes ──
   useEffect(() => { dirtyRef.current.base = true; ensureRaf() }, [rows, cols, walls])
   useEffect(() => { dirtyRef.current.interaction = true; ensureRaf() }, [startCell, endCell])
+
+  // ── Theme change observer ──
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const light = document.documentElement.classList.contains('light')
+      if (light !== isLightRef.current) {
+        isLightRef.current = light
+        markAllDirty()
+      }
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [markAllDirty])
 
   // ── Cleanup ──
   useEffect(() => {

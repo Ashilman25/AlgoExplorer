@@ -251,28 +251,28 @@ function RecentRunRow({ run, onClick }) {
   return (
     <button
       onClick = {onClick}
-      className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/30 border border-white/[0.05] hover:border-white/[0.12] hover:bg-slate-800/60 transition-colors duration-fast group text-left"
+      className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-dim border border-hairline hover:border-subtle hover:bg-hover transition-colors duration-fast group text-left"
     >
-      <div className = "p-1 rounded-md bg-slate-800/70 border border-white/[0.06] shrink-0">
-        <Icon size = {11} strokeWidth = {1.5} className = "text-slate-500" />
+      <div className = "p-1 rounded-md bg-hover border border-hairline shrink-0">
+        <Icon size = {11} strokeWidth = {1.5} className = "text-muted" />
       </div>
 
       <div className = "min-w-0 flex-1">
-        <p className = "text-xs font-medium text-slate-300 truncate">
+        <p className = "text-xs font-medium text-secondary truncate">
           {ALGO_LABELS[run.algorithm_key] ?? run.algorithm_key}
         </p>
-        <p className = "text-[10px] text-slate-600 truncate">
+        <p className = "text-[10px] text-faint truncate">
           {runInputSummary(run)}
         </p>
       </div>
 
       <Badge variant = {meta.badge} className = "shrink-0 hidden sm:inline-flex">{meta.label}</Badge>
-      <span className = "text-[10px] text-slate-600 shrink-0">{formatRelative(run.created_at)}</span>
+      <span className = "text-[10px] text-faint shrink-0">{formatRelative(run.created_at)}</span>
 
       <ExternalLink
         size = {11}
         strokeWidth = {1.5}
-        className = "text-slate-700 group-hover:text-brand-400 shrink-0 transition-colors duration-fast"
+        className = "text-faint group-hover:text-brand-400 shrink-0 transition-colors duration-fast"
       />
     </button>
   )
@@ -288,15 +288,15 @@ function RecentScenarioRow({ scenario, onClick }) {
   return (
     <button
       onClick = {onClick}
-      className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/30 border border-white/[0.05] hover:border-white/[0.12] hover:bg-slate-800/60 transition-colors duration-fast group text-left"
+      className = "w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-dim border border-hairline hover:border-subtle hover:bg-hover transition-colors duration-fast group text-left"
     >
-      <div className = "p-1 rounded-md bg-slate-800/70 border border-white/[0.06] shrink-0">
-        <Icon size = {11} strokeWidth = {1.5} className = "text-slate-500" />
+      <div className = "p-1 rounded-md bg-hover border border-hairline shrink-0">
+        <Icon size = {11} strokeWidth = {1.5} className = "text-muted" />
       </div>
 
       <div className = "min-w-0 flex-1">
-        <p className = "text-xs font-medium text-slate-300 truncate">{scenario.name}</p>
-        <p className = "text-[10px] text-slate-600 truncate">
+        <p className = "text-xs font-medium text-secondary truncate">{scenario.name}</p>
+        <p className = "text-[10px] text-faint truncate">
           {ALGO_LABELS[scenario.algorithm_key] ?? scenario.algorithm_key}
           {' · '}
           {scenarioInputSummary(scenario)}
@@ -304,12 +304,12 @@ function RecentScenarioRow({ scenario, onClick }) {
       </div>
 
       <Badge variant = {meta.badge} className = "shrink-0 hidden sm:inline-flex">{meta.label}</Badge>
-      <span className = "text-[10px] text-slate-600 shrink-0">{formatRelative(scenario.created_at)}</span>
+      <span className = "text-[10px] text-faint shrink-0">{formatRelative(scenario.created_at)}</span>
 
       <ExternalLink
         size = {11}
         strokeWidth = {1.5}
-        className = "text-slate-700 group-hover:text-brand-400 shrink-0 transition-colors duration-fast"
+        className = "text-faint group-hover:text-brand-400 shrink-0 transition-colors duration-fast"
       />
     </button>
   )
@@ -326,10 +326,10 @@ function PresetCard({ preset, onClick }) {
       onClick = {onClick}
       className = {[
         'group flex flex-col gap-2.5 rounded-xl p-4 text-left',
-        'bg-slate-800/40 border border-white/[0.06]',
+        'bg-surface-dim border border-hairline',
         'transition-all duration-fast',
         preset.borderHover,
-        'hover:bg-slate-800/70',
+        'hover:bg-hover',
       ].join(' ')}
     >
       <div className = "flex items-center gap-2.5">
@@ -337,19 +337,19 @@ function PresetCard({ preset, onClick }) {
           <Icon size = {13} strokeWidth = {1.5} className = {preset.iconColor} />
         </div>
 
-        <span className = "text-xs font-semibold text-slate-200">{preset.label}</span>
+        <span className = "text-xs font-semibold text-secondary">{preset.label}</span>
       </div>
 
-      <p className = "text-[11px] text-slate-500 leading-relaxed">{preset.description}</p>
+      <p className = "text-[11px] text-muted leading-relaxed">{preset.description}</p>
 
       <div className = "flex items-center gap-1 mt-auto">
-        <span className = "text-[10px] font-medium text-slate-600 group-hover:text-brand-400 transition-colors duration-fast">
+        <span className = "text-[10px] font-medium text-faint group-hover:text-brand-400 transition-colors duration-fast">
           Try it
         </span>
         <ArrowRight
           size = {10}
           strokeWidth = {1.5}
-          className = "text-slate-700 group-hover:text-brand-400 group-hover:translate-x-0.5 transition-all duration-fast"
+          className = "text-faint group-hover:text-brand-400 group-hover:translate-x-0.5 transition-all duration-fast"
         />
       </div>
     </button>
@@ -419,18 +419,18 @@ export default function HomePage() {
           Algorithm Explorer
         </p>
 
-        <h1 className = "text-2xl font-semibold text-slate-100 tracking-tight mb-2">
+        <h1 className = "text-2xl font-semibold text-primary tracking-tight mb-2">
           Dashboard
         </h1>
 
-        <p className = "text-sm text-slate-400 max-w-md leading-relaxed">
+        <p className = "text-sm text-muted max-w-md leading-relaxed">
           A browser-based simulation lab for visualizing, comparing, and benchmarking algorithms.
           Pick a lab below to begin exploring.
         </p>
 
         <div className = "mt-4 inline-flex items-center gap-1.5">
           <Activity size = {12} strokeWidth = {1.5} className = {STATUS_COLOR[backendStatus]} />
-          <span className = "text-xs text-slate-600">
+          <span className = "text-xs text-faint">
             API <span className = {STATUS_COLOR[backendStatus]}>{backendStatus}</span>
           </span>
         </div>
@@ -439,7 +439,7 @@ export default function HomePage() {
 
       {/* ── Algorithm Labs ─────────────────────────────── */}
       <section className = "mb-9 animate-enter stagger-1">
-        <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600 mb-4">
+        <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-faint mb-4">
           Algorithm Labs
         </h2>
 
@@ -450,24 +450,24 @@ export default function HomePage() {
               to = {lab.to}
               className = {[
                 'group flex flex-col gap-5 rounded-xl p-5',
-                'bg-slate-800/50 border border-white/[0.07]',
+                'bg-surface-translucent border border-hairline',
                 'transition-all duration-[150ms]',
                 lab.borderHover,
-                'hover:bg-slate-800/80',
+                'hover:bg-hover',
               ].join(' ')}
             >
               <div className = "flex items-start justify-between">
                 <div className = {`p-2.5 rounded-xl ${lab.iconBg}`}>
                   <lab.icon size = {17} strokeWidth = {1.5} className = {lab.iconColor} />
                 </div>
-                <span className = "text-[10px] font-mono font-medium text-slate-600 uppercase tracking-wide">
+                <span className = "text-[10px] font-mono font-medium text-faint uppercase tracking-wide">
                   {lab.phase}
                 </span>
               </div>
 
               <div className = "flex-1 space-y-1.5">
-                <h3 className = "text-sm font-semibold text-slate-100">{lab.label}</h3>
-                <p className = "text-xs text-slate-400 leading-relaxed">{lab.description}</p>
+                <h3 className = "text-sm font-semibold text-primary">{lab.label}</h3>
+                <p className = "text-xs text-muted leading-relaxed">{lab.description}</p>
               </div>
 
               <div className = "flex items-center justify-between gap-2">
@@ -475,7 +475,7 @@ export default function HomePage() {
                   {lab.algorithms.map(alg => (
                     <span
                       key = {alg}
-                      className = "text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-700/60 text-slate-500 border border-white/[0.05]"
+                      className = "text-[10px] font-mono px-2 py-0.5 rounded-full bg-elevated text-muted border border-hairline"
                     >
                       {alg}
                     </span>
@@ -484,7 +484,7 @@ export default function HomePage() {
                 <ArrowRight
                   size = {13}
                   strokeWidth = {1.5}
-                  className = "text-slate-600 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all duration-[100ms] shrink-0"
+                  className = "text-faint group-hover:text-muted group-hover:translate-x-0.5 transition-all duration-[100ms] shrink-0"
                 />
               </div>
             </Link>
@@ -496,7 +496,7 @@ export default function HomePage() {
       {/* ── Recent Activity ────────────────────────────── */}
       {hasActivity && (
         <section className = "mb-9 animate-enter stagger-2">
-          <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600 mb-4">
+          <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-faint mb-4">
             Recent Activity
           </h2>
 
@@ -507,14 +507,14 @@ export default function HomePage() {
               <div>
                 <div className = "flex items-center justify-between mb-2.5">
                   <div className = "flex items-center gap-2">
-                    <History size = {12} strokeWidth = {1.5} className = "text-slate-600" />
-                    <h3 className = "text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Recent Runs</h3>
-                    <span className = "text-[10px] text-slate-700 font-mono">{runs.length}</span>
+                    <History size = {12} strokeWidth = {1.5} className = "text-faint" />
+                    <h3 className = "text-[11px] font-semibold text-muted uppercase tracking-wide">Recent Runs</h3>
+                    <span className = "text-[10px] text-faint font-mono">{runs.length}</span>
                   </div>
 
                   <Link
                     to = "/runs"
-                    className = "text-[10px] font-medium text-slate-600 hover:text-brand-400 transition-colors duration-fast flex items-center gap-1"
+                    className = "text-[10px] font-medium text-faint hover:text-brand-400 transition-colors duration-fast flex items-center gap-1"
                   >
                     View all
                     <ArrowRight size = {9} strokeWidth = {1.5} />
@@ -534,14 +534,14 @@ export default function HomePage() {
               <div>
                 <div className = "flex items-center justify-between mb-2.5">
                   <div className = "flex items-center gap-2">
-                    <BookMarked size = {12} strokeWidth = {1.5} className = "text-slate-600" />
-                    <h3 className = "text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Saved Scenarios</h3>
-                    <span className = "text-[10px] text-slate-700 font-mono">{scenarios.length}</span>
+                    <BookMarked size = {12} strokeWidth = {1.5} className = "text-faint" />
+                    <h3 className = "text-[11px] font-semibold text-muted uppercase tracking-wide">Saved Scenarios</h3>
+                    <span className = "text-[10px] text-faint font-mono">{scenarios.length}</span>
                   </div>
 
                   <Link
                     to = "/scenarios"
-                    className = "text-[10px] font-medium text-slate-600 hover:text-brand-400 transition-colors duration-fast flex items-center gap-1"
+                    className = "text-[10px] font-medium text-faint hover:text-brand-400 transition-colors duration-fast flex items-center gap-1"
                   >
                     View all
                     <ArrowRight size = {9} strokeWidth = {1.5} />
@@ -563,8 +563,8 @@ export default function HomePage() {
       {/* ── Featured Presets ────────────────────────────── */}
       <section className = {`mb-9 animate-enter ${hasActivity ? 'stagger-3' : 'stagger-2'}`}>
         <div className = "flex items-center gap-2 mb-4">
-          <Zap size = {12} strokeWidth = {1.5} className = "text-slate-600" />
-          <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600">
+          <Zap size = {12} strokeWidth = {1.5} className = "text-faint" />
+          <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-faint">
             Featured Presets
           </h2>
         </div>
@@ -579,7 +579,7 @@ export default function HomePage() {
 
       {/* ── Tools ──────────────────────────────────────── */}
       <section className = {`animate-enter ${hasActivity ? 'stagger-4' : 'stagger-3'}`}>
-        <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-slate-600 mb-4">
+        <h2 className = "text-[10px] font-semibold tracking-[0.10em] uppercase text-faint mb-4">
           Tools
         </h2>
 
@@ -590,10 +590,10 @@ export default function HomePage() {
               to = {tool.to}
               className = {[
                 'group flex items-start gap-3.5 rounded-xl p-4',
-                'bg-slate-800/50 border border-white/[0.07]',
+                'bg-surface-translucent border border-hairline',
                 'transition-all duration-[150ms]',
                 tool.borderHover,
-                'hover:bg-slate-800/80',
+                'hover:bg-hover',
               ].join(' ')}
             >
               <div className = {`p-2 rounded-lg shrink-0 ${tool.iconBg}`}>
@@ -602,14 +602,14 @@ export default function HomePage() {
 
               <div className = "min-w-0 flex-1">
                 <div className = "flex items-center justify-between gap-1">
-                  <h3 className = "text-sm font-semibold text-slate-200">{tool.label}</h3>
+                  <h3 className = "text-sm font-semibold text-secondary">{tool.label}</h3>
                   <ArrowRight
                     size = {12}
                     strokeWidth = {1.5}
-                    className = "text-slate-600 group-hover:text-slate-400 group-hover:translate-x-0.5 transition-all duration-[100ms] shrink-0"
+                    className = "text-faint group-hover:text-muted group-hover:translate-x-0.5 transition-all duration-[100ms] shrink-0"
                   />
                 </div>
-                <p className = "mt-1 text-xs text-slate-500 leading-relaxed">{tool.description}</p>
+                <p className = "mt-1 text-xs text-muted leading-relaxed">{tool.description}</p>
               </div>
             </Link>
           ))}

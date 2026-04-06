@@ -24,7 +24,7 @@ export default function PseudocodeView({ lines, activeLines }) {
 
   if (!lines || lines.length === 0) {
     return (
-      <div className = "flex-1 flex items-center justify-center text-slate-500 text-xs">
+      <div className = "flex-1 flex items-center justify-center text-muted text-xs">
         No pseudocode available
       </div>
     )
@@ -36,7 +36,7 @@ export default function PseudocodeView({ lines, activeLines }) {
         <button
           onClick = {handleCopy}
           aria-label = "Copy pseudocode"
-          className = "p-1 rounded text-slate-500 hover:text-slate-300 hover:bg-slate-700/50 transition-colors duration-150"
+          className = "p-1 rounded text-muted hover:text-secondary hover:bg-hover transition-colors duration-150"
         >
           {copied ? <Check size = {13} /> : <Copy size = {13} />}
         </button>
@@ -52,11 +52,11 @@ export default function PseudocodeView({ lines, activeLines }) {
               className = {cn(
                 'flex items-start font-mono text-[13px] leading-6 transition-colors duration-150 rounded-sm',
                 isActive
-                  ? 'text-brand-400 bg-cyan-950/30 border-l-2 border-brand-400'
-                  : 'text-slate-400 border-l-2 border-transparent',
+                  ? 'text-brand-400 bg-brand-500/10 border-l-2 border-brand-400'
+                  : 'text-muted border-l-2 border-transparent',
               )}
             >
-              <span className = "w-8 shrink-0 text-right pr-3 text-slate-600 select-none text-[12px]">
+              <span className = "w-8 shrink-0 text-right pr-3 text-faint select-none text-[12px]">
                 {i + 1}
               </span>
               <span className = "whitespace-pre">{line}</span>

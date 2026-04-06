@@ -56,7 +56,7 @@ function NavItem({to, icon: Icon, label, end = false, showExpanded = true}) {
             : 'justify-center mx-auto w-9 h-8',
           isActive
             ? 'bg-brand-500/10 text-brand-400'
-            : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-200',
+            : 'text-muted hover:bg-hover hover:text-primary',
         )
       }
       >
@@ -84,7 +84,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
     <aside
       className = {cn(
         'fixed left-0 top-[52px] z-40 h-[calc(100vh-52px)]',
-        'bg-slate-900 border-r border-white/[0.07]',
+        'bg-slate-900 border-r border-hairline',
         'transition-[width] duration-200 ease-out',
         showExpanded ? 'w-[240px]' : 'w-[56px]',
       )}
@@ -99,9 +99,9 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
         className = {cn(
           'absolute right-[-14px] top-[50px] z-10',
           'w-4 h-8 rounded-r-lg',
-          'bg-slate-900 border border-white/[0.12] border-l-0',
+          'bg-base border border-subtle border-l-0',
           'flex items-center justify-center',
-          'text-slate-400 hover:text-brand-400 hover:bg-slate-700 hover:border-brand-500/30',
+          'text-muted hover:text-brand-400 hover:bg-elevated hover:border-brand-500/30',
           'transition-colors duration-[100ms]',
           'shadow-md',
         )}
@@ -132,7 +132,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }) {
           <div key = {section} className = "pb-1 pt-5">
             <p className = {cn(
               'px-5 pb-2 text-[10px] font-semibold tracking-[0.10em] uppercase select-none',
-              showExpanded ? 'text-slate-600' : 'text-transparent',
+              showExpanded ? 'text-faint' : 'text-transparent',
             )}>
               {section}
             </p>

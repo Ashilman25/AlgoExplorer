@@ -1,6 +1,14 @@
-const GRID_LINE_COLOR = 'rgba(148,163,184,0.07)'
-const WALL_FILL_COLOR = '#334155'
-const WALL_EDGE_COLOR = '#475569'
+const DARK = {
+  gridLine: 'rgba(148,163,184,0.07)',
+  wallFill: '#334155',
+  wallEdge: '#475569',
+}
+
+const LIGHT = {
+  gridLine: 'rgba(15,23,42,0.10)',
+  wallFill: '#94a3b8',
+  wallEdge: '#64748b',
+}
 
 /**
  * Draw Layer 1: grid lines + wall fills.
@@ -11,8 +19,9 @@ const WALL_EDGE_COLOR = '#475569'
  * @param {number} rows
  * @param {number} cols
  * @param {Set<string>} walls — Set of "row,col" strings
+ * @param {boolean} isLight — true when light mode is active
  */
-export function drawBase(ctx, cellSize, offset, rows, cols, walls) {
+export function drawBase(ctx, cellSize, offset, rows, cols, walls, isLight = false) {
   const w = cols * cellSize
   const h = rows * cellSize
 
@@ -20,20 +29,22 @@ export function drawBase(ctx, cellSize, offset, rows, cols, walls) {
   ctx.save()
   ctx.translate(offset.x, offset.y)
 
+  const colors = isLight ? LIGHT : DARK
+
   // Wall fills
-  ctx.fillStyle = WALL_FILL_COLOR
+  ctx.fillStyle = colors.wallFill
   for (const key of walls) {
     const [r, c] = key.split(',').map(Number)
     ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize)
     // 3D raised edge: 1px highlight on top and left
-    ctx.fillStyle = WALL_EDGE_COLOR
+    ctx.fillStyle = colors.wallEdge
     ctx.fillRect(c * cellSize, r * cellSize, cellSize, 1)
     ctx.fillRect(c * cellSize, r * cellSize, 1, cellSize)
-    ctx.fillStyle = WALL_FILL_COLOR
+    ctx.fillStyle = colors.wallFill
   }
 
   // Grid lines
-  ctx.strokeStyle = GRID_LINE_COLOR
+  ctx.strokeStyle = colors.gridLine
   ctx.lineWidth = 1
 
   ctx.beginPath()

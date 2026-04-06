@@ -1,7 +1,18 @@
-const PATH_COLOR = '#34d399'       // emerald-400
-const PATH_GLOW_COLOR = '#34d399'
+const DARK = {
+  color: '#34d399',         // emerald-400
+  glow: '#34d399',
+  shadowBlur: 12,
+  glowAlpha: 0.15,
+}
+
+const LIGHT = {
+  color: '#059669',         // emerald-600 — darker for white bg
+  glow: '#059669',
+  shadowBlur: 8,
+  glowAlpha: 0.20,
+}
+
 const PATH_LINE_WIDTH = 3
-const PATH_SHADOW_BLUR = 12
 const PATH_DASH = [12, 8]
 
 /**
@@ -12,8 +23,9 @@ const PATH_DASH = [12, 8]
  * @param {{ x: number, y: number }} offset
  * @param {number[][]} path — [[row, col], ...] cell coordinates along the path
  * @param {number} dashOffset — current animated dash offset
+ * @param {boolean} isLight — true when light mode is active
  */
-export function drawPath(ctx, cellSize, offset, path, dashOffset) {
+export function drawPath(ctx, cellSize, offset, path, dashOffset, isLight = false) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
   if (!path || path.length < 2) return
@@ -55,22 +67,24 @@ export function drawPath(ctx, cellSize, offset, path, dashOffset) {
     ctx.quadraticCurveTo(secondLast.x, secondLast.y, last.x, last.y)
   }
 
+  const colors = isLight ? LIGHT : DARK
+
   // Glow underlay (thicker, no dash)
-  ctx.strokeStyle = PATH_COLOR
+  ctx.strokeStyle = colors.color
   ctx.lineWidth = PATH_LINE_WIDTH + 4
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
-  ctx.globalAlpha = 0.15
-  ctx.shadowBlur = PATH_SHADOW_BLUR * 2
-  ctx.shadowColor = PATH_GLOW_COLOR
+  ctx.globalAlpha = colors.glowAlpha
+  ctx.shadowBlur = colors.shadowBlur * 2
+  ctx.shadowColor = colors.glow
   ctx.setLineDash([])
   ctx.stroke()
 
   // Main path (dashed, animated)
   ctx.globalAlpha = 1
   ctx.lineWidth = PATH_LINE_WIDTH
-  ctx.shadowBlur = PATH_SHADOW_BLUR
-  ctx.shadowColor = PATH_GLOW_COLOR
+  ctx.shadowBlur = colors.shadowBlur
+  ctx.shadowColor = colors.glow
   ctx.setLineDash(PATH_DASH)
   ctx.lineDashOffset = dashOffset
   ctx.stroke()

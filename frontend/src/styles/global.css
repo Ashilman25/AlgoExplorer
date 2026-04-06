@@ -91,6 +91,12 @@
     --text-muted:     #94a3b8;           /* slate-400  descriptions, helpers   */
     --text-faint:     #475569;           /* slate-600  placeholders, disabled  */
     --text-inverted:  #0f172a;           /* slate-900  text on colored bg      */
+
+    /* Translucent surface variants */
+    --bg-surface-translucent: rgb(30 41 59 / 0.50);
+    --bg-surface-dim:         rgb(30 41 59 / 0.30);
+    --bg-hover:               rgb(30 41 59 / 0.70);
+    --bg-backdrop:            rgba(2, 6, 23, 0.70);
   }
 
   /* ── Light mode overrides (.light on <html>) ──────────────────────────── */
@@ -113,6 +119,17 @@
     --text-muted:     #475569;           /* slate-600 — helper text, ~6:1      */
     --text-faint:     #64748b;           /* slate-500 — placeholders, ~4.5:1   */
     --text-inverted:  #f8fafc;           /* slate-50                           */
+
+    --bg-surface-translucent: #ffffff;
+    --bg-surface-dim:         rgba(15, 23, 42, 0.025);
+    --bg-hover:               rgba(15, 23, 42, 0.05);
+    --bg-backdrop:            rgba(15, 23, 42, 0.25);
+
+    --shadow-glow-active:  0 0 0 2px #ffffff, 0 0 14px rgba(6, 182, 212, 0.35);
+    --shadow-glow-success: 0 0 0 2px #ffffff, 0 0 14px rgba(52, 211, 153, 0.35);
+    --shadow-glow-source:  0 0 0 2px #ffffff, 0 0 12px rgba(167, 139, 250, 0.30);
+    --shadow-glow-target:  0 0 0 2px #ffffff, 0 0 12px rgba(251, 113, 133, 0.30);
+    --shadow-glow-brand:   0 0 18px rgba(6, 182, 212, 0.20);
   }
 
   /* ── Reset ────────────────────────────────────────────────────────────── */
@@ -378,6 +395,23 @@
   .bg-surface  { background-color: var(--bg-surface); }
   .bg-elevated { background-color: var(--bg-elevated); }
   .bg-overlay  { background-color: var(--bg-overlay); }
+  .bg-surface-translucent { background-color: var(--bg-surface-translucent); }
+  .bg-surface-dim         { background-color: var(--bg-surface-dim); }
+  .bg-hover               { background-color: var(--bg-hover); }
+  .bg-backdrop            { background-color: var(--bg-backdrop); }
+
+  /* ── Hover variants for semantic tokens ──────────────────────────────── */
+  .hover\:bg-hover:hover       { background-color: var(--bg-hover); }
+  .hover\:bg-elevated:hover    { background-color: var(--bg-elevated); }
+  .hover\:bg-surface:hover     { background-color: var(--bg-surface); }
+  .hover\:text-primary:hover   { color: var(--text-primary); }
+  .hover\:text-secondary:hover { color: var(--text-secondary); }
+  .hover\:text-muted:hover     { color: var(--text-muted); }
+  .hover\:border-subtle:hover  { border-color: var(--border-subtle); }
+  .hover\:border-default:hover { border-color: var(--border-default); }
+
+  /* Brand accent: cyan-400 is 1.9:1 on white — darken in light mode */
+  .light .text-brand-400 { color: #0e7490; text-shadow: none; }
 
   /* ── Semantic text ────────────────────────────────────────────────────── */
 
@@ -525,83 +559,11 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════ */
-  /*  LIGHT MODE: UTILITY CLASS OVERRIDES                                    */
-  /*                                                                         */
-  /*  Components use hardcoded dark Tailwind utilities. These overrides must */
-  /*  live in @layer utilities (same layer as Tailwind's generated classes)  */
-  /*  so selector specificity wins, not layer order.                         */
-  /*                                                                         */
-  /*  Scoping rules:                                                          */
-  /*    .light header  — top nav                                              */
-  /*    .light aside   — sidebar                                              */
-  /*    .light main    — all page content                                     */
-  /*                                                                         */
-  /*  Dark mode is completely untouched by everything below.                 */
+  /*  LIGHT MODE: REMAINING OVERRIDES                                        */
+  /*  Most utility overrides removed — components use semantic classes now.  */
   /* ═══════════════════════════════════════════════════════════════════════ */
 
-  /* ── Header: text and icon colours ───────────────────────────────────── */
-
-  .light header .text-brand-400 { color: #0891b2; text-shadow: none; }
-  .light header .text-slate-500 { color: #64748b; }
-  .light header .text-slate-400 { color: #64748b; }
-  .light header .text-slate-300 { color: #475569; }
-  .light header .hover\:text-slate-300:hover { color: #0f172a; }
-
-  /* ── Sidebar: text, hover, and active colours ─────────────────────────── */
-
-  .light aside .text-slate-600        { color: #94a3b8; }   /* section labels */
-  .light aside .text-slate-400        { color: #475569; }   /* inactive items  */
-  .light aside .text-brand-400        { color: #0891b2; }   /* active item     */
-  .light aside .hover\:text-slate-200:hover { color: #0f172a; }
-  .light aside .hover\:bg-slate-800\/70:hover { background-color: rgba(15, 23, 42, 0.07); }
-
-  /* ── Main: text ───────────────────────────────────────────────────────── */
-  /* Every hardcoded light-on-dark shade mapped to dark-on-light equivalent. */
-
-  .light main .text-slate-50  { color: #0f172a; }
-  .light main .text-slate-100 { color: #0f172a; }
-  .light main .text-slate-200 { color: #1e293b; }
-  .light main .text-slate-300 { color: #334155; }
-  .light main .text-slate-400 { color: #475569; }
-  .light main .text-slate-500 { color: #64748b; }
-  .light main .text-slate-600 { color: #475569; }
-
-  /* Brand accent: cyan-400 is 1.9:1 on white — use brand-700 instead       */
-  .light main .text-brand-400 { color: #0e7490; }
-
-  /* Group-hover arrow colours                                               */
-  .light main .group-hover\:text-slate-400 { color: #475569; }
-  .light main .group:hover .group-hover\:text-slate-400 { color: #475569; }
-
-  /* ── Main: backgrounds ────────────────────────────────────────────────── */
-
-  .light main .bg-slate-800\/50 { background-color: #ffffff; }
-  .light main .bg-slate-800\/60 { background-color: #ffffff; }
-  .light main .bg-slate-800\/70 { background-color: #f8fafc; }
-  .light main .bg-slate-800\/80 { background-color: #f4f7fb; }
-  .light main .bg-slate-800\/30 { background-color: rgba(15, 23, 42, 0.025); }
-  .light main .bg-slate-900\/80 { background-color: rgba(255, 255, 255, 0.97); }
-  .light main .bg-slate-700\/60 { background-color: rgba(15, 23, 42, 0.06); }
-  .light main .bg-slate-700\/80 { background-color: rgba(15, 23, 42, 0.07); }
-  .light main .bg-slate-700\/50 { background-color: rgba(15, 23, 42, 0.05); }
-
-  /* ── Main: hover backgrounds ──────────────────────────────────────────── */
-
-  .light main .hover\:bg-slate-800\/80:hover { background-color: #eef4fb; }
-  .light main .hover\:bg-slate-800\/90:hover { background-color: #e8eef5; }
-  .light main .hover\:bg-slate-800\/70:hover { background-color: rgba(15, 23, 42, 0.05); }
-  .light main .hover\:bg-slate-700\/50:hover { background-color: rgba(15, 23, 42, 0.06); }
-
-  /* ── Main: borders ────────────────────────────────────────────────────── */
-  /* white/opacity borders are invisible on white backgrounds               */
-
-  .light main .border-white\/\[0\.07\] { border-color: rgba(15, 23, 42, 0.11); }
-  .light main .border-white\/\[0\.06\] { border-color: rgba(15, 23, 42, 0.09); }
-  .light main .border-white\/\[0\.10\] { border-color: rgba(15, 23, 42, 0.14); }
-  .light main .border-white\/\[0\.05\] { border-color: rgba(15, 23, 42, 0.08); }
-  .light main .border-dashed          { border-color: rgba(15, 23, 42, 0.20); }
-
-  /* Hover border tints on cards                                             */
+  /* Hover border tints on colored cards                                     */
   .light main .hover\:border-brand-500\/25:hover  { border-color: rgba(6, 182, 212, 0.40); }
   .light main .hover\:border-amber-500\/25:hover  { border-color: rgba(245, 158, 11, 0.40); }
   .light main .hover\:border-violet-500\/25:hover { border-color: rgba(139, 92, 246, 0.40); }

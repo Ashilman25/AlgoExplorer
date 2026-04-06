@@ -9,7 +9,7 @@ const STATE_COLOR = {
 const CELL_BASE = 'flex items-center justify-center font-mono text-xs tabular-nums transition-all duration-150'
 
 const CELL_STATE_CLASSES = {
-  default:  `${CELL_BASE} border border-white/[0.04] text-slate-600`,
+  default:  `${CELL_BASE} border border-hairline text-faint`,
   active:   `${CELL_BASE} border-2 border-state-active   bg-state-active/20   text-state-active`,
   frontier: `${CELL_BASE} border-2 border-state-frontier bg-state-frontier/15 text-state-frontier`,
   visited:  `${CELL_BASE} border border-state-visited/20  bg-state-visited/10  text-state-visited`,
@@ -24,7 +24,7 @@ const GLOW = {
   frontier: '0 0 6px rgba(251,191,36,0.3)',
 }
 
-const HEADER_CELL = 'flex items-center justify-center bg-slate-800/80 border border-white/[0.06] font-mono text-xs font-semibold text-slate-400 select-none'
+const HEADER_CELL = 'flex items-center justify-center bg-surface border border-hairline font-mono text-xs font-semibold text-muted select-none'
 
 // ── Layout Detection ──────────────────────────────────────────────────
 
@@ -114,7 +114,7 @@ function TableGrid({ currentStep, rowHeaders, colHeaders, cornerLabel }) {
   if (!table || table.length === 0) {
     return (
       <div className = "w-full h-full flex items-center justify-center">
-        <p className = "text-sm text-slate-500">No table data yet.</p>
+        <p className = "text-sm text-muted">No table data yet.</p>
       </div>
     )
   }
@@ -223,7 +223,7 @@ function StripLayout({ currentStep }) {
   if (array.length === 0) {
     return (
       <div className = "w-full h-full flex items-center justify-center">
-        <p className = "text-sm text-slate-500">No array data yet.</p>
+        <p className = "text-sm text-muted">No array data yet.</p>
       </div>
     )
   }
@@ -236,7 +236,7 @@ function StripLayout({ currentStep }) {
           {array.map((_, i) => (
             <div
               key = {`idx-${i}`}
-              className = "font-mono text-[9px] text-slate-600 text-center select-none"
+              className = "font-mono text-[9px] text-faint text-center select-none"
               style = {{ width: CELL_SIZE }}
             >
               {i}

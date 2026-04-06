@@ -89,12 +89,12 @@ export default function StepInspector({ metrics = [], moduleKey, algorithmKey, e
             <span className = "font-mono text-[9px] font-bold uppercase tracking-widest text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full border border-brand-500/20">
               {eventType}
             </span>
-            <span className = "font-mono text-[9px] text-slate-600">
+            <span className = "font-mono text-[9px] text-faint">
               #{stepIndex + 1} of {totalSteps}
             </span>
           </div>
           {runId && (
-            <span className = "font-mono text-[8px] text-slate-700">
+            <span className = "font-mono text-[8px] text-faint">
               #{runId}
             </span>
           )}
@@ -149,7 +149,7 @@ export default function StepInspector({ metrics = [], moduleKey, algorithmKey, e
       </div>
 
       {/* footer: summary metrics */}
-      <div className = "shrink-0 p-3 border-t border-white/[0.07] space-y-1.5">
+      <div className = "shrink-0 p-3 border-t border-hairline space-y-1.5">
         {displayMetrics.map((m) => (
           <div key = {m.label} className = "metric-card flex items-center justify-between py-2 px-3">
             <span className = "mono-label">{m.label}</span>
@@ -199,24 +199,24 @@ function StepDetail({ step, explanationLevel = 'detailed' }) {
           <p className = "mono-label">Explanation</p>
 
           {title && (
-            <p className = "text-xs font-medium text-slate-200">{title}</p>
+            <p className = "text-xs font-medium text-secondary">{title}</p>
           )}
 
           {showBody && body && (
-            <p className = "text-xs text-slate-200 leading-relaxed">{body}</p>
+            <p className = "text-xs text-secondary leading-relaxed">{body}</p>
           )}
 
           {showDataSnapshot && dataSnapshot && Object.keys(dataSnapshot).length > 0 && (
-            <div className = "pt-2 mt-2 border-t border-white/[0.06] space-y-1">
+            <div className = "pt-2 mt-2 border-t border-hairline space-y-1">
               {Object.entries(dataSnapshot).map(([key, value]) => (
                 <div
                   key = {key}
-                  className = "flex items-start justify-between gap-3 rounded bg-slate-800/40 border border-white/[0.04] px-2.5 py-1.5"
+                  className = "flex items-start justify-between gap-3 rounded bg-surface-dim border border-hairline px-2.5 py-1.5"
                 >
-                  <span className = "font-mono text-[10px] text-slate-500 shrink-0">
+                  <span className = "font-mono text-[10px] text-muted shrink-0">
                     {key.replace(/_/g, ' ')}
                   </span>
-                  <span className = "font-mono text-[10px] text-slate-300 text-right break-all">
+                  <span className = "font-mono text-[10px] text-secondary text-right break-all">
                     {formatSnapshotValue(value)}
                   </span>
                 </div>
@@ -259,10 +259,10 @@ function StepDetail({ step, explanationLevel = 'detailed' }) {
             {Object.entries(snapshot).map(([k, v]) => (
               <div
                 key = {k}
-                className = "flex items-center justify-between rounded bg-slate-800/50 border border-white/[0.05] px-2.5 py-1.5"
+                className = "flex items-center justify-between rounded bg-surface-translucent border border-hairline px-2.5 py-1.5"
               >
-                <span className = "font-mono text-[9px] text-slate-500">{k.replace(/_/g, ' ')}</span>
-                <span className = "font-mono text-[9px] text-slate-300 tabular-nums">{String(v)}</span>
+                <span className = "font-mono text-[9px] text-muted">{k.replace(/_/g, ' ')}</span>
+                <span className = "font-mono text-[9px] text-secondary tabular-nums">{String(v)}</span>
               </div>
             ))}
           </div>
@@ -281,27 +281,27 @@ function InfoDrawer({ algorithmKey, learningInfo, metrics, isOpen, onToggle }) {
   const hint = [algoLabel, primaryComplexity].filter(Boolean).join(' · ')
 
   return (
-    <div className = "shrink-0 border-t border-white/[0.07]">
+    <div className = "shrink-0 border-t border-hairline">
       {/* toggle bar */}
       <button
         onClick = {onToggle}
-        className = "w-full flex items-center justify-between px-3 py-2 hover:bg-white/[0.02] transition-colors duration-100"
+        className = "w-full flex items-center justify-between px-3 py-2 hover:bg-hover transition-colors duration-100"
       >
         <div className = "flex items-center gap-1.5">
           <ChevronRight
             size = {10}
             className = {cn(
-              'text-slate-600 transition-transform duration-150',
+              'text-faint transition-transform duration-150',
               isOpen && 'rotate-90',
             )}
           />
-          <span className = "font-mono text-[9px] text-slate-300 uppercase tracking-wider">
+          <span className = "font-mono text-[9px] text-secondary uppercase tracking-wider">
             Info & Metrics
           </span>
         </div>
 
         {hint && (
-          <span className = "font-mono text-[8px] text-slate-300">
+          <span className = "font-mono text-[8px] text-secondary">
             {hint}
           </span>
         )}
@@ -309,7 +309,7 @@ function InfoDrawer({ algorithmKey, learningInfo, metrics, isOpen, onToggle }) {
 
       {/* expandable content */}
       {isOpen && (
-        <div className = "px-3 pb-3 space-y-4 border-t border-white/[0.04] animate-enter">
+        <div className = "px-3 pb-3 space-y-4 border-t border-hairline animate-enter">
           {/* Algorithm info — compact: complexity + properties only */}
           {learningInfo && (
             <div className = "space-y-3 pt-2">
@@ -321,9 +321,9 @@ function InfoDrawer({ algorithmKey, learningInfo, metrics, isOpen, onToggle }) {
                     'TIME (worst)': learningInfo.complexity.time.worst,
                     'SPACE': learningInfo.complexity.space,
                   }).map(([label, value]) => (
-                    <div key = {label} className = "flex items-center justify-between rounded bg-slate-800/50 border border-white/[0.05] px-2.5 py-1">
-                      <span className = "font-mono text-[9px] text-slate-500">{label}</span>
-                      <span className = "font-mono text-[9px] text-slate-300">{value}</span>
+                    <div key = {label} className = "flex items-center justify-between rounded bg-surface-translucent border border-hairline px-2.5 py-1">
+                      <span className = "font-mono text-[9px] text-muted">{label}</span>
+                      <span className = "font-mono text-[9px] text-secondary">{value}</span>
                     </div>
                   ))}
                 </div>
@@ -397,11 +397,11 @@ function LoadingSkeleton() {
 function EmptyState() {
   return (
     <div className = "flex flex-col items-center justify-center h-full gap-3 p-6 text-center">
-      <div className = "w-8 h-8 rounded-full bg-slate-800/60 border border-white/[0.06] flex items-center justify-center">
-        <span className = "text-slate-600 text-sm font-mono">∅</span>
+      <div className = "w-8 h-8 rounded-full bg-surface-translucent border border-hairline flex items-center justify-center">
+        <span className = "text-faint text-sm font-mono">∅</span>
       </div>
 
-      <p className = "text-xs text-slate-600 leading-relaxed max-w-[180px]">
+      <p className = "text-xs text-faint leading-relaxed max-w-[180px]">
         Run a simulation to see step-by-step details here.
       </p>
     </div>

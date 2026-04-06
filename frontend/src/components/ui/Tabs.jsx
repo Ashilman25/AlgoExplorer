@@ -20,7 +20,7 @@ export function TabList({ children, className }) {
     <div
       role = "tablist"
       className = {cn(
-        'flex items-center gap-0.5 border-b border-white/[0.07]',
+        'flex items-center gap-0.5 border-b border-hairline',
         className,
       )}
     >
@@ -43,7 +43,7 @@ export function Tab({ value, children, className }) {
         'border-b-2 -mb-px',
         isActive
           ? 'text-brand-400 border-brand-500'
-          : 'text-slate-500 border-transparent hover:text-slate-300 hover:border-slate-600',
+          : 'text-muted border-transparent hover:text-secondary hover:border-default',
         className,
       )}
     >

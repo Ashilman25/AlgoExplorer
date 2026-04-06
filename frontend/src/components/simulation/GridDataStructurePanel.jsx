@@ -37,19 +37,19 @@ export default function GridDataStructurePanel({ algorithm }) {
 
   function moreBadge(count) {
     return (
-      <span className = "font-mono text-[9px] px-1 py-px rounded border border-white/[0.08] bg-slate-800/50 text-slate-500">
+      <span className = "font-mono text-[9px] px-1 py-px rounded border border-subtle bg-surface-translucent text-muted">
         +{count} more
       </span>
     )
   }
 
   return (
-    <div className = "shrink-0 border-t border-white/[0.06] px-3 py-1 space-y-0.5 overflow-y-auto h-[72px]">
+    <div className = "shrink-0 border-t border-hairline px-3 py-1 space-y-0.5 overflow-y-auto h-[72px]">
 
       {hasFrontier && (
         <div className = "flex items-center gap-1.5">
           <span className = "mono-label shrink-0 text-[9px]">Frontier</span>
-          <span className = "font-mono text-[9px] text-slate-600 shrink-0">{frontier.length}</span>
+          <span className = "font-mono text-[9px] text-faint shrink-0">{frontier.length}</span>
           <div className = "flex gap-0.5 flex-wrap">
             {frontierT.visible.map((cell, i) => (
               <span key = {i} className = "font-mono text-[9px] px-1 py-px rounded border text-state-frontier bg-state-frontier/10 border-state-frontier/30">
@@ -64,11 +64,11 @@ export default function GridDataStructurePanel({ algorithm }) {
       {hasDistances && (
         <div className = "flex items-center gap-1.5">
           <span className = "mono-label shrink-0 text-[9px]">Dist</span>
-          <span className = "font-mono text-[9px] text-slate-600 shrink-0">{distEntries.length}</span>
+          <span className = "font-mono text-[9px] text-faint shrink-0">{distEntries.length}</span>
           <div className = "flex gap-0.5 flex-wrap">
             {distT.visible.map(([coord, d]) => (
-              <span key = {coord} className = "font-mono text-[9px] px-1 py-px rounded border border-white/[0.08] bg-slate-800/50 text-slate-400">
-                {coord}:<span className = {d === 'inf' ? 'text-slate-600' : 'text-state-active'}>{d}</span>
+              <span key = {coord} className = "font-mono text-[9px] px-1 py-px rounded border border-subtle bg-surface-translucent text-muted">
+                {coord}:<span className = {d === 'inf' ? 'text-faint' : 'text-state-active'}>{d}</span>
               </span>
             ))}
             {distT.hidden > 0 && moreBadge(distT.hidden)}
@@ -79,11 +79,11 @@ export default function GridDataStructurePanel({ algorithm }) {
       {hasHeuristic && (
         <div className = "flex items-center gap-1.5">
           <span className = "mono-label shrink-0 text-[9px]">f(n)</span>
-          <span className = "font-mono text-[9px] text-slate-600 shrink-0">{heurEntries.length}</span>
+          <span className = "font-mono text-[9px] text-faint shrink-0">{heurEntries.length}</span>
           <div className = "flex gap-0.5 flex-wrap">
             {heurT.visible.map(([coord, vals]) => (
-              <span key = {coord} className = "font-mono text-[9px] px-1 py-px rounded border border-white/[0.08] bg-slate-800/50 text-slate-400">
-                {coord}:<span className = {vals.f === 'inf' ? 'text-slate-600' : 'text-brand-400'}>{vals.f}</span>
+              <span key = {coord} className = "font-mono text-[9px] px-1 py-px rounded border border-subtle bg-surface-translucent text-muted">
+                {coord}:<span className = {vals.f === 'inf' ? 'text-faint' : 'text-brand-400'}>{vals.f}</span>
               </span>
             ))}
             {heurT.hidden > 0 && moreBadge(heurT.hidden)}
@@ -94,7 +94,7 @@ export default function GridDataStructurePanel({ algorithm }) {
       {hasPath && (
         <div className = "flex items-center gap-1.5">
           <span className = "mono-label shrink-0 text-[9px]">Path</span>
-          <span className = "font-mono text-[9px] text-slate-600 shrink-0">{(path ?? []).length}</span>
+          <span className = "font-mono text-[9px] text-faint shrink-0">{(path ?? []).length}</span>
           <div className = "flex items-center gap-0.5 flex-wrap">
             {pathT.visible.map((cell, i) => (
               <span key = {i} className = "flex items-center gap-0.5">
@@ -102,13 +102,13 @@ export default function GridDataStructurePanel({ algorithm }) {
                   {coordLabel(cell)}
                 </span>
                 {i < pathT.visible.length - 1 && (
-                  <span className = "text-[9px] text-slate-600">&rarr;</span>
+                  <span className = "text-[9px] text-faint">&rarr;</span>
                 )}
               </span>
             ))}
             {pathT.hidden > 0 && (
               <span className = "flex items-center gap-0.5">
-                <span className = "text-[9px] text-slate-600">&rarr;</span>
+                <span className = "text-[9px] text-faint">&rarr;</span>
                 {moreBadge(pathT.hidden)}
               </span>
             )}

@@ -22,8 +22,8 @@ export default function SlotPanel({ slot, stepIndex, maxSteps, moduleType, input
   const Renderer = DOMAIN_RENDERER[moduleType] ?? null
 
   return (
-    <div className = "flex flex-col rounded-xl border border-white/[0.07] bg-slate-800/30 overflow-hidden min-w-0">
-      <div className = "flex items-center justify-between px-4 py-2.5 border-b border-white/[0.07] bg-slate-800/50">
+    <div className = "flex flex-col rounded-xl border border-hairline bg-surface-dim overflow-hidden min-w-0">
+      <div className = "flex items-center justify-between px-4 py-2.5 border-b border-hairline bg-surface-translucent">
         <span className = "font-mono text-xs font-semibold uppercase tracking-widest text-state-source bg-state-source/10 px-2 py-0.5 rounded-full border border-state-source/20">
           {fmtAlgorithmName(algorithmKey)}
         </span>
@@ -33,7 +33,7 @@ export default function SlotPanel({ slot, stepIndex, maxSteps, moduleType, input
           {status === 'running' && <span className = "text-state-frontier">Running...</span>}
           {status === 'loading_timeline' && <span className = "text-state-frontier">Loading...</span>}
           {status === 'error' && <span className = "text-state-target">Error</span>}
-          {status === 'idle' && <span className = "text-slate-600">Idle</span>}
+          {status === 'idle' && <span className = "text-faint">Idle</span>}
         </span>
       </div>
 
@@ -81,7 +81,7 @@ function StepContent({ step }) {
         {eventType}
       </span>
       {explanation && (
-        <p className = "text-xs text-slate-400 leading-relaxed">{explanation}</p>
+        <p className = "text-xs text-muted leading-relaxed">{explanation}</p>
       )}
       {entities.length > 0 && (
         <div className = "flex flex-wrap gap-1">
@@ -106,11 +106,11 @@ function MiniMetrics({ snapshot }) {
   if (entries.length === 0) return null
 
   return (
-    <div className = "flex gap-2 px-3 py-2 border-t border-white/[0.05] bg-slate-900/30">
+    <div className = "flex gap-2 px-3 py-2 border-t border-hairline bg-base">
       {entries.slice(0, 3).map(([key, value]) => (
         <div key = {key} className = "flex items-center gap-1.5 min-w-0">
           <span className = "mono-sm truncate">{key.replace(/_/g, ' ')}</span>
-          <span className = "font-mono text-xs text-slate-300 tabular-nums">{String(value)}</span>
+          <span className = "font-mono text-xs text-secondary tabular-nums">{String(value)}</span>
         </div>
       ))}
     </div>
@@ -143,7 +143,7 @@ function ErrorState({ message, onRetry }) {
 function IdleState() {
   return (
     <div className = "flex items-center justify-center h-full p-4">
-      <p className = "text-xs text-slate-600">Waiting for run...</p>
+      <p className = "text-xs text-faint">Waiting for run...</p>
     </div>
   )
 }

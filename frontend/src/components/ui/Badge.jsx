@@ -1,7 +1,7 @@
 import { cn } from '../../utils/cn'
 
 const VARIANTS = {
-  default: 'bg-slate-700 text-slate-300 border-transparent',
+  default: 'bg-elevated text-secondary border-transparent',
   success: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
   warning: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
   info: 'bg-sky-500/15 text-sky-400 border-sky-500/20',

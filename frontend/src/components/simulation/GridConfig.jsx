@@ -35,7 +35,7 @@ export default function GridConfig({
             aria-label = "Allow diagonal movement"
             className = "accent-brand-500 w-3.5 h-3.5"
           />
-          <span className = "text-xs text-slate-400">Allow diagonal movement</span>
+          <span className = "text-xs text-muted">Allow diagonal movement</span>
         </label>
       </ConfigSection>
 

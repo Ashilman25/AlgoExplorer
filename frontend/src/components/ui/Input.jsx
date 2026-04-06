@@ -7,7 +7,7 @@ export default function Input({ label, error, hint, className, inputClassName, .
   return (
     <div className={cn('space-y-1.5', className)}>
       {label && (
-        <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide">
+        <label className="block text-xs font-medium text-muted uppercase tracking-wide">
           {label}
         </label>
       )}
@@ -15,8 +15,8 @@ export default function Input({ label, error, hint, className, inputClassName, .
       <input
         aria-label={ariaLabel}
         className={cn(
-          'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2',
-          'text-slate-200 text-sm outline-none transition-colors duration-fast',
+          'w-full bg-base border border-default rounded-lg px-3 py-2',
+          'text-secondary text-sm outline-none transition-colors duration-fast',
           'focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40',
           error && 'border-rose-500/40 focus:border-rose-500 focus:ring-rose-500/30',
           inputClassName,
@@ -29,7 +29,7 @@ export default function Input({ label, error, hint, className, inputClassName, .
       )}
 
       {!error && hint && (
-        <p className="text-[11px] text-slate-500">{hint}</p>
+        <p className="text-[11px] text-muted">{hint}</p>
       )}
     </div>
   )

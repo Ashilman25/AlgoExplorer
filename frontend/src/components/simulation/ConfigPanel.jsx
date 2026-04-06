@@ -14,7 +14,7 @@ export default function ConfigPanel({title = 'Configuration', header, children, 
         {children}
       </div>
       {footer && (
-        <div className = "shrink-0 border-t border-white/[0.06] bg-slate-800/80 p-3">
+        <div className = "shrink-0 border-t border-hairline bg-surface p-3">
           {footer}
         </div>
       )}
@@ -25,8 +25,8 @@ export default function ConfigPanel({title = 'Configuration', header, children, 
 export function ModeToggle({ mode, onChange }) {
   const isGrid = mode === 'grid'
   return (
-    <div className = "shrink-0 flex items-center justify-center px-3 py-2 border-b border-white/[0.06]">
-      <div className = "relative flex w-full bg-slate-900/60 rounded-lg p-[3px] border border-white/[0.04]">
+    <div className = "shrink-0 flex items-center justify-center px-3 py-2 border-b border-hairline">
+      <div className = "relative flex w-full bg-base rounded-lg p-[3px] border border-hairline">
         <div
           className = {cn(
             'absolute top-[3px] h-[calc(100%-6px)] w-[calc(50%-3px)] rounded-md bg-brand-500/15 border border-brand-500/30 transition-[left] duration-200',
@@ -37,7 +37,7 @@ export function ModeToggle({ mode, onChange }) {
           type = "button"
           className = {cn(
             'flex-1 relative z-10 py-[7px] text-xs font-semibold tracking-wide bg-transparent border-none cursor-pointer',
-            !isGrid ? 'text-brand-400' : 'text-slate-500'
+            !isGrid ? 'text-brand-400' : 'text-muted'
           )}
           onClick = {() => onChange('graph')}
         >
@@ -47,7 +47,7 @@ export function ModeToggle({ mode, onChange }) {
           type = "button"
           className = {cn(
             'flex-1 relative z-10 py-[7px] text-xs font-semibold tracking-wide bg-transparent border-none cursor-pointer',
-            isGrid ? 'text-brand-400' : 'text-slate-500'
+            isGrid ? 'text-brand-400' : 'text-muted'
           )}
           onClick = {() => onChange('grid')}
         >
@@ -62,7 +62,7 @@ export function ConfigSection({title, children, className}) {
   return (
     <div className = {cn('space-y-3', className)}>
       {title && (
-        <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-600">
+        <p className = "text-[10px] font-semibold uppercase tracking-[0.08em] text-faint">
           {title}
         </p>
       )}

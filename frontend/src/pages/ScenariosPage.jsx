@@ -81,18 +81,18 @@ function ScenarioCard({ scenario, onEdit, onDelete, onLoad, onDuplicate }) {
   const tags = scenario.tags ?? []
 
   return (
-    <div className = "glass border border-white/[0.07] rounded-xl p-4 flex flex-col gap-3 group hover:border-white/[0.12] transition-colors duration-fast">
+    <div className = "glass border border-hairline rounded-xl p-4 flex flex-col gap-3 group hover:border-subtle transition-colors duration-fast">
 
       {/* top row */}
       <div className = "flex items-start justify-between gap-2">
         <div className = "flex items-center gap-2.5 min-w-0">
-          <div className = "p-1.5 rounded-lg bg-slate-800/70 border border-white/[0.06] shrink-0">
-            <Icon size = {14} strokeWidth = {1.5} className = "text-slate-400" />
+          <div className = "p-1.5 rounded-lg bg-hover border border-hairline shrink-0">
+            <Icon size = {14} strokeWidth = {1.5} className = "text-muted" />
           </div>
 
           <div className = "min-w-0">
-            <p className = "text-sm font-medium text-slate-200 truncate">{scenario.name}</p>
-            <p className = "text-[11px] text-slate-500 font-mono">{scenario.algorithm_key}</p>
+            <p className = "text-sm font-medium text-secondary truncate">{scenario.name}</p>
+            <p className = "text-[11px] text-muted font-mono">{scenario.algorithm_key}</p>
           </div>
         </div>
 
@@ -100,9 +100,9 @@ function ScenarioCard({ scenario, onEdit, onDelete, onLoad, onDuplicate }) {
       </div>
 
       {/* meta row */}
-      <div className = "flex items-center gap-3 text-[11px] text-slate-500">
+      <div className = "flex items-center gap-3 text-[11px] text-muted">
         <span>{inputSummary(scenario)}</span>
-        <span className = "text-slate-700">·</span>
+        <span className = "text-faint">·</span>
         <span>{formatDate(scenario.created_at)}</span>
       </div>
 
@@ -110,7 +110,7 @@ function ScenarioCard({ scenario, onEdit, onDelete, onLoad, onDuplicate }) {
       {tags.length > 0 && (
         <div className = "flex items-center gap-1.5 flex-wrap">
           {tags.map((t) => (
-            <span key = {t} className = "px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-700/60 text-slate-400 border border-white/[0.05]">
+            <span key = {t} className = "px-1.5 py-0.5 rounded text-[10px] font-medium bg-elevated text-muted border border-hairline">
               {t}
             </span>
           ))}
@@ -118,7 +118,7 @@ function ScenarioCard({ scenario, onEdit, onDelete, onLoad, onDuplicate }) {
       )}
 
       {/* actions */}
-      <div className = "flex items-center gap-1.5 pt-1 border-t border-white/[0.05]">
+      <div className = "flex items-center gap-1.5 pt-1 border-t border-hairline">
         <button
           onClick = {() => onLoad(scenario)}
           className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-brand-400 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/20 transition-colors duration-fast"
@@ -129,7 +129,7 @@ function ScenarioCard({ scenario, onEdit, onDelete, onLoad, onDuplicate }) {
 
         <button
           onClick = {() => onDuplicate(scenario)}
-          className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast"
+          className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-muted hover:text-primary hover:bg-hover transition-colors duration-fast"
         >
           <Copy size = {11} strokeWidth = {1.5} />
           Duplicate
@@ -137,7 +137,7 @@ function ScenarioCard({ scenario, onEdit, onDelete, onLoad, onDuplicate }) {
 
         <button
           onClick = {() => onEdit(scenario)}
-          className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast"
+          className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-muted hover:text-primary hover:bg-hover transition-colors duration-fast"
         >
           <Pencil size = {11} strokeWidth = {1.5} />
           Edit
@@ -163,20 +163,20 @@ function ScenarioRow({ scenario, onEdit, onDelete, onLoad, onDuplicate }) {
   const tags = scenario.tags ?? []
 
   return (
-    <div className = "flex items-center gap-4 px-4 py-2.5 glass border border-white/[0.07] rounded-lg hover:border-white/[0.12] transition-colors duration-fast group">
+    <div className = "flex items-center gap-4 px-4 py-2.5 glass border border-hairline rounded-lg hover:border-subtle transition-colors duration-fast group">
 
       {/* icon */}
-      <div className = "p-1.5 rounded-lg bg-slate-800/70 border border-white/[0.06] shrink-0">
-        <Icon size = {13} strokeWidth = {1.5} className = "text-slate-400" />
+      <div className = "p-1.5 rounded-lg bg-hover border border-hairline shrink-0">
+        <Icon size = {13} strokeWidth = {1.5} className = "text-muted" />
       </div>
 
       {/* name + algo */}
       <div className = "min-w-0 flex-1">
-        <p className = "text-sm font-medium text-slate-200 truncate">{scenario.name}</p>
+        <p className = "text-sm font-medium text-secondary truncate">{scenario.name}</p>
         <div className = "flex items-center gap-2 mt-0.5">
-          <span className = "text-[11px] text-slate-500 font-mono">{scenario.algorithm_key}</span>
-          <span className = "text-slate-700 text-[10px]">·</span>
-          <span className = "text-[11px] text-slate-500">{inputSummary(scenario)}</span>
+          <span className = "text-[11px] text-muted font-mono">{scenario.algorithm_key}</span>
+          <span className = "text-faint text-[10px]">·</span>
+          <span className = "text-[11px] text-muted">{inputSummary(scenario)}</span>
         </div>
       </div>
 
@@ -184,29 +184,29 @@ function ScenarioRow({ scenario, onEdit, onDelete, onLoad, onDuplicate }) {
       {tags.length > 0 && (
         <div className = "hidden md:flex items-center gap-1 shrink-0">
           {tags.slice(0, 3).map((t) => (
-            <span key = {t} className = "px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-700/60 text-slate-400 border border-white/[0.05]">
+            <span key = {t} className = "px-1.5 py-0.5 rounded text-[10px] font-medium bg-elevated text-muted border border-hairline">
               {t}
             </span>
           ))}
           {tags.length > 3 && (
-            <span className = "text-[10px] text-slate-600">+{tags.length - 3}</span>
+            <span className = "text-[10px] text-faint">+{tags.length - 3}</span>
           )}
         </div>
       )}
 
       {/* badge + date */}
       <Badge variant = {meta.badge} className = "shrink-0">{scenario.module_type}</Badge>
-      <span className = "text-[11px] text-slate-500 shrink-0 w-24 text-right hidden sm:block">{formatDate(scenario.created_at)}</span>
+      <span className = "text-[11px] text-muted shrink-0 w-24 text-right hidden sm:block">{formatDate(scenario.created_at)}</span>
 
       {/* actions */}
       <div className = "flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-fast">
         <button onClick = {() => onLoad(scenario)} className = "p-1.5 rounded-md text-brand-400 hover:bg-brand-500/15 transition-colors duration-fast" title = "Load">
           <ExternalLink size = {13} strokeWidth = {1.5} />
         </button>
-        <button onClick = {() => onDuplicate(scenario)} className = "p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast" title = "Duplicate">
+        <button onClick = {() => onDuplicate(scenario)} className = "p-1.5 rounded-md text-muted hover:text-primary hover:bg-hover transition-colors duration-fast" title = "Duplicate">
           <Copy size = {13} strokeWidth = {1.5} />
         </button>
-        <button onClick = {() => onEdit(scenario)} className = "p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast" title = "Edit">
+        <button onClick = {() => onEdit(scenario)} className = "p-1.5 rounded-md text-muted hover:text-primary hover:bg-hover transition-colors duration-fast" title = "Edit">
           <Pencil size = {13} strokeWidth = {1.5} />
         </button>
         <button onClick = {() => onDelete(scenario)} className = "p-1.5 rounded-md text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 transition-colors duration-fast" title = "Delete">
@@ -270,24 +270,24 @@ function EditModal({ scenario, open, onClose, onSave, allTags }) {
 
         {/* name */}
         <div>
-          <label className = "block text-xs font-medium text-slate-400 mb-1.5">Name</label>
+          <label className = "block text-xs font-medium text-muted mb-1.5">Name</label>
           <input
             autoFocus
             value = {name}
             onChange = {(e) => setName(e.target.value)}
-            className = "w-full px-3 py-2 rounded-lg text-sm text-slate-200 bg-slate-800/80 border border-white/[0.08] focus:border-brand-500/50 focus:outline-none transition-colors duration-fast placeholder:text-slate-600"
+            className = "w-full px-3 py-2 rounded-lg text-sm text-secondary bg-surface border border-subtle focus:border-brand-500/50 focus:outline-none transition-colors duration-fast placeholder:text-faint"
             placeholder = "e.g. BFS on cyclic graph"
           />
         </div>
 
         {/* tags */}
         <div>
-          <label className = "block text-xs font-medium text-slate-400 mb-1.5">Tags</label>
-          <div className = "flex flex-wrap items-center gap-1.5 p-2 rounded-lg bg-slate-800/80 border border-white/[0.08] focus-within:border-brand-500/50 transition-colors duration-fast min-h-[38px]">
+          <label className = "block text-xs font-medium text-muted mb-1.5">Tags</label>
+          <div className = "flex flex-wrap items-center gap-1.5 p-2 rounded-lg bg-surface border border-subtle focus-within:border-brand-500/50 transition-colors duration-fast min-h-[38px]">
             {tags.map((t) => (
-              <span key = {t} className = "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-700 text-slate-300 border border-white/[0.06]">
+              <span key = {t} className = "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-elevated text-secondary border border-hairline">
                 {t}
-                <button type = "button" onClick = {() => removeTag(t)} className = "text-slate-500 hover:text-slate-200">
+                <button type = "button" onClick = {() => removeTag(t)} className = "text-muted hover:text-primary">
                   <X size = {10} strokeWidth = {2} />
                 </button>
               </span>
@@ -296,7 +296,7 @@ function EditModal({ scenario, open, onClose, onSave, allTags }) {
               value = {tagInput}
               onChange = {(e) => setTagInput(e.target.value)}
               onKeyDown = {handleTagKeyDown}
-              className = "flex-1 min-w-[80px] bg-transparent text-sm text-slate-200 outline-none placeholder:text-slate-600"
+              className = "flex-1 min-w-[80px] bg-transparent text-sm text-secondary outline-none placeholder:text-faint"
               placeholder = {tags.length ? '' : 'Type a tag and press Enter'}
             />
           </div>
@@ -309,7 +309,7 @@ function EditModal({ scenario, open, onClose, onSave, allTags }) {
                   key = {t}
                   type = "button"
                   onClick = {() => addTag(t)}
-                  className = "px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-400 border border-white/[0.06] hover:border-brand-500/30 hover:text-brand-400 transition-colors duration-fast"
+                  className = "px-2 py-0.5 rounded text-[10px] font-medium bg-surface text-muted border border-hairline hover:border-brand-500/30 hover:text-brand-400 transition-colors duration-fast"
                 >
                   + {t}
                 </button>
@@ -323,7 +323,7 @@ function EditModal({ scenario, open, onClose, onSave, allTags }) {
           <button
             type = "button"
             onClick = {onClose}
-            className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast"
+            className = "px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-primary hover:bg-hover transition-colors duration-fast"
           >
             Cancel
           </button>
@@ -349,15 +349,15 @@ function DeleteModal({ scenario, open, onClose, onConfirm }) {
 
   return (
     <Modal open = {open} onClose = {onClose} title = "Delete Scenario" size = "sm">
-      <p className = "text-sm text-slate-300 mb-1">
-        Are you sure you want to delete <span className = "font-semibold text-slate-100">"{scenario.name}"</span>?
+      <p className = "text-sm text-secondary mb-1">
+        Are you sure you want to delete <span className = "font-semibold text-primary">"{scenario.name}"</span>?
       </p>
-      <p className = "text-xs text-slate-500 mb-5">This action cannot be undone.</p>
+      <p className = "text-xs text-muted mb-5">This action cannot be undone.</p>
 
       <div className = "flex items-center justify-end gap-2">
         <button
           onClick = {onClose}
-          className = "px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-fast"
+          className = "px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-primary hover:bg-hover transition-colors duration-fast"
         >
           Cancel
         </button>
@@ -385,9 +385,9 @@ function GroupedSection({ moduleType, scenarios, view, cardProps }) {
   return (
     <div className = "mb-6 last:mb-0">
       <div className = "flex items-center gap-2 mb-3">
-        <Icon size = {14} strokeWidth = {1.5} className = "text-slate-500" />
-        <h2 className = "text-xs font-semibold text-slate-400 uppercase tracking-wider">{meta.label}</h2>
-        <span className = "text-[10px] text-slate-600 font-mono">{scenarios.length}</span>
+        <Icon size = {14} strokeWidth = {1.5} className = "text-muted" />
+        <h2 className = "text-xs font-semibold text-muted uppercase tracking-wider">{meta.label}</h2>
+        <span className = "text-[10px] text-faint font-mono">{scenarios.length}</span>
       </div>
 
       {view === 'grid' ? (
@@ -512,25 +512,25 @@ export default function ScenariosPage() {
       >
         {/* search */}
         <div className = "relative">
-          <Search size = {13} strokeWidth = {1.5} className = "absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+          <Search size = {13} strokeWidth = {1.5} className = "absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           <input
             value = {query}
             onChange = {(e) => setQuery(e.target.value)}
             placeholder = "Search scenarios…"
-            className = "pl-8 pr-3 py-1.5 rounded-lg text-xs text-slate-200 bg-slate-800/60 border border-white/[0.07] focus:border-brand-500/40 focus:outline-none transition-colors duration-fast w-48 placeholder:text-slate-600"
+            className = "pl-8 pr-3 py-1.5 rounded-lg text-xs text-secondary bg-surface-translucent border border-hairline focus:border-brand-500/40 focus:outline-none transition-colors duration-fast w-48 placeholder:text-faint"
           />
         </div>
 
         {/* module filter */}
-        <div className = "flex items-center gap-1 p-0.5 rounded-lg bg-slate-800/50 border border-white/[0.06]">
+        <div className = "flex items-center gap-1 p-0.5 rounded-lg bg-surface-translucent border border-hairline">
           {MODULE_FILTERS.map((f) => (
             <button
               key = {f.value}
               onClick = {() => setModuleFilter(f.value)}
               className = {`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors duration-fast ${
                 moduleFilter === f.value
-                  ? 'bg-slate-700 text-slate-200 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-300'
+                  ? 'bg-elevated text-secondary shadow-sm'
+                  : 'text-muted hover:text-secondary'
               }`}
             >
               {f.label}
@@ -539,11 +539,11 @@ export default function ScenariosPage() {
         </div>
 
         {/* view toggle */}
-        <div className = "flex items-center gap-0.5 p-0.5 rounded-lg bg-slate-800/50 border border-white/[0.06]">
+        <div className = "flex items-center gap-0.5 p-0.5 rounded-lg bg-surface-translucent border border-hairline">
           <button
             onClick = {() => setView('grid')}
             className = {`p-1.5 rounded-md transition-colors duration-fast ${
-              view === 'grid' ? 'bg-slate-700 text-slate-200' : 'text-slate-500 hover:text-slate-300'
+              view === 'grid' ? 'bg-elevated text-secondary' : 'text-muted hover:text-secondary'
             }`}
             title = "Grid view"
           >
@@ -552,7 +552,7 @@ export default function ScenariosPage() {
           <button
             onClick = {() => setView('list')}
             className = {`p-1.5 rounded-md transition-colors duration-fast ${
-              view === 'list' ? 'bg-slate-700 text-slate-200' : 'text-slate-500 hover:text-slate-300'
+              view === 'list' ? 'bg-elevated text-secondary' : 'text-muted hover:text-secondary'
             }`}
             title = "List view"
           >
@@ -566,7 +566,7 @@ export default function ScenariosPage() {
       {/* tag bar + count */}
       {scenarios.length > 0 && (
         <div className = "flex items-center gap-3 mb-4 flex-wrap">
-          <p className = "text-xs text-slate-500 font-mono shrink-0">
+          <p className = "text-xs text-muted font-mono shrink-0">
             {filtered.length} of {scenarios.length} scenario{scenarios.length !== 1 ? 's' : ''}
             {moduleFilter !== 'all' ? ` in ${moduleFilter}` : ''}
             {query ? ` matching "${query}"` : ''}
@@ -590,7 +590,7 @@ export default function ScenariosPage() {
                 <button
                   key = {t}
                   onClick = {() => setTagFilter(t)}
-                  className = "px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800/70 text-slate-500 border border-white/[0.05] hover:border-brand-500/20 hover:text-brand-400 transition-colors duration-fast"
+                  className = "px-2 py-0.5 rounded text-[10px] font-medium bg-hover text-muted border border-hairline hover:border-brand-500/20 hover:text-brand-400 transition-colors duration-fast"
                 >
                   {t}
                 </button>

@@ -75,28 +75,28 @@ export default function GridFocusCard() {
   if (rows.length === 0) return null
 
   return (
-    <div className = "shrink-0 border-t border-white/[0.06] px-3 py-2 space-y-1">
+    <div className = "shrink-0 border-t border-hairline px-3 py-2 space-y-1">
       <p className = "mono-label">Grid Focus</p>
 
       {rows.map((row) => {
         if (row.g !== undefined) {
           // g / h / f row
           return (
-            <div key = "ghf" className = "flex items-center gap-2 rounded-lg bg-slate-800/50 border border-white/[0.05] px-2.5 py-1.5">
-              <span className = "font-mono text-[10px] text-slate-500">g</span>
-              <span className = "font-mono text-xs text-slate-300 tabular-nums">{row.g}</span>
-              <span className = "text-white/[0.1]">|</span>
-              <span className = "font-mono text-[10px] text-slate-500">h</span>
-              <span className = "font-mono text-xs text-slate-300 tabular-nums">{row.h}</span>
-              <span className = "text-white/[0.1]">|</span>
-              <span className = "font-mono text-[10px] text-slate-500">f</span>
+            <div key = "ghf" className = "flex items-center gap-2 rounded-lg bg-surface-translucent border border-hairline px-2.5 py-1.5">
+              <span className = "font-mono text-[10px] text-muted">g</span>
+              <span className = "font-mono text-xs text-secondary tabular-nums">{row.g}</span>
+              <span className = "text-faint">|</span>
+              <span className = "font-mono text-[10px] text-muted">h</span>
+              <span className = "font-mono text-xs text-secondary tabular-nums">{row.h}</span>
+              <span className = "text-faint">|</span>
+              <span className = "font-mono text-[10px] text-muted">f</span>
               <span className = "font-mono text-xs text-brand-400 tabular-nums">{row.f}</span>
             </div>
           )
         }
 
         return (
-          <div key = {row.label} className = "flex items-center justify-between rounded-lg bg-slate-800/50 border border-white/[0.05] px-2.5 py-1.5">
+          <div key = {row.label} className = "flex items-center justify-between rounded-lg bg-surface-translucent border border-hairline px-2.5 py-1.5">
             <span className = "mono-sm">{row.label}</span>
             <span className = "flex items-center gap-1.5">
               {row.badge ? (
@@ -104,10 +104,10 @@ export default function GridFocusCard() {
                   {row.value}
                 </span>
               ) : (
-                <span className = "font-mono text-xs text-slate-300 tabular-nums">{row.value}</span>
+                <span className = "font-mono text-xs text-secondary tabular-nums">{row.value}</span>
               )}
               {row.suffix && (
-                <span className = "font-mono text-[10px] text-slate-500">{row.suffix}</span>
+                <span className = "font-mono text-[10px] text-muted">{row.suffix}</span>
               )}
             </span>
           </div>

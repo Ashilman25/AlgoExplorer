@@ -9,7 +9,7 @@ export default function MetricCard({label, value, sub, valueClassName, className
 
       <div className = "mono-label mt-1">{label}</div>
       {sub && (
-        <div className = "text-[10px] text-slate-600 mt-0.5 font-mono">{sub}</div>
+        <div className = "text-[10px] text-faint mt-0.5 font-mono">{sub}</div>
       )}
     </div>
   )

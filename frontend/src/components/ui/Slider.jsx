@@ -17,11 +17,11 @@ export default function Slider({
       {(label || display !== undefined) && (
         <div className="flex items-center justify-between">
           {label && (
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+            <span className="text-xs font-medium text-muted uppercase tracking-wide">
               {label}
             </span>
           )}
-          <span className="font-mono text-xs text-slate-400">{display}</span>
+          <span className="font-mono text-xs text-muted">{display}</span>
         </div>
       )}
       <input

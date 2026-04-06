@@ -105,10 +105,10 @@ export function SortingConfig({
             aria-label = "Search Target"
             value = {searchTarget}
             onChange = {onSearchTargetChange}
-            className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono outline-none"
+            className = "w-full bg-base border border-default focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-sm text-secondary font-mono outline-none"
           />
           {algorithm === 'binary_search' && (
-            <p className = "text-[10px] text-slate-600 mt-1">
+            <p className = "text-[10px] text-faint mt-1">
               Array will be auto-sorted for Binary Search.
             </p>
           )}
@@ -152,7 +152,7 @@ export function SortingConfig({
             onChange = {onManualInputChange}
             placeholder = "Enter numbers separated by commas or spaces, e.g. 5, 3, 8, 1, 4"
             rows = {3}
-            className = "w-full bg-slate-900 border border-slate-700 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono placeholder:text-slate-600 outline-none resize-none"
+            className = "w-full bg-base border border-default focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40 rounded-lg px-3 py-2 text-sm text-secondary font-mono placeholder:text-faint outline-none resize-none"
           />
           {inputError && (
             <ErrorAlert message={inputError} className="mt-1" />
@@ -236,7 +236,7 @@ function SortingCanvas({ array }) {
   if (n === 0) {
     return (
       <div className = "flex-1 flex items-center justify-center">
-        <p className = "text-sm text-slate-500">No array data to display.</p>
+        <p className = "text-sm text-muted">No array data to display.</p>
       </div>
     )
   }
@@ -266,10 +266,10 @@ function SortingCanvas({ array }) {
 
       {/* loading overlay — sits on top of bars, does not replace them */}
       {isLoading && (
-        <div className = "absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
+        <div className = "absolute inset-0 flex items-center justify-center bg-base/60 z-10">
           <div className = "flex flex-col items-center gap-3">
             <div className = "w-6 h-6 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-            <p className = "text-xs text-slate-500 font-mono">Running simulation…</p>
+            <p className = "text-xs text-muted font-mono">Running simulation…</p>
           </div>
         </div>
       )}
@@ -438,7 +438,7 @@ export function SortingDataPanel({ comparing, swapping, pivotIndex, displayArray
 
   if (isSearchMode) {
     return (
-      <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
+      <div className = "shrink-0 border-t border-hairline px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
         {searchTarget != null && (
           <div className = "flex items-center gap-2">
             <span className = "mono-label shrink-0">Target</span>
@@ -480,11 +480,11 @@ export function SortingDataPanel({ comparing, swapping, pivotIndex, displayArray
   const hasPivot = pivotIndex != null
 
   if (!hasComparing && !hasSwapping && !hasPivot) {
-    return <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 min-h-[40px]" />
+    return <div className = "shrink-0 border-t border-hairline px-4 py-3 min-h-[40px]" />
   }
 
   return (
-    <div className = "shrink-0 border-t border-white/[0.06] px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
+    <div className = "shrink-0 border-t border-hairline px-4 py-3 space-y-2 overflow-x-auto min-h-[40px]">
 
       {hasPivot && (
         <div className = "flex items-center gap-2">
@@ -521,7 +521,7 @@ export function SortingDataPanel({ comparing, swapping, pivotIndex, displayArray
                   [{idx}] = {displayArray[idx]}
                 </span>
                 {i < swapping.length - 1 && (
-                  <span className = "text-[10px] text-slate-600">↔</span>
+                  <span className = "text-[10px] text-faint">↔</span>
                 )}
               </span>
             ))}
@@ -758,14 +758,14 @@ export default function SortingLabPage() {
         accent = "amber"
         badge = "Phase 6"
       >
-        <div className = "flex items-center gap-1 bg-slate-900/50 border border-white/[0.06] rounded-lg p-1">
+        <div className = "flex items-center gap-1 bg-base border border-hairline rounded-lg p-1">
           <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || array.length < 2 || !!inputError}>
             {isRunning || isPlaying ? 'Running…' : 'Run'}
           </Button>
           <Button variant = "ghost" size = "sm" icon = {Save} onClick = {handleSave} disabled = {isRunning || isPlaying || array.length < 2 || !!inputError}>
             Save
           </Button>
-          <div className = "w-px h-4 bg-white/[0.08]" />
+          <div className = "w-px h-4 border-l border-hairline" />
           <Button variant = "ghost" size = "sm" icon = {RotateCcw} onClick = {handleReset} disabled = {isRunning || isPlaying}>
             Reset
           </Button>
