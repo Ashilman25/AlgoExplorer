@@ -22,5 +22,8 @@ export default defineConfig({
     globals: true,
     css: true,
     exclude: [...configDefaults.exclude, 'test/e2e/**'],
+    fakeTimers: {
+      shouldAdvanceTime: true,
+    },
   },
 })

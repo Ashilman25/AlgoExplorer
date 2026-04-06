@@ -1,10 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Network, BarChart3, Grid3x3, BookMarked, Gauge, ArrowRight,
-  Activity, Columns2, History, ExternalLink, Zap,
+  Columns2, History, ExternalLink, Zap,
 } from 'lucide-react'
-import { client } from '../services/client'
 import Badge from '../components/ui/Badge'
 import { useToast } from '../components/ui/Toast'
 import { useGuestStore } from '../stores/useGuestStore'
@@ -185,12 +184,6 @@ const FEATURED_PRESETS = [
   },
 ]
 
-const STATUS_COLOR = {
-  connected: 'text-emerald-400',
-  unreachable: 'text-rose-400',
-  checking: 'text-amber-400',
-}
-
 const MAX_RECENT = 5
 
 
@@ -359,15 +352,8 @@ function PresetCard({ preset, onClick }) {
 export default function HomePage() {
   const navigate = useNavigate()
   const toast = useToast()
-  const [backendStatus, setBackendStatus] = useState('checking')
   const { runs, scenarios } = useGuestStore()
   const setScenario = useScenarioStore((s) => s.setScenario)
-
-  useEffect(() => {
-    client.health()
-      .then(() => setBackendStatus('connected'))
-      .catch(() => setBackendStatus('unreachable'))
-  }, [])
 
   const recentRuns = runs.slice(0, MAX_RECENT)
   const recentScenarios = scenarios.slice(0, MAX_RECENT)
@@ -425,12 +411,6 @@ export default function HomePage() {
           Pick a lab below to begin exploring.
         </p>
 
-        <div className = "mt-4 inline-flex items-center gap-1.5">
-          <Activity size = {12} strokeWidth = {1.5} className = {STATUS_COLOR[backendStatus]} />
-          <span className = "text-xs text-faint">
-            API <span className = {STATUS_COLOR[backendStatus]}>{backendStatus}</span>
-          </span>
-        </div>
       </div>
 
 
