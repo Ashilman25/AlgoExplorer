@@ -1,4 +1,5 @@
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast, ErrorAlert } from '../components/ui'
@@ -44,6 +45,100 @@ const GRAPH_ALGOS = [
 ]
 
 
+
+// ── Inline edge-weight editor ─────────────────────────────────────────────
+function EdgeWeightPopover({ src, tgt, weight, clientX, clientY, algorithm, onConfirm, onCancel }) {
+  const [value, setValue] = useState(String(weight))
+  const [error, setError] = useState(null)
+  const inputRef = useRef(null)
+  const popoverRef = useRef(null)
+
+  useEffect(() => {
+    const el = inputRef.current
+    if (el) { el.focus(); el.select() }
+  }, [])
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) onCancel()
+    }
+    const timer = setTimeout(() => document.addEventListener('pointerdown', handler), 0)
+    return () => { clearTimeout(timer); document.removeEventListener('pointerdown', handler) }
+  }, [onCancel])
+
+  const handleSubmit = () => {
+    const trimmed = value.trim()
+    if (trimmed === '' || isNaN(Number(trimmed))) { setError('Enter a valid number'); return }
+    const w = parseFloat(trimmed)
+    if (w < 0 && algorithm !== 'bellman_ford') { setError('Negative weights need Bellman-Ford'); return }
+    onConfirm(w)
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleSubmit() }
+    else if (e.key === 'Escape') { e.preventDefault(); onCancel() }
+  }
+
+  // Keep popover on-screen
+  const x = Math.max(108, Math.min(clientX, window.innerWidth - 108))
+  const y = Math.max(140, clientY)
+
+  return createPortal(
+    <div
+      ref = {popoverRef}
+      className = "fixed z-50"
+      style = {{ left: x, top: y - 12, transform: 'translate(-50%, -100%)' }}
+    >
+      <div className = "glass border border-subtle rounded-lg shadow-2xl w-[200px] animate-enter">
+        <div className = "flex items-center justify-between px-3 pt-2.5 pb-1.5">
+          <span className = "text-[10px] font-medium text-muted uppercase tracking-wider">Weight</span>
+          <span className = "text-[11px] font-mono text-secondary/70">{src} &rarr; {tgt}</span>
+        </div>
+
+        <div className = "px-3 pb-1.5">
+          <input
+            ref = {inputRef}
+            type = "text"
+            inputMode = "decimal"
+            value = {value}
+            onChange = {(e) => { setValue(e.target.value); setError(null) }}
+            onKeyDown = {handleKeyDown}
+            className = {[
+              'w-full bg-base border rounded-md px-2.5 py-1.5',
+              'text-secondary text-sm font-mono outline-none transition-colors',
+              error
+                ? 'border-rose-500/40 focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30'
+                : 'border-default focus:border-brand-500 focus:ring-1 focus:ring-brand-500/40',
+            ].join(' ')}
+          />
+          {error && <p className = "text-[10px] font-mono text-rose-400/80 mt-1">{error}</p>}
+        </div>
+
+        <div className = "flex items-center justify-between px-3 pb-2.5 pt-1">
+          <button onClick = {onCancel} className = "text-[11px] text-muted hover:text-primary transition-colors">
+            Cancel
+          </button>
+          <button onClick = {handleSubmit} className = "text-[11px] font-medium text-brand-400 hover:text-brand-300 transition-colors">
+            Apply &crarr;
+          </button>
+        </div>
+      </div>
+
+      {/* caret pointing down toward the edge */}
+      <div className = "flex justify-center -mt-px">
+        <div
+          className = "w-0 h-0"
+          style = {{
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: '6px solid var(--border-subtle, rgba(51,65,85,0.5))',
+          }}
+        />
+      </div>
+    </div>,
+    document.body,
+  )
+}
 
 export function GraphConfig({
   algorithm, onAlgorithmChange,
@@ -302,7 +397,7 @@ function GraphCanvas({
   const handleEdgeClick = useCallback((e, src, tgt) => {
     e.stopPropagation()
     if (builderMode === 'delete') onDeleteEdge(src, tgt)
-    else if (builderMode === 'drag') onEdgeWeightEdit(src, tgt)
+    else if (builderMode === 'drag') onEdgeWeightEdit(src, tgt, e)
 
   }, [builderMode, onDeleteEdge, onEdgeWeightEdit])
 
@@ -786,6 +881,7 @@ export default function GraphLabPage() {
 
   const [graphNodes, setGraphNodes] = useState(gp?.nodes ?? [])
   const [graphEdges, setGraphEdges] = useState(gp?.edges ?? [])
+  const [editingEdge, setEditingEdge] = useState(null)
   const [nodePositions, setNodePositions] = useState(() =>
     gp?.nodePositions ?? (gp?.nodes ? computeNodePositions(gp.nodes) : {}),
   )
@@ -944,20 +1040,34 @@ export default function GraphLabPage() {
     setNodePositions((prev) => ({ ...prev, [nid]: { cx, cy } }))
   }, [])
 
-  const handleEdgeWeightEdit = useCallback((src, tgt) => {
-    const input = prompt('Edge weight:', '1')
-    if (input === null) return
-    const w = parseFloat(input)
-    if (isNaN(w)) return
-    if (w < 0 && algorithm !== 'bellman_ford') return
+  const handleEdgeWeightEdit = useCallback((src, tgt, clickEvent) => {
+    if (!weighted) return
+    const currentEdge = graphEdges.find((e) => {
+      const es = String(e.source), et = String(e.target)
+      return (es === src && et === tgt) || (es === tgt && et === src)
+    })
+    setEditingEdge({
+      src, tgt,
+      weight: currentEdge?.weight ?? 1,
+      clientX: clickEvent.clientX,
+      clientY: clickEvent.clientY,
+    })
+  }, [weighted, graphEdges])
+
+  const handleEdgeWeightConfirm = useCallback((newWeight) => {
+    if (!editingEdge) return
+    const { src, tgt } = editingEdge
     setGraphEdges((prev) => prev.map((e) => {
       const es = String(e.source), et = String(e.target)
       if ((es === src && et === tgt) || (es === tgt && et === src)) {
-        return { ...e, weight: w }
+        return { ...e, weight: newWeight }
       }
       return e
     }))
-  }, [algorithm])
+    clearTimeline()
+    clearRun()
+    setEditingEdge(null)
+  }, [editingEdge, clearTimeline, clearRun])
 
   // ── Mode switching ──────────────────────────────────────────────────────────
   const handleModeChange = useCallback((newMode) => {
@@ -1169,6 +1279,18 @@ export default function GraphLabPage() {
               onDeleteEdge = {handleDeleteEdge}
               onEdgeWeightEdit = {handleEdgeWeightEdit}
             />
+            {editingEdge && (
+              <EdgeWeightPopover
+                src = {editingEdge.src}
+                tgt = {editingEdge.tgt}
+                weight = {editingEdge.weight}
+                clientX = {editingEdge.clientX}
+                clientY = {editingEdge.clientY}
+                algorithm = {algorithm}
+                onConfirm = {handleEdgeWeightConfirm}
+                onCancel = {() => setEditingEdge(null)}
+              />
+            )}
           </div>
         ) : (
           <div className = "flex flex-col flex-1 min-h-0">
