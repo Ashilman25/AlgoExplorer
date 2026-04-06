@@ -20,14 +20,13 @@ const GLOW = {
 }
 
 
-export default function DpStripCanvas({ showCoinUsed = false }) {
+export default function DpStripCanvas({ showCoinUsed = false, previewLength = 0 }) {
   const currentStep = usePlaybackStore((s) => s.currentStep)
-  const totalSteps  = usePlaybackStore((s) => s.totalSteps)
   const isLoading   = usePlaybackStore((s) => s.isLoading)
 
   const activeCellRef = useRef(null)
 
-  const array           = currentStep?.state_payload?.array ?? null
+  const timelineArray   = currentStep?.state_payload?.array ?? null
   const cellStates      = currentStep?.state_payload?.cell_states ?? null
   const currentIndex    = currentStep?.state_payload?.current_index ?? null
   const dependencyIdx   = currentStep?.state_payload?.dependency_indices ?? []
@@ -37,25 +36,11 @@ export default function DpStripCanvas({ showCoinUsed = false }) {
   const explanation      = typeof rawExp === 'string' ? rawExp : rawExp?.body ?? rawExp?.text ?? rawExp?.title ?? null
   const eventType        = currentStep?.event_type ?? null
 
-  const hasTimeline = totalSteps > 0
+  const array = timelineArray ?? (previewLength > 0 ? Array(previewLength).fill(null) : null)
 
   useEffect(() => {
     activeCellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
   }, [currentIndex])
-
-
-  if (!hasTimeline) {
-    return (
-      <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className = "text-sm font-medium text-muted">
-          1D DP array — cells fill in as the algorithm progresses
-        </p>
-        <p className = "text-xs text-faint max-w-xs leading-relaxed">
-          Configure your input parameters, then step through the computation.
-        </p>
-      </div>
-    )
-  }
 
   if (!array || array.length === 0) {
     return (
