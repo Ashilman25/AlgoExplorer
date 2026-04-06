@@ -1,6 +1,6 @@
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2 } from 'lucide-react'
+import { Network, Play, RotateCcw, Save, MousePointer, Plus, Link, Trash2, Eraser } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader'
 import { Button, Select, useToast, ErrorAlert } from '../components/ui'
 import { SimulationLayout, ConfigPanel, ConfigSection, ModeToggle, GridCanvas, GridConfig, GridDataStructurePanel, PresetSelect } from '../components/simulation'
@@ -767,7 +767,7 @@ const BUILDER_MODES = [
   {value: 'delete', icon: Trash2, label: 'Delete'},
 ]
 
-function BuilderToolbar({ builderMode, onModeChange, connectSource }) {
+function BuilderToolbar({ builderMode, onModeChange, connectSource, onClear }) {
   return (
     <div className = "shrink-0 flex items-center gap-1 px-4 py-2 border-b border-hairline">
       {BUILDER_MODES.map(({ value, icon: Icon, label }) => (
@@ -785,6 +785,16 @@ function BuilderToolbar({ builderMode, onModeChange, connectSource }) {
           {label}
         </button>
       ))}
+
+      <div className = "w-px h-4 border-l border-hairline mx-1" />
+      <button
+        title = "Clear canvas"
+        onClick = {onClear}
+        className = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors text-muted hover:text-red-400 hover:bg-red-500/10 border border-transparent"
+      >
+        <Eraser size = {12} strokeWidth = {1.5} />
+        Clear
+      </button>
 
       {builderMode === 'connect' && connectSource && (
         <span className = "ml-2 font-mono text-[10px] text-state-source">
@@ -1071,6 +1081,27 @@ export default function GraphLabPage() {
     setEditingEdge(null)
   }, [editingEdge, clearTimeline, clearRun])
 
+  const handleClearGraph = useCallback(() => {
+    if (isRunning || isPlaying) return
+    setGraphNodes([])
+    setGraphEdges([])
+    setNodePositions({})
+    setSource('')
+    setTarget('')
+    setConnectSource(null)
+    setEditingEdge(null)
+    setPresetKey('')
+    setBuilderMode('drag')
+    clearTimeline()
+    clearRun()
+  }, [isRunning, isPlaying, clearTimeline, clearRun])
+
+  const handleClearGrid = useCallback(() => {
+    gridState.resetGrid()
+    clearTimeline()
+    clearRun()
+  }, [gridState, clearTimeline, clearRun])
+
   // ── Mode switching ──────────────────────────────────────────────────────────
   const handleModeChange = useCallback((newMode) => {
     setMode(newMode)
@@ -1260,7 +1291,7 @@ export default function GraphLabPage() {
       >
         {mode === 'graph' ? (
           <div className = "flex flex-col flex-1 min-h-0">
-            <BuilderToolbar builderMode = {builderMode} onModeChange = {setBuilderMode} connectSource = {connectSource} />
+            <BuilderToolbar builderMode = {builderMode} onModeChange = {setBuilderMode} connectSource = {connectSource} onClear = {handleClearGraph} />
             <GraphCanvas
               nodes = {graphNodes}
               edges = {graphEdges}
@@ -1311,6 +1342,7 @@ export default function GraphLabPage() {
                 onMazeTypeChange = {gridState.setMazeType}
                 containerRef = {canvasContainerRef}
                 onDimensionsChange = {gridState.setDimensions}
+                onClear = {handleClearGrid}
               />
             </div>
             <GridDataStructurePanel algorithm = {algorithm} />

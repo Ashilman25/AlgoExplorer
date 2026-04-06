@@ -10,6 +10,7 @@ export default function GridCanvas({
   onWallBatch, onStartPlace, onEndPlace,
   containerRef, onDimensionsChange,
   mazeType, onGenerate, onMazeTypeChange,
+  onClear,
 }) {
   const {
     canvasRefs,
@@ -456,6 +457,27 @@ export default function GridCanvas({
               </div>
             )}
           </div>
+        )}
+
+        {/* Clear button — build mode only */}
+        {isBuildMode && onClear && (
+          <button
+            type = "button"
+            onClick = {onClear}
+            style = {{
+              padding: '3px 10px',
+              fontSize: 11,
+              color: '#f87171',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.25)',
+              borderRadius: 5,
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            Clear
+          </button>
         )}
 
         {/* Action hint — build mode only */}
