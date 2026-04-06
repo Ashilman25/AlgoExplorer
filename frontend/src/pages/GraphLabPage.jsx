@@ -991,8 +991,10 @@ export default function GraphLabPage() {
     const id = nextNodeId(graphNodes)
     setGraphNodes((prev) => [...prev, { id }])
     setNodePositions((prev) => ({ ...prev, [id]: { cx, cy } }))
-
-  }, [graphNodes])
+    const idStr = String(id)
+    if (!source) setSource(idStr)
+    if (!target) setTarget(idStr)
+  }, [graphNodes, source, target])
 
   const handleDeleteNode = useCallback((nid) => {
     setGraphNodes((prev) => prev.filter((n) => String(n.id) !== nid))
