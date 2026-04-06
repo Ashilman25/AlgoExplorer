@@ -38,8 +38,8 @@ export function CustomTooltip({ active, payload, label, unit }) {
   if (!active || !payload?.length) return null
 
   return (
-    <div className="rounded-lg bg-slate-900/95 border border-slate-700 px-3 py-2.5 shadow-xl">
-      <p className="text-[10px] text-slate-500 font-mono mb-1.5">
+    <div className="rounded-lg bg-base border border-default px-3 py-2.5 shadow-xl">
+      <p className="text-[10px] text-muted font-mono mb-1.5">
         Size: {Number(label).toLocaleString()}
       </p>
       {payload.map((entry) => (
@@ -48,8 +48,8 @@ export function CustomTooltip({ active, payload, label, unit }) {
             className="w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: entry.color }}
           />
-          <span className="text-slate-400">{entry.dataKey}</span>
-          <span className="ml-auto font-mono text-slate-200">
+          <span className="text-muted">{entry.dataKey}</span>
+          <span className="ml-auto font-mono text-secondary">
             {typeof entry.value === 'number'
               ? entry.value % 1 === 0
                 ? entry.value.toLocaleString()
