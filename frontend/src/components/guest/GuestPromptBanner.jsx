@@ -38,7 +38,7 @@ export default function GuestPromptBanner() {
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-brand-500/8 border border-brand-500/15 mb-4">
       <CloudUpload size={15} strokeWidth={1.5} className="text-brand-400 shrink-0" />
-      <p className="flex-1 text-xs text-slate-400">
+      <p className="flex-1 text-xs text-muted">
         You have {parts.join(' and ')} stored locally.{' '}
         <Link
           to="/register"
@@ -50,7 +50,7 @@ export default function GuestPromptBanner() {
       </p>
       <button
         onClick={handleDismiss}
-        className="p-1 rounded text-slate-600 hover:text-slate-400 transition-colors"
+        className="p-1 rounded text-faint hover:text-muted transition-colors"
         aria-label="Dismiss"
       >
         <X size={13} strokeWidth={1.5} />
