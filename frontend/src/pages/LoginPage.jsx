@@ -52,9 +52,9 @@ export default function LoginPage() {
 
   return (
     <AuthPageLayout
-      eyebrow="Phase 12.1"
+      eyebrow="Sign In"
       title="Sign in to sync your work."
-      description="Use your account to access protected resources and prepare for cloud-backed scenarios, runs, and settings."
+      description="Access your saved runs, scenarios, and settings across sessions."
       footer={
         <span>
           No account yet?{' '}

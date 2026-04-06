@@ -32,7 +32,7 @@ export default function AuthPageLayout({ eyebrow, title, description, footer, ch
           </div>
 
           <div className="text-xs text-faint font-mono">
-            Guest mode still works. Accounts add sync and protected persistence.
+            No account required to explore. Sign up to save and sync your work across devices.
           </div>
         </section>
 

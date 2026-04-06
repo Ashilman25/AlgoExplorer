@@ -756,7 +756,6 @@ export default function SortingLabPage() {
         title = "Sorting & Searching Lab"
         description = "Visualize sorting and searching algorithms with comparison, swap, and operation tracking."
         accent = "amber"
-        badge = "Phase 6"
       >
         <div className = "flex items-center gap-1 bg-base border border-hairline rounded-lg p-1">
           <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || array.length < 2 || !!inputError}>
