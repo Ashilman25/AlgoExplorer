@@ -15,6 +15,7 @@ const DEFAULT_PLAYBACK_STATE = {
   isScrubbing: false,
   currentStep: null,
   timingConfig: null,
+  runHandler: null,
 }
 
 const TIMELINE_STEPS = [
@@ -190,5 +191,65 @@ describe('PlaybackBar', () => {
     // At last step — should pause
     expect(usePlaybackStore.getState().isPlaying).toBe(false)
     expect(screen.getByText('STEP 5 / 5')).toBeInTheDocument()
+  })
+
+  describe('run-on-play (pre-run state)', () => {
+    it('enables Play and Step Forward when runHandler is registered and no timeline', () => {
+      usePlaybackStore.setState({ ...DEFAULT_PLAYBACK_STATE, runHandler: vi.fn() })
+      render(<PlaybackBar />)
+
+      expect(screen.getByRole('button', { name: 'Play' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Step forward' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Step back' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Jump to start' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Jump to end' })).toBeDisabled()
+      expect(screen.getByRole('slider', { name: 'Timeline scrubber' })).toBeDisabled()
+    })
+
+    it('calls runHandler with autoPlay true when Play is clicked pre-run', () => {
+      const handler = vi.fn()
+      usePlaybackStore.setState({ ...DEFAULT_PLAYBACK_STATE, runHandler: handler })
+      render(<PlaybackBar />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+      expect(handler).toHaveBeenCalledWith({ autoPlay: true })
+    })
+
+    it('calls runHandler with autoPlay false when Step Forward is clicked pre-run', () => {
+      const handler = vi.fn()
+      usePlaybackStore.setState({ ...DEFAULT_PLAYBACK_STATE, runHandler: handler })
+      render(<PlaybackBar />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Step forward' }))
+      expect(handler).toHaveBeenCalledWith({ autoPlay: false })
+    })
+
+    it('shows spinner and disables Play when isLoading is true', () => {
+      usePlaybackStore.setState({ ...DEFAULT_PLAYBACK_STATE, isLoading: true, runHandler: vi.fn() })
+      render(<PlaybackBar />)
+
+      const playBtn = screen.getByRole('button', { name: 'Loading' })
+      expect(playBtn).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Step forward' })).toBeDisabled()
+    })
+
+    it('all controls disabled when no handler and no timeline', () => {
+      usePlaybackStore.setState({ ...DEFAULT_PLAYBACK_STATE, runHandler: null })
+      render(<PlaybackBar />)
+
+      expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Step forward' })).toBeDisabled()
+    })
+
+    it('reverts to normal play/pause behavior once timeline is loaded', () => {
+      const handler = vi.fn()
+      seedPlaybackStore()
+      usePlaybackStore.setState({ runHandler: handler })
+      render(<PlaybackBar />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+      expect(handler).not.toHaveBeenCalled()
+      expect(usePlaybackStore.getState().isPlaying).toBe(true)
+    })
   })
 })
