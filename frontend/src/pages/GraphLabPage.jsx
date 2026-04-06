@@ -720,7 +720,7 @@ function nextNodeId(existingNodes) {
 export default function GraphLabPage() {
   const { run, isRunning } = useRunSimulation()
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
-  const { clearTimeline, error: timelineError } = usePlaybackStore()
+  const { clearTimeline, registerRunHandler, unregisterRunHandler, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
   const toast = useToast()
@@ -1005,7 +1005,7 @@ export default function GraphLabPage() {
   }, [gridState.setAllowDiagonal, clearTimeline, clearRun])
 
   // ── Run / Reset / Save ─────────────────────────────────────────────────────
-  const handleRun = useCallback(() => {
+  const handleRun = useCallback(({ autoPlay = true } = {}) => {
     if (mode === 'grid') {
       const payload = gridState.buildGridPayload()
       if (!payload) return
@@ -1015,7 +1015,7 @@ export default function GraphLabPage() {
         input_payload: payload,
         execution_mode: 'simulate',
         explanation_level: 'detailed',
-      }, GRID_TIMING_CONFIG)
+      }, GRID_TIMING_CONFIG, { autoPlay })
       return
     }
 
@@ -1041,7 +1041,7 @@ export default function GraphLabPage() {
       },
       execution_mode: 'simulate',
       explanation_level: 'detailed',
-    })
+    }, null, { autoPlay })
   }, [run, algorithm, graphNodes, graphEdges, source, target, weighted, directed, mode, gridState])
 
   const handleReset = useCallback(() => {
@@ -1065,6 +1065,14 @@ export default function GraphLabPage() {
     })
     toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
   }, [saveScenario, toast, graphNodes, graphEdges, algorithm, source, target, weighted, directed, mode, nodePositions])
+
+  const handleRunRef = useRef()
+  handleRunRef.current = handleRun
+
+  useEffect(() => {
+    registerRunHandler((opts) => handleRunRef.current?.(opts))
+    return () => unregisterRunHandler()
+  }, [registerRunHandler, unregisterRunHandler])
 
   return (
     <>

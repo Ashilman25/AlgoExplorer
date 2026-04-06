@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { SkipBack, ChevronLeft, Play, Pause, ChevronRight, SkipForward } from 'lucide-react'
+import { SkipBack, ChevronLeft, Play, Pause, ChevronRight, SkipForward, Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { usePlaybackStore } from '../../stores/usePlaybackStore'
 
@@ -37,13 +37,37 @@ export default function PlaybackBar() {
   const isScrubbing = usePlaybackStore((s) => s.isScrubbing)
   const timingConfig = usePlaybackStore((s) => s.timingConfig)
   const {play, pause, next, prev, jumpToStart, jumpToEnd, jumpTo, setSpeed, beginScrub, endScrub} = usePlaybackStore()
+  const runHandler = usePlaybackStore((s) => s.runHandler)
+  const isLoading = usePlaybackStore((s) => s.isLoading)
 
   const hasSteps = totalSteps > 0
   const atStart = stepIndex === 0
   const atEnd = stepIndex >= totalSteps - 1
+  const canTriggerRun = !hasSteps && !!runHandler && !isLoading
 
   //percent of scrub bar
   const scrubPct = totalSteps > 1 ? (stepIndex / (totalSteps - 1)) * 100 : 0
+
+  const handlePlayClick = () => {
+    if (canTriggerRun) {
+      runHandler({ autoPlay: true })
+    } else if (isPlaying) {
+      pause()
+    } else {
+      play()
+    }
+  }
+
+  const handleStepForwardClick = () => {
+    if (canTriggerRun) {
+      runHandler({ autoPlay: false })
+    } else {
+      next()
+    }
+  }
+
+  const playIcon = isLoading ? Loader2 : (isPlaying ? Pause : Play)
+  const playLabel = isLoading ? 'Loading' : (isPlaying ? 'Pause' : 'Play')
 
   //auto play scrub
   useEffect(() => {
@@ -104,13 +128,14 @@ export default function PlaybackBar() {
         <CtrlBtn icon = {SkipBack} onClick = {jumpToStart} disabled = {!hasSteps || atStart} title = "Jump to start" />
         <CtrlBtn icon = {ChevronLeft} onClick = {prev} disabled = {!hasSteps || atStart} title = "Step back" />
         <CtrlBtn
-          icon = {isPlaying ? Pause : Play}
-          onClick = {isPlaying ? pause : play}
-          disabled = {!hasSteps}
-          title = {isPlaying ? 'Pause' : 'Play'}
+          icon = {playIcon}
+          onClick = {handlePlayClick}
+          disabled = {isLoading || (!hasSteps && !runHandler)}
+          title = {playLabel}
           accent
+          spin = {isLoading}
         />
-        <CtrlBtn icon = {ChevronRight} onClick = {next} disabled = {!hasSteps || atEnd} title = "Step forward" />
+        <CtrlBtn icon = {ChevronRight} onClick = {handleStepForwardClick} disabled = {isLoading || (!hasSteps && !runHandler) || (hasSteps && atEnd)} title = "Step forward" />
         <CtrlBtn icon = {SkipForward} onClick = {jumpToEnd} disabled = {!hasSteps || atEnd} title = "Jump to end" />
       </div>
 
@@ -166,7 +191,7 @@ function SpeedControl({ speed, setSpeed }) {
 
 //transport buttons
 
-function CtrlBtn({ icon: Icon, onClick, disabled, title, accent }) {
+function CtrlBtn({ icon: Icon, onClick, disabled, title, accent, spin }) {
   return (
     <button
       onClick = {onClick}
@@ -181,7 +206,7 @@ function CtrlBtn({ icon: Icon, onClick, disabled, title, accent }) {
           : 'bg-surface-translucent border-hairline text-muted hover:text-primary hover:bg-hover',
       )}
     >
-      <Icon size = {14} strokeWidth = {1.8} />
+      <Icon size = {14} strokeWidth = {1.8} className = {spin ? 'animate-spin' : undefined} />
     </button>
   )
 }

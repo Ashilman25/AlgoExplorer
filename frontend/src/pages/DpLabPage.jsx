@@ -563,7 +563,7 @@ export default function DpLabPage() {
   const { run, isRunning } = useRunSimulation()
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const currentStep = usePlaybackStore((s) => s.currentStep)
-  const { clearTimeline, error: timelineError } = usePlaybackStore()
+  const { clearTimeline, registerRunHandler, unregisterRunHandler, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
   const toast = useToast()
@@ -772,7 +772,7 @@ export default function DpLabPage() {
   }, [clearTimeline, clearRun])
 
 
-  const handleRun = useCallback(() => {
+  const handleRun = useCallback(({ autoPlay = true } = {}) => {
     let input_payload = {}
     let algorithm_config = null
 
@@ -794,7 +794,7 @@ export default function DpLabPage() {
       algorithm_config,
       execution_mode: 'simulate',
       explanation_level: 'detailed',
-    })
+    }, null, { autoPlay })
   }, [run, algorithm, string1, string2, capacity, items, coins, coinTarget, fibN, fibMode])
 
 
@@ -944,6 +944,13 @@ export default function DpLabPage() {
     }
   }, [clearTimeline, clearRun])
 
+  const handleRunRef = useRef()
+  handleRunRef.current = handleRun
+
+  useEffect(() => {
+    registerRunHandler((opts) => handleRunRef.current?.(opts))
+    return () => unregisterRunHandler()
+  }, [registerRunHandler, unregisterRunHandler])
 
   return (
     <>

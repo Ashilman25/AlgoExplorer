@@ -539,7 +539,7 @@ export default function SortingLabPage() {
   const { run, isRunning } = useRunSimulation()
   const isPlaying = usePlaybackStore((s) => s.isPlaying)
   const currentStep = usePlaybackStore((s) => s.currentStep)
-  const { clearTimeline, error: timelineError } = usePlaybackStore()
+  const { clearTimeline, registerRunHandler, unregisterRunHandler, error: timelineError } = usePlaybackStore()
   const { clearRun } = useRunStore()
   const { saveScenario } = useGuestStore()
   const toast = useToast()
@@ -703,7 +703,7 @@ export default function SortingLabPage() {
   }, [clearTimeline, clearRun])
 
 
-  const handleRun = useCallback(() => {
+  const handleRun = useCallback(({ autoPlay = true } = {}) => {
     const payload = {
       array: algorithm === 'binary_search' ? [...array].sort((a, b) => a - b) : array,
       preset,
@@ -720,7 +720,7 @@ export default function SortingLabPage() {
       input_payload: payload,
       execution_mode: 'simulate',
       explanation_level: 'detailed',
-    })
+    }, null, { autoPlay })
   }, [run, algorithm, array, preset, duplicateDensity, isSearching, searchTarget])
 
 
@@ -747,6 +747,15 @@ export default function SortingLabPage() {
     })
     toast({ type: 'success', title: 'Scenario saved', message: `"${name}" added to library.` })
   }, [saveScenario, toast, algorithm, array, preset, duplicateDensity])
+
+
+  const handleRunRef = useRef()
+  handleRunRef.current = handleRun
+
+  useEffect(() => {
+    registerRunHandler((opts) => handleRunRef.current?.(opts))
+    return () => unregisterRunHandler()
+  }, [registerRunHandler, unregisterRunHandler])
 
 
   return (

@@ -18,7 +18,7 @@ export function useRunSimulation() {
   const {setTimeline, clearTimeline, setLoading: setTimelineLoading, setError: setTimelineError, play} = usePlaybackStore()
   const saveRun = useGuestStore((s) => s.saveRun)
 
-  const run = useCallback(async (request, timingConfig) => {
+  const run = useCallback(async (request, timingConfig, { autoPlay = true } = {}) => {
     setIsRunning(true)
     clearRun()
     clearTimeline()
@@ -35,7 +35,7 @@ export function useRunSimulation() {
       const timelineResponse = await runsService.getTimeline(runResponse.id)
       setTimeline(timelineResponse.steps, timingConfig)
       setTimelineLoading(false)
-      play()
+      if (autoPlay) play()
 
       // persist to guest run history
       saveRun(guestService.createRunItem({

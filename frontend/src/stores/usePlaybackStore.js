@@ -21,6 +21,7 @@ export const usePlaybackStore = create((set, get) => ({
 
   currentStep: null,
   timingConfig: null,
+  runHandler: null,
 
   setTimeline: (steps, timingConfig) => {
     const s = Array.isArray(steps) ? steps : []
@@ -88,6 +89,9 @@ export const usePlaybackStore = create((set, get) => ({
   setSpeed: (speed) => set({ speed }),
   beginScrub: () => set({ isScrubbing: true, isPlaying: false }),
   endScrub: () => set({ isScrubbing: false }),
+
+  registerRunHandler: (fn) => set({ runHandler: fn }),
+  unregisterRunHandler: () => set({ runHandler: null }),
 
   reset: () =>
     set((s) => ({
