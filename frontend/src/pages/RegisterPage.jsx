@@ -65,9 +65,9 @@ export default function RegisterPage() {
 
   return (
     <AuthPageLayout
-      eyebrow="Phase 12.1"
+      eyebrow="Register"
       title="Create an account for synced persistence."
-      description="Accounts are optional, but they unlock protected resources and set up guest-to-account migration for later phases."
+      description="Create an account to keep your runs, scenarios, and settings synced across devices."
       footer={
         <span>
           Already have an account?{' '}

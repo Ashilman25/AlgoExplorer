@@ -1068,7 +1068,6 @@ export default function GraphLabPage() {
         title = "Graph Lab"
         description = "Interactive graph traversal and pathfinding simulations."
         accent = "brand"
-        badge = "Phase 5"
       >
         <div className = "flex items-center gap-1 bg-base border border-hairline rounded-lg p-1">
           <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || (mode === 'grid' && (!gridState.startCell || !gridState.endCell))}>

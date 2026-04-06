@@ -952,7 +952,6 @@ export default function DpLabPage() {
         title = "DP Lab"
         description = "Explore dynamic programming through step-by-step table construction, traceback, and recursive call trees."
         accent = "violet"
-        badge = "Phase 7"
       >
         <div className = "flex items-center gap-1 bg-base border border-hairline rounded-lg p-1">
           <Button variant = "primary" size = "sm" icon = {Play} onClick = {handleRun} disabled = {isRunning || isPlaying || !!inputError}>

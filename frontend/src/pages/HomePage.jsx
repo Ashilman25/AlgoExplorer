@@ -21,7 +21,6 @@ const LABS = [
     iconColor: 'text-brand-400',
     iconBg: 'bg-brand-500/10',
     borderHover: 'hover:border-brand-500/25',
-    phase: 'Phase 5',
     description:
       'Visualize graph and pathfinding algorithms step by step on an interactive node/edge canvas.',
     algorithms: ['BFS', 'Dijkstra'],
@@ -33,7 +32,6 @@ const LABS = [
     iconColor: 'text-amber-400',
     iconBg: 'bg-amber-500/10',
     borderHover: 'hover:border-amber-500/25',
-    phase: 'Phase 6',
     description:
       'Watch sorting algorithms work through arrays in real time with comparison and swap tracking.',
     algorithms: ['Quick Sort', 'Merge Sort'],
@@ -45,7 +43,6 @@ const LABS = [
     iconColor: 'text-violet-400',
     iconBg: 'bg-violet-500/10',
     borderHover: 'hover:border-violet-500/25',
-    phase: 'Phase 7',
     description:
       'Explore dynamic programming through cell-by-cell table construction with traceback overlays.',
     algorithms: ['LCS', 'Edit Distance'],
@@ -460,9 +457,6 @@ export default function HomePage() {
                 <div className = {`p-2.5 rounded-xl ${lab.iconBg}`}>
                   <lab.icon size = {17} strokeWidth = {1.5} className = {lab.iconColor} />
                 </div>
-                <span className = "text-[10px] font-mono font-medium text-faint uppercase tracking-wide">
-                  {lab.phase}
-                </span>
               </div>
 
               <div className = "flex-1 space-y-1.5">
