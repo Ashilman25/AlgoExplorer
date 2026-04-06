@@ -55,8 +55,8 @@ export default function FloatingCodePanel({ open, onClose, content, activeLines 
   return (
     <div
       className = {cn(
-        'absolute z-30 flex flex-col rounded-xl border border-white/[0.10] shadow-lg',
-        'bg-slate-800/90 backdrop-blur-md',
+        'absolute z-30 flex flex-col rounded-xl border border-subtle shadow-lg',
+        'bg-surface backdrop-blur-md',
       )}
       style = {{
         width: size.width,
@@ -69,7 +69,7 @@ export default function FloatingCodePanel({ open, onClose, content, activeLines 
       {/* Title bar — draggable */}
       <div
         onPointerDown = {handlePointerDown}
-        className = "flex items-center justify-between px-3 h-10 shrink-0 border-b border-white/[0.07] select-none"
+        className = "flex items-center justify-between px-3 h-10 shrink-0 border-b border-hairline select-none"
         style = {{ cursor: isDragging ? 'grabbing' : 'grab' }}
       >
         <div className = "flex items-center gap-1">
@@ -81,7 +81,7 @@ export default function FloatingCodePanel({ open, onClose, content, activeLines 
                 'px-2.5 py-1 text-xs font-medium rounded transition-colors duration-150',
                 activeTab === tab
                   ? 'text-brand-400 bg-brand-500/15'
-                  : 'text-slate-500 hover:text-slate-300',
+                  : 'text-muted hover:text-secondary',
               )}
             >
               {tab === 'pseudocode' ? 'Pseudocode' : 'Code'}
@@ -92,7 +92,7 @@ export default function FloatingCodePanel({ open, onClose, content, activeLines 
         <button
           onClick = {onClose}
           aria-label = "Close code panel"
-          className = "p-1 rounded text-slate-500 hover:text-slate-200 hover:bg-slate-700/50 transition-colors duration-150"
+          className = "p-1 rounded text-muted hover:text-primary hover:bg-hover transition-colors duration-150"
         >
           <X size = {14} strokeWidth = {1.5} />
         </button>

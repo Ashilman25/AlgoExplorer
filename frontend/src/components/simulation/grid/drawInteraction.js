@@ -32,7 +32,7 @@ const END_PIN = {
  * @param {boolean} isBuildMode — only show hover in build mode
  * @param {{ type: 'start'|'end', cell: number[] }|null} previewPin — snap preview during drag
  */
-export function drawInteraction(ctx, cellSize, offset, hoveredCell, startCell, endCell, isBuildMode, previewPin) {
+export function drawInteraction(ctx, cellSize, offset, hoveredCell, startCell, endCell, isBuildMode, previewPin, isLight = false) {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
   ctx.save()
@@ -67,12 +67,12 @@ export function drawInteraction(ctx, cellSize, offset, hoveredCell, startCell, e
 
   // Start pin
   if (startCell) {
-    drawPin(ctx, startCell[1] * cellSize + halfCell, startCell[0] * cellSize + halfCell, cellSize, START_PIN)
+    drawPin(ctx, startCell[1] * cellSize + halfCell, startCell[0] * cellSize + halfCell, cellSize, START_PIN, isLight)
   }
 
   // End pin
   if (endCell) {
-    drawPin(ctx, endCell[1] * cellSize + halfCell, endCell[0] * cellSize + halfCell, cellSize, END_PIN)
+    drawPin(ctx, endCell[1] * cellSize + halfCell, endCell[0] * cellSize + halfCell, cellSize, END_PIN, isLight)
   }
 
   // Preview pin during drag (semi-transparent)
@@ -80,14 +80,14 @@ export function drawInteraction(ctx, cellSize, offset, hoveredCell, startCell, e
     const [pr, pc] = previewPin.cell
     const style = previewPin.type === 'start' ? START_PIN : END_PIN
     ctx.globalAlpha = 0.5
-    drawPin(ctx, pc * cellSize + halfCell, pr * cellSize + halfCell, cellSize, style)
+    drawPin(ctx, pc * cellSize + halfCell, pr * cellSize + halfCell, cellSize, style, isLight)
     ctx.globalAlpha = 1
   }
 
   ctx.restore()
 }
 
-function drawPin(ctx, cx, cy, cellSize, style) {
+function drawPin(ctx, cx, cy, cellSize, style, isLight = false) {
   const outerR = cellSize * 0.4
   const innerR = cellSize * 0.15
 
@@ -109,7 +109,7 @@ function drawPin(ctx, cx, cy, cellSize, style) {
 
   // Label letter
   if (cellSize >= 14) {
-    ctx.fillStyle = '#0f172a'
+    ctx.fillStyle = isLight ? '#ffffff' : '#0f172a'
     ctx.font = `bold ${Math.round(cellSize * 0.3)}px var(--font-mono), monospace`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'

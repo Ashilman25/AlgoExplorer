@@ -77,7 +77,7 @@ export default function PlaybackBar() {
   }, [isPlaying, speed, hasSteps, isScrubbing, timingConfig])
 
   return (
-    <div className = "flex items-center gap-4 px-5 rounded-xl border border-white/[0.07] bg-slate-900/80 h-[72px] flex-none">
+    <div className = "flex items-center gap-4 px-5 rounded-xl border border-hairline bg-base h-[72px] flex-none">
 
       {/* Step counter */}
       <span className = "mono-label whitespace-nowrap" style = {{ minWidth: '88px' }}>
@@ -154,7 +154,7 @@ function SpeedControl({ speed, setSpeed }) {
         {SPEEDS.map((s, i) => {
           const label = s === 0.25 ? '¼×' : s === 1 ? '1×' : s === 4 ? '4×' : s === 16 ? '16×' : null
           return (
-            <span key = {i} className = "font-mono text-[8px] text-slate-700 leading-none text-center" style = {{ width: 0, overflow: 'visible' }}>
+            <span key = {i} className = "font-mono text-[8px] text-faint leading-none text-center" style = {{ width: 0, overflow: 'visible' }}>
               {label}
             </span>
           )
@@ -178,7 +178,7 @@ function CtrlBtn({ icon: Icon, onClick, disabled, title, accent }) {
         'disabled:opacity-30 disabled:cursor-not-allowed',
         accent
           ? 'bg-brand-500/20 border-brand-500/30 text-brand-400 hover:bg-brand-500/30 hover:border-brand-500/50'
-          : 'bg-slate-800/50 border-white/[0.06] text-slate-400 hover:text-slate-200 hover:bg-slate-700/50',
+          : 'bg-surface-translucent border-hairline text-muted hover:text-primary hover:bg-hover',
       )}
     >
       <Icon size = {14} strokeWidth = {1.8} />

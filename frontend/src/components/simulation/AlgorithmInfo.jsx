@@ -41,7 +41,7 @@ export default function AlgorithmInfo({ learningInfo, className }) {
           <p className = "mono-label">Key Insights</p>
           <ul className = "space-y-1.5 pl-3">
             {insights.map((insight, i) => (
-              <li key = {i} className = "text-xs text-slate-400 leading-relaxed list-disc list-outside">
+              <li key = {i} className = "text-xs text-muted leading-relaxed list-disc list-outside">
                 {insight}
               </li>
             ))}
@@ -57,13 +57,13 @@ export default function AlgorithmInfo({ learningInfo, className }) {
             {use_cases.use_when.map((item, i) => (
               <div key = {`use-${i}`} className = "flex items-start gap-2 text-xs">
                 <span className = "text-state-success mt-0.5 shrink-0">+</span>
-                <span className = "text-slate-400 leading-relaxed">{item}</span>
+                <span className = "text-muted leading-relaxed">{item}</span>
               </div>
             ))}
             {use_cases.avoid_when.map((item, i) => (
               <div key = {`avoid-${i}`} className = "flex items-start gap-2 text-xs">
                 <span className = "text-state-target mt-0.5 shrink-0">-</span>
-                <span className = "text-slate-400 leading-relaxed">{item}</span>
+                <span className = "text-muted leading-relaxed">{item}</span>
               </div>
             ))}
           </div>
@@ -76,15 +76,15 @@ export default function AlgorithmInfo({ learningInfo, className }) {
           <p className = "mono-label">Scenarios</p>
           <div className = "space-y-1">
             {scenarios.best_case && (
-              <div className = "flex items-start justify-between gap-3 rounded bg-slate-800/40 border border-white/[0.04] px-2.5 py-1.5">
+              <div className = "flex items-start justify-between gap-3 rounded bg-surface-dim border border-hairline px-2.5 py-1.5">
                 <span className = "font-mono text-[10px] text-state-success shrink-0">BEST</span>
-                <span className = "font-mono text-[10px] text-slate-300 text-right">{scenarios.best_case}</span>
+                <span className = "font-mono text-[10px] text-secondary text-right">{scenarios.best_case}</span>
               </div>
             )}
             {scenarios.worst_case && (
-              <div className = "flex items-start justify-between gap-3 rounded bg-slate-800/40 border border-white/[0.04] px-2.5 py-1.5">
+              <div className = "flex items-start justify-between gap-3 rounded bg-surface-dim border border-hairline px-2.5 py-1.5">
                 <span className = "font-mono text-[10px] text-state-target shrink-0">WORST</span>
-                <span className = "font-mono text-[10px] text-slate-300 text-right">{scenarios.worst_case}</span>
+                <span className = "font-mono text-[10px] text-secondary text-right">{scenarios.worst_case}</span>
               </div>
             )}
           </div>
@@ -96,9 +96,9 @@ export default function AlgorithmInfo({ learningInfo, className }) {
 
 function ComplexityRow({ label, value }) {
   return (
-    <div className = "flex items-center justify-between rounded bg-slate-800/50 border border-white/[0.05] px-2.5 py-1.5">
-      <span className = "font-mono text-[10px] text-slate-500">{label}</span>
-      <span className = "font-mono text-[10px] text-slate-300">{value}</span>
+    <div className = "flex items-center justify-between rounded bg-surface-translucent border border-hairline px-2.5 py-1.5">
+      <span className = "font-mono text-[10px] text-muted">{label}</span>
+      <span className = "font-mono text-[10px] text-secondary">{value}</span>
     </div>
   )
 }

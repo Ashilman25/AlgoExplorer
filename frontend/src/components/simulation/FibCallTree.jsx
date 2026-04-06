@@ -100,10 +100,10 @@ export default function FibCallTree() {
   if (!hasTimeline) {
     return (
       <div className = "flex-1 flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className = "text-sm font-medium text-slate-500">
+        <p className = "text-sm font-medium text-muted">
           Call tree — visualizes recursive Fibonacci call structure
         </p>
-        <p className = "text-xs text-slate-600 max-w-xs leading-relaxed">
+        <p className = "text-xs text-faint max-w-xs leading-relaxed">
           Run with Memoized or Naive Recursive mode to see the call tree.
         </p>
       </div>
@@ -113,7 +113,7 @@ export default function FibCallTree() {
   if (nodes.length === 0) {
     return (
       <div className = "flex-1 flex items-center justify-center">
-        <p className = "text-sm text-slate-500">No call tree data yet.</p>
+        <p className = "text-sm text-muted">No call tree data yet.</p>
       </div>
     )
   }
