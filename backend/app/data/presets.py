@@ -2,8 +2,8 @@ PRESETS: dict = {
     "graph": {
         "general": [
             {
-                "key": "bfs-demo",
-                "label": "BFS Demo — 6 nodes",
+                "key": "simple-traversal",
+                "label": "Simple Traversal — 6 nodes",
                 "description": "Simple unweighted graph for breadth-first traversal",
                 "tags": ["pathfinding"],
                 "input_payload": {
@@ -125,8 +125,8 @@ PRESETS: dict = {
                 },
             },
             {
-                "key": "mst-demo",
-                "label": "MST Demo — 6 nodes",
+                "key": "connected-weighted",
+                "label": "Connected Weighted — 6 nodes",
                 "description": "Connected weighted graph for minimum spanning tree algorithms",
                 "tags": ["mst"],
                 "input_payload": {

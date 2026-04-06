@@ -64,7 +64,7 @@ class TestGraphPresetsFiltered:
     def test_pathfinding_excludes_mst_and_ordering(self, client):
         r = client.get("/api/presets/graph", params = {"algorithm_key": "bfs"})
         keys = {p["key"] for p in r.json()["groups"][0]["presets"]}
-        assert "mst-demo" not in keys
+        assert "connected-weighted" not in keys
         assert "dag-prereqs" not in keys
         assert "dag-cycle" not in keys
 
@@ -87,7 +87,7 @@ class TestGraphPresetsFiltered:
         keys = {p["key"] for p in r.json()["groups"][0]["presets"]}
         assert "dag-prereqs" in keys
         assert "dag-cycle" in keys
-        assert "bfs-demo" not in keys
+        assert "simple-traversal" not in keys
 
     @pytest.mark.parametrize("algorithm_key", list(ALGORITHM_CATEGORY.keys()))
     def test_all_known_graph_algorithms_return_200(self, client, algorithm_key):
