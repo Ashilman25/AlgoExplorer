@@ -589,6 +589,7 @@ export default function BenchmarksPage() {
   const [resultData, setResultData] = useState(null)
   const [benchmarkError, setBenchmarkError] = useState(null)
   const [workerHealthy, setWorkerHealthy] = useState(true)
+  const [workerBannerDismissed, setWorkerBannerDismissed] = useState(false)
   const [isCancelling, setIsCancelling] = useState(false)
   const benchmarkStartTime = useRef(null)
   const etaTarget = useRef(null)
@@ -847,9 +848,15 @@ export default function BenchmarksPage() {
 
       <GuestPromptBanner />
 
-      {!workerHealthy && (
-        <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
-          No benchmark workers detected. Jobs will be queued until a worker is available.
+      {!workerHealthy && !workerBannerDismissed && (
+        <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400 flex items-center justify-between">
+          <span>No benchmark workers detected. Jobs will be queued until a worker is available.</span>
+          <button
+            onClick={() => setWorkerBannerDismissed(true)}
+            className="p-1 rounded-md text-amber-400/60 hover:text-amber-400 hover:bg-amber-500/10 transition-colors shrink-0 ml-3"
+          >
+            <X size={14} strokeWidth={1.5} />
+          </button>
         </div>
       )}
 
