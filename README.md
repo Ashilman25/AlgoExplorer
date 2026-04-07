@@ -2,7 +2,7 @@
 
 **A browser-based platform for visualizing, replaying, and benchmarking algorithms.**
 
-[Live Demo](https://algo-explorer-amber.vercel.app) &nbsp;&middot;&nbsp; Built with React, FastAPI, and a lot of graph paper
+[Live Demo](https://www.algo-explorer.com/) &nbsp;&middot;&nbsp; Built with React, FastAPI, and a lot of graph paper
 
 ---
 
